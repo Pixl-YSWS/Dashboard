@@ -1,0 +1,53 @@
+@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap");
+@import "tailwindcss";
+
+@theme inline {
+  --color-ink: #16161e;
+  --color-cream: #fffaf7;
+  --color-parch: #f5eed2;
+  --color-brand: #ec3750;
+  --color-tang: #ff8c37;
+  --color-mint: #4ade80;
+  --font-pixel: "Pixelify Sans", sans-serif;
+}
+
+body {
+  background: #fffaf7;
+  color: #16161e;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.pixl-card {
+  background: #ffffff;
+  border: 2px solid #16161e;
+  border-right-width: 8px;
+  border-bottom-width: 8px;
+}
+
+.pixl-btn {
+  display: inline-block;
+  border: 2px solid #16161e;
+  border-right-width: 5px;
+  border-bottom-width: 5px;
+  padding: 0.35rem 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 60ms ease;
+}
+.pixl-btn:hover {
+  transform: translate(1px, 1px);
+}
+.pixl-btn:active {
+  transform: translate(3px, 3px);
+  border-right-width: 2px;
+  border-bottom-width: 2px;
+}
+
+.pixl-input {
+  border: 2px solid #16161e;
+  background: #ffffff;
+  padding: 0.35rem 0.6rem;
+}
+.pixl-input:focus {
+  outline: 2px solid #ec3750;
+}
