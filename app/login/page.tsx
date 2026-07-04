@@ -20,7 +20,7 @@ export default async function LoginPage({
             {message}
           </div>
         )}
-        <a href="/api/auth/login" className="pixl-btn bg-ink text-white w-full text-center">
+        <a href="/api/auth/login" className="pixl-btn bg-ink dark:bg-gray-700 text-white w-full text-center">
           Sign in with Slack
         </a>
         <p className="text-xs text-ink/50 mt-6">

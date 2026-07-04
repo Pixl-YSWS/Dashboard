@@ -41,7 +41,7 @@ export default async function Overview() {
           <div key={v.id} className="p-4 flex items-center gap-4">
             <span
               className={`font-pixel text-sm px-2 py-0.5 border-2 border-ink ${
-                v.kind === "chat" ? "bg-tang/20" : "bg-brand/15"
+                v.kind === "chat" ? "bg-tang/20 dark:bg-tang/30" : "bg-brand/15 dark:bg-brand/30"
               }`}
             >
               {v.kind}

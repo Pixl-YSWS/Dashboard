@@ -81,14 +81,22 @@ export async function banPlayer(formData: FormData): Promise<void> {
 
 export async function liftBan(formData: FormData): Promise<void> {
   const by = await actor();
-  const banId = Number(formData.get("banId") ?? 0);
   const userId = String(formData.get("userId") ?? "");
-  if (!banId) return;
+  if (!userId) return;
+  const now = new Date().toISOString();
   const { error } = await db
     .from("bans")
-    .update({ lifted_at: new Date().toISOString() })
-    .eq("id", banId);
+    .update({ lifted_at: now })
+    .eq("user_id", userId)
+    .is("lifted_at", null);
   if (error) throw new Error(error.message);
-  if (userId) await logModAction(userId, "unban", `ban #${banId} lifted`, by);
+
+  const { data: lifted } = await db
+    .from("bans")
+    .select("id")
+    .eq("user_id", userId)
+    .is("lifted_at", now);
+  const count = (lifted ?? []).length;
+  await logModAction(userId, "unban", `${count} active ban(s) lifted`, by);
   revalidatePath("/", "layout");
 }

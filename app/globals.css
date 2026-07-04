@@ -1,6 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap");
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-ink: #16161e;
   --color-cream: #fffaf7;
@@ -17,11 +19,41 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.dark body {
+  background: #12121e;
+  color: #e8e8f0;
+}
+
+.dark .text-ink { color: #e8e8f0; }
+.dark .text-ink\/40 { color: color-mix(in srgb, #e8e8f0 40%, transparent); }
+.dark .text-ink\/50 { color: color-mix(in srgb, #e8e8f0 50%, transparent); }
+.dark .text-ink\/60 { color: color-mix(in srgb, #e8e8f0 60%, transparent); }
+.dark .text-ink\/70 { color: color-mix(in srgb, #e8e8f0 70%, transparent); }
+
+.dark .border-ink { border-color: #3a3a50; }
+.dark .border-ink\/20 { border-color: color-mix(in srgb, #3a3a50 20%, transparent); }
+.dark .divide-ink\/10 > :not(:last-child) { border-color: color-mix(in srgb, #3a3a50 10%, transparent); }
+
+.dark .bg-cream { background-color: #12121e; }
+.dark .bg-parch { background-color: #1c1c30; }
+.dark .bg-ink { background-color: #2a2a40; }
+.dark .bg-ink\/10 { background-color: color-mix(in srgb, #2a2a40 10%, transparent); }
+
+@media (hover: hover) {
+  .dark .hover\:bg-cream:hover { background-color: #1c1c30; }
+  .dark .hover\:border-ink:hover { border-color: #3a3a50; }
+}
+
 .pixl-card {
   background: #ffffff;
   border: 2px solid #16161e;
   border-right-width: 8px;
   border-bottom-width: 8px;
+}
+
+.dark .pixl-card {
+  background: #1c1c30;
+  border-color: #3a3a50;
 }
 
 .pixl-btn {
@@ -41,6 +73,16 @@ body {
   transform: translate(3px, 3px);
   border-right-width: 2px;
   border-bottom-width: 2px;
+}
+
+.dark .pixl-btn {
+  border-color: #3a3a50;
+}
+
+.dark .pixl-input {
+  background: #1c1c30;
+  border-color: #3a3a50;
+  color: #e8e8f0;
 }
 
 .pixl-input {

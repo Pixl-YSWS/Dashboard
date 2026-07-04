@@ -23,7 +23,7 @@ export default async function PlayersPage({
           placeholder="Search display names…"
           className="pixl-input w-72"
         />
-        <button className="pixl-btn bg-ink text-white">Search</button>
+        <button className="pixl-btn bg-ink dark:bg-gray-700 text-white">Search</button>
       </form>
       <div className="pixl-card overflow-x-auto">
         <table className="w-full text-sm">
@@ -57,7 +57,7 @@ export default async function PlayersPage({
                       banned
                     </span>
                   ) : (
-                    <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-mint/30">
+                    <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-mint/30 dark:bg-mint/20">
                       ok
                     </span>
                   )}

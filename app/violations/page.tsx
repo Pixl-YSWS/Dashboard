@@ -24,7 +24,7 @@ export default async function ViolationsPage() {
             <div className="flex items-center gap-3 flex-wrap">
               <span
                 className={`font-pixel text-sm px-2 py-0.5 border-2 border-ink ${
-                  v.kind === "chat" ? "bg-tang/20" : "bg-brand/15"
+                  v.kind === "chat" ? "bg-tang/20 dark:bg-tang/30" : "bg-brand/15 dark:bg-brand/30"
                 }`}
               >
                 {v.kind}

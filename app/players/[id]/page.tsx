@@ -49,8 +49,8 @@ export default async function PlayerPage({
       <div className="pixl-card p-4 mb-8 flex flex-col gap-3">
         <div className="font-pixel text-xl">Moderate</div>
         <WarnForm userId={user.id} />
-        <BanForm userId={user.id} />
-        {activeBan && <LiftBanForm banId={activeBan.id} userId={user.id} />}
+        <BanForm userId={user.id} isBanned={!!activeBan} />
+        {activeBan && <LiftBanForm userId={user.id} />}
       </div>
 
       <Section title={`Projects (${projects.length})`}>
@@ -92,7 +92,7 @@ export default async function PlayerPage({
           )}
           {violations.map((v) => (
             <div key={v.id} className="p-3 flex gap-3 items-baseline">
-              <span className="font-pixel text-xs px-2 border-2 border-ink bg-tang/20">
+              <span className="font-pixel text-xs px-2 border-2 border-ink bg-tang/20 dark:bg-tang/30">
                 {v.kind}
               </span>
               <span className="text-sm flex-1 break-words">{v.content}</span>
