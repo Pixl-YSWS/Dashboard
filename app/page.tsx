@@ -21,7 +21,7 @@ export default async function Overview() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
         {cards.map((c) => (
           <div key={c.label} className="pixl-card p-5">
-            <div className={`font-pixel text-5xl ${c.color}`}>{c.value}</div>
+            <div className={`text-5xl font-bold ${c.color}`}>{c.value}</div>
             <div className="text-sm font-bold text-ink/60 mt-1">{c.label}</div>
           </div>
         ))}
