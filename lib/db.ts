@@ -72,6 +72,39 @@ export interface ModActionRow {
   created_at: string;
 }
 
+export interface AdminRow {
+  slack_id: string;
+  name: string;
+  permissions: string[];
+  added_by: string;
+  created_at: string;
+}
+
+export async function getAdmin(slackId: string): Promise<AdminRow | null> {
+  const { data, error } = await db
+    .from("admins")
+    .select("*")
+    .eq("slack_id", slackId)
+    .maybeSingle();
+  if (error) {
+    console.error("getAdmin", error.message);
+    return null;
+  }
+  return (data as AdminRow) ?? null;
+}
+
+export async function listAdmins(): Promise<AdminRow[]> {
+  const { data, error } = await db
+    .from("admins")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listAdmins", error.message);
+    return [];
+  }
+  return (data ?? []) as AdminRow[];
+}
+
 export function banIsActive(b: BanRow): boolean {
   if (b.lifted_at) return false;
   if (!b.expires_at) return true;

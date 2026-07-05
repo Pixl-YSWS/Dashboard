@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { isAllowed, setSessionCookie } from "@/lib/session";
+import { getAdmin } from "@/lib/db";
 
 interface SlackIdClaims {
   "https://slack.com/user_id"?: string;
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest) {
   }
   const slackId = claims["https://slack.com/user_id"];
   if (!slackId) return fail("claims");
-  if (!isAllowed(slackId)) return fail("denied");
+  if (!isAllowed(slackId) && !(await getAdmin(slackId))) return fail("denied");
 
   await setSessionCookie(slackId, claims.name ?? slackId);
   return NextResponse.redirect(`${process.env.BASE_URL}/`);

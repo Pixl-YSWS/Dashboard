@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { getSession } from "@/lib/session";
+import { getAccess } from "@/lib/guard";
 
 export const metadata: Metadata = {
   title: "Pixl — internal",
@@ -14,7 +14,8 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
+  const access = await getAccess();
+  const session = access?.session ?? null;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -75,6 +76,22 @@ export default async function RootLayout({
                 >
                   Violations
                 </Link>
+                {(access?.isSuper || access?.perms.has("notify")) && (
+                  <Link
+                    href="/notify"
+                    className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                  >
+                    Notify
+                  </Link>
+                )}
+                {access?.isSuper && (
+                  <Link
+                    href="/admins"
+                    className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                  >
+                    Sub-admins
+                  </Link>
+                )}
               </nav>
               <div className="mt-auto p-4 border-t-2 border-ink text-xs">
                 <div className="font-bold truncate">{session.name}</div>

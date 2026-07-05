@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { banPlayer, liftBan, warnPlayer } from "@/app/actions";
+import { banPlayer, liftBan, sendNotification, warnPlayer } from "@/app/actions";
 
 function SubmitBtn({
   children,
@@ -70,6 +70,29 @@ export function BanForm({
       <SubmitBtn className="pixl-btn bg-brand text-white text-sm" disabled={isBanned}>
         {isBanned ? "Already banned" : "Ban"}
       </SubmitBtn>
+    </form>
+  );
+}
+
+export function NotifyForm({ userId }: { userId: string }) {
+  return (
+    <form action={sendNotification} className="flex gap-2 items-center flex-wrap">
+      <input type="hidden" name="userId" value={userId} />
+      <input
+        name="title"
+        placeholder="Title"
+        maxLength={100}
+        className="pixl-input text-sm w-40"
+        required
+      />
+      <input
+        name="body"
+        placeholder="Message"
+        maxLength={500}
+        className="pixl-input text-sm flex-1 min-w-40"
+        required
+      />
+      <SubmitBtn className="pixl-btn bg-mint text-ink text-sm">Notify</SubmitBtn>
     </form>
   );
 }

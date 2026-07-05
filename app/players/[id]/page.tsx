@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/guard";
 import { banIsActive, getPlayer } from "@/lib/db";
-import { BanForm, LiftBanForm, WarnForm } from "@/app/_components/Moderate";
+import { BanForm, LiftBanForm, NotifyForm, WarnForm } from "@/app/_components/Moderate";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,8 @@ export default async function PlayerPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  const access = await requireAdmin();
+  const can = (p: string) => access.isSuper || access.perms.has(p);
   const { id } = await params;
   const data = await getPlayer(id);
   if (!data) notFound();
@@ -48,9 +49,15 @@ export default async function PlayerPage({
 
       <div className="pixl-card p-4 mb-8 flex flex-col gap-3">
         <div className="font-pixel text-xl">Moderate</div>
-        <WarnForm userId={user.id} />
-        <BanForm userId={user.id} isBanned={!!activeBan} />
-        {activeBan && <LiftBanForm userId={user.id} />}
+        {can("warn") && <WarnForm userId={user.id} />}
+        {can("ban") && <BanForm userId={user.id} isBanned={!!activeBan} />}
+        {can("ban") && activeBan && <LiftBanForm userId={user.id} />}
+        {can("notify") && <NotifyForm userId={user.id} />}
+        {!can("warn") && !can("ban") && !can("notify") && (
+          <div className="text-sm text-ink/50">
+            You don&apos;t have any moderation permissions.
+          </div>
+        )}
       </div>
 
       <Section title={`Projects (${projects.length})`}>
