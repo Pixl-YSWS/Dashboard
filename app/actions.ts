@@ -7,7 +7,7 @@ import { dmUser } from "@/lib/slack";
 import { requirePerm, requireSuper, ALL_PERMISSIONS, type AdminAccess } from "@/lib/guard";
 
 const DEFAULT_WARNING =
-  "Hey! A heads-up from the Pixl team: keep chat messages and display names friendly. Continued violations can lead to a ban from the game.";
+  "Please keep chat messages and display names appropriate. Continued violations may result in a ban from Pixl.";
 
 function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
@@ -33,8 +33,13 @@ export async function warnPlayer(formData: FormData): Promise<void> {
     .eq("id", userId)
     .single();
   if (data?.slack_id) {
+    const dm = [
+      "You've received a moderation warning from Pixl.",
+      message,
+      "If you believe this is a mistake, reach out to the Pixl team.",
+    ].join("\n\n");
     try {
-      await dmUser(data.slack_id, `⚠️ *Pixl moderation* — ${message}`);
+      await dmUser(data.slack_id, dm);
     } catch (e) {
       console.error("warn DM failed", e);
     }
@@ -95,20 +100,35 @@ export async function liftBan(formData: FormData): Promise<void> {
   const userId = String(formData.get("userId") ?? "");
   if (!userId) return;
   const now = new Date().toISOString();
-  const { error } = await db
+  const { data: lifted, error } = await db
     .from("bans")
     .update({ lifted_at: now })
     .eq("user_id", userId)
-    .is("lifted_at", null);
+    .is("lifted_at", null)
+    .select("id");
   if (error) throw new Error(error.message);
 
-  const { data: lifted } = await db
-    .from("bans")
-    .select("id")
-    .eq("user_id", userId)
-    .is("lifted_at", now);
   const count = (lifted ?? []).length;
   await logModAction(userId, "unban", `${count} active ban(s) lifted`, by);
+
+  if (count > 0) {
+    const { data } = await db
+      .from("users")
+      .select("slack_id")
+      .eq("id", userId)
+      .single();
+    if (data?.slack_id) {
+      const dm = [
+        "Your ban from Pixl has been lifted. You're welcome to rejoin the game.",
+        "Please keep the community guidelines in mind going forward.",
+      ].join("\n\n");
+      try {
+        await dmUser(data.slack_id, dm);
+      } catch (e) {
+        console.error("unban DM failed", e);
+      }
+    }
+  }
   revalidatePath("/", "layout");
 }
 
