@@ -73,14 +73,15 @@ export async function banPlayer(formData: FormData): Promise<void> {
     .eq("id", userId)
     .single();
   if (data?.slack_id) {
-    const until = expiresAt
-      ? `until ${new Date(expiresAt).toUTCString()}`
-      : "permanently";
+    const lines = [
+      expiresAt
+        ? `You've been temporarily banned from Pixl until ${new Date(expiresAt).toUTCString()}.`
+        : "You've been permanently banned from Pixl.",
+    ];
+    if (reason) lines.push(`Reason: ${reason}`);
+    lines.push("If you believe this is a mistake, reach out to the Pixl team.");
     try {
-      await dmUser(
-        data.slack_id,
-        `🚫 *Pixl moderation* — you've been banned ${until}.${reason ? ` Reason: ${reason}` : ""}`,
-      );
+      await dmUser(data.slack_id, lines.join("\n\n"));
     } catch (e) {
       console.error("ban DM failed", e);
     }

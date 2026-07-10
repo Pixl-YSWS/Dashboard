@@ -13,6 +13,26 @@
   --font-pixel: "Pixelify Sans", sans-serif;
 }
 
+:root {
+  --chart-players: #ec3750;
+  --chart-projects: #4f46e5;
+  --chart-violations: #ea580c;
+  --chart-grid: #ececf2;
+  --chart-surface: #ffffff;
+  --chart-cross: rgba(22, 22, 30, 0.35);
+  --chart-text: rgba(22, 22, 30, 0.55);
+}
+
+.dark {
+  --chart-players: #ec3750;
+  --chart-projects: #6366f1;
+  --chart-violations: #dd6b20;
+  --chart-grid: #2a2a40;
+  --chart-surface: #1c1c30;
+  --chart-cross: rgba(232, 232, 240, 0.35);
+  --chart-text: rgba(232, 232, 240, 0.55);
+}
+
 body {
   background: #fffaf7;
   color: #16161e;

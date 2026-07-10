@@ -1,18 +1,31 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/guard";
-import { getStats, listViolations } from "@/lib/db";
+import { getStats, getGrowthSeries, listViolations } from "@/lib/db";
+import { GrowthChart } from "@/app/_components/GrowthChart";
 
 export const dynamic = "force-dynamic";
 
-export default async function Overview() {
+const RANGES = [14, 30, 60, 90];
+
+export default async function Overview({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
   await requireAdmin();
-  const [stats, recent] = await Promise.all([getStats(), listViolations(8)]);
+  const { range } = await searchParams;
+  const days = RANGES.includes(Number(range)) ? Number(range) : 30;
+  const [stats, growth, recent] = await Promise.all([
+    getStats(),
+    getGrowthSeries(days),
+    listViolations(8),
+  ]);
 
   const cards = [
-    { label: "Players", value: stats.players, color: "text-ink" },
-    { label: "Projects", value: stats.projects, color: "text-ink" },
-    { label: "Violations (7d)", value: stats.violations7d, color: "text-tang" },
-    { label: "Active bans", value: stats.activeBans, color: "text-brand" },
+    { label: "Players", value: stats.players, color: "text-ink", delta: stats.playersWeek },
+    { label: "Projects", value: stats.projects, color: "text-ink", delta: stats.projectsWeek },
+    { label: "Violations (7d)", value: stats.violations7d, color: "text-tang", delta: null },
+    { label: "Active bans", value: stats.activeBans, color: "text-brand", delta: null },
   ];
 
   return (
@@ -22,9 +35,44 @@ export default async function Overview() {
         {cards.map((c) => (
           <div key={c.label} className="pixl-card p-5">
             <div className={`text-5xl font-bold ${c.color}`}>{c.value}</div>
-            <div className="text-sm font-bold text-ink/60 mt-1">{c.label}</div>
+            <div className="text-sm font-bold text-ink/60 mt-1">
+              {c.label}
+              {c.delta !== null && c.delta > 0 && (
+                <span className="text-green-600 dark:text-green-400 ml-2">
+                  +{c.delta} this week
+                </span>
+              )}
+            </div>
           </div>
         ))}
+      </div>
+
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <h2 className="font-pixel text-3xl text-ink mr-3">Growth</h2>
+        {RANGES.map((r) => (
+          <Link
+            key={r}
+            href={r === 30 ? "/" : `/?range=${r}`}
+            className={`text-xs font-bold px-2.5 py-1 border-2 ${
+              r === days
+                ? "border-ink bg-ink text-white dark:bg-gray-700"
+                : "border-ink/20 text-ink/60 hover:border-ink hover:text-ink"
+            }`}
+          >
+            {r}d
+          </Link>
+        ))}
+      </div>
+      <div className="grid lg:grid-cols-2 gap-5 mb-10">
+        <div className="pixl-card p-5">
+          <GrowthChart title="Players" series="players" kind="cumulative" points={growth.players} />
+        </div>
+        <div className="pixl-card p-5">
+          <GrowthChart title="Projects" series="projects" kind="cumulative" points={growth.projects} />
+        </div>
+        <div className="pixl-card p-5 lg:col-span-2">
+          <GrowthChart title="Violations" series="violations" kind="daily" points={growth.violations} />
+        </div>
       </div>
 
       <div className="flex items-baseline justify-between mb-3">

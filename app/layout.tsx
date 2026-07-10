@@ -71,10 +71,22 @@ export default async function RootLayout({
                   Players
                 </Link>
                 <Link
+                  href="/projects"
+                  className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                >
+                  Projects
+                </Link>
+                <Link
                   href="/violations"
                   className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
                 >
                   Violations
+                </Link>
+                <Link
+                  href="/bans"
+                  className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                >
+                  Bans
                 </Link>
                 {(access?.isSuper || access?.perms.has("notify")) && (
                   <Link

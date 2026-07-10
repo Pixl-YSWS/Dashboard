@@ -121,7 +121,7 @@ async function count(table: string, filter?: (q: any) => any): Promise<number> {
 
 export async function getStats() {
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [players, projects, violations, violations7d, activeBans] =
+  const [players, projects, violations, violations7d, activeBans, playersWeek, projectsWeek] =
     await Promise.all([
       count("users"),
       count("projects"),
@@ -132,8 +132,106 @@ export async function getStats() {
           .is("lifted_at", null)
           .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
       ),
+      count("users", (q) => q.gte("created_at", weekAgo)),
+      count("projects", (q) => q.gte("created_at", weekAgo)),
     ]);
-  return { players, projects, violations, violations7d, activeBans };
+  return { players, projects, violations, violations7d, activeBans, playersWeek, projectsWeek };
+}
+
+export interface GrowthPoint {
+  date: string;
+  total: number;
+  added: number;
+}
+
+async function fetchCreatedAts(table: string): Promise<string[]> {
+  const out: string[] = [];
+  const page = 1000;
+  for (let from = 0; ; from += page) {
+    const { data, error } = await db
+      .from(table)
+      .select("created_at")
+      .order("created_at", { ascending: true })
+      .range(from, from + page - 1);
+    if (error) {
+      console.error("fetchCreatedAts", table, error.message);
+      break;
+    }
+    const rows = data ?? [];
+    for (const r of rows) out.push(r.created_at as string);
+    if (rows.length < page) break;
+  }
+  return out;
+}
+
+function bucketDaily(dates: string[], days: number): GrowthPoint[] {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const start = today.getTime() - (days - 1) * 86400_000;
+  const counts = new Map<string, number>();
+  let before = 0;
+  for (const iso of dates) {
+    if (new Date(iso).getTime() < start) {
+      before++;
+      continue;
+    }
+    const key = new Date(iso).toISOString().slice(0, 10);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const points: GrowthPoint[] = [];
+  let total = before;
+  for (let i = 0; i < days; i++) {
+    const key = new Date(start + i * 86400_000).toISOString().slice(0, 10);
+    const added = counts.get(key) ?? 0;
+    total += added;
+    points.push({ date: key, total, added });
+  }
+  return points;
+}
+
+export async function getGrowthSeries(days = 30) {
+  const [users, projects, violations] = await Promise.all([
+    fetchCreatedAts("users"),
+    fetchCreatedAts("projects"),
+    fetchCreatedAts("violations"),
+  ]);
+  return {
+    players: bucketDaily(users, days),
+    projects: bucketDaily(projects, days),
+    violations: bucketDaily(violations, days),
+  };
+}
+
+export interface ProjectWithUser extends ProjectRow {
+  users?: Pick<UserRow, "id" | "display_name"> | null;
+}
+
+export async function listProjects(query?: string): Promise<ProjectWithUser[]> {
+  let q = db
+    .from("projects")
+    .select("*, users(id, display_name)")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (query) q = q.ilike("name", `%${query}%`);
+  const { data, error } = await q;
+  if (error) {
+    console.error("listProjects", error.message);
+    return [];
+  }
+  return (data ?? []) as ProjectWithUser[];
+}
+
+export async function listBans(): Promise<BanRow[]> {
+  const { data, error } = await db
+    .from("bans")
+    .select("*, users(id, display_name)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) {
+    console.error("listBans", error.message);
+    return [];
+  }
+  return (data ?? []) as BanRow[];
 }
 
 export async function listViolations(limit = 100): Promise<ViolationRow[]> {
