@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/guard";
+import { requirePagePerm } from "@/lib/guard";
 import { banIsActive, getPlayer } from "@/lib/db";
 import { BanForm, LiftBanForm, NotifyForm, WarnForm } from "@/app/_components/Moderate";
 
@@ -20,7 +20,7 @@ export default async function PlayerPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const access = await requireAdmin();
+  const access = await requirePagePerm(["warn", "ban"]);
   const can = (p: string) => access.isSuper || access.perms.has(p);
   const { id } = await params;
   const data = await getPlayer(id);

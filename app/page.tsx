@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/guard";
+import { requireAdmin, canView } from "@/lib/guard";
 import { getStats, getGrowthSeries, listViolations } from "@/lib/db";
 import { GrowthChart } from "@/app/_components/GrowthChart";
 
@@ -12,20 +12,25 @@ export default async function Overview({
 }: {
   searchParams: Promise<{ range?: string }>;
 }) {
-  await requireAdmin();
+  const access = await requireAdmin();
+  const showModeration = canView(access, ["warn", "ban"]);
   const { range } = await searchParams;
   const days = RANGES.includes(Number(range)) ? Number(range) : 30;
   const [stats, growth, recent] = await Promise.all([
     getStats(),
     getGrowthSeries(days),
-    listViolations(8),
+    showModeration ? listViolations(8) : Promise.resolve([]),
   ]);
 
   const cards = [
     { label: "Players", value: stats.players, color: "text-ink", delta: stats.playersWeek },
     { label: "Projects", value: stats.projects, color: "text-ink", delta: stats.projectsWeek },
-    { label: "Violations (7d)", value: stats.violations7d, color: "text-tang", delta: null },
-    { label: "Active bans", value: stats.activeBans, color: "text-brand", delta: null },
+    ...(showModeration
+      ? [
+          { label: "Violations (7d)", value: stats.violations7d, color: "text-tang", delta: null },
+          { label: "Active bans", value: stats.activeBans, color: "text-brand", delta: null },
+        ]
+      : []),
   ];
 
   return (
@@ -70,45 +75,51 @@ export default async function Overview({
         <div className="pixl-card p-5">
           <GrowthChart title="Projects" series="projects" kind="cumulative" points={growth.projects} />
         </div>
-        <div className="pixl-card p-5 lg:col-span-2">
-          <GrowthChart title="Violations" series="violations" kind="daily" points={growth.violations} />
-        </div>
+        {showModeration && (
+          <div className="pixl-card p-5 lg:col-span-2">
+            <GrowthChart title="Violations" series="violations" kind="daily" points={growth.violations} />
+          </div>
+        )}
       </div>
 
-      <div className="flex items-baseline justify-between mb-3">
-        <h2 className="font-pixel text-3xl text-ink">Latest violations</h2>
-        <Link href="/violations" className="text-brand font-bold text-sm underline">
-          see all →
-        </Link>
-      </div>
-      <div className="pixl-card divide-y-2 divide-ink/10">
-        {recent.length === 0 && (
-          <div className="p-5 text-ink/50 text-sm">Nothing yet — squeaky clean.</div>
-        )}
-        {recent.map((v) => (
-          <div key={v.id} className="p-4 flex items-center gap-4">
-            <span
-              className={`font-pixel text-sm px-2 py-0.5 border-2 border-ink ${
-                v.kind === "chat" ? "bg-tang/20 dark:bg-tang/30" : "bg-brand/15 dark:bg-brand/30"
-              }`}
-            >
-              {v.kind}
-            </span>
-            <div className="flex-1 min-w-0">
-              <Link
-                href={`/players/${v.user_id}`}
-                className="font-bold hover:text-brand"
-              >
-                {v.users?.display_name ?? v.user_id}
-              </Link>
-              <div className="text-sm text-ink/70 truncate">“{v.content}”</div>
-            </div>
-            <div className="text-xs text-ink/50 shrink-0">
-              {new Date(v.created_at).toLocaleString()}
-            </div>
+      {showModeration && (
+        <>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="font-pixel text-3xl text-ink">Latest violations</h2>
+            <Link href="/violations" className="text-brand font-bold text-sm underline">
+              see all →
+            </Link>
           </div>
-        ))}
-      </div>
+          <div className="pixl-card divide-y-2 divide-ink/10">
+            {recent.length === 0 && (
+              <div className="p-5 text-ink/50 text-sm">Nothing yet — squeaky clean.</div>
+            )}
+            {recent.map((v) => (
+              <div key={v.id} className="p-4 flex items-center gap-4">
+                <span
+                  className={`font-pixel text-sm px-2 py-0.5 border-2 border-ink ${
+                    v.kind === "chat" ? "bg-tang/20 dark:bg-tang/30" : "bg-brand/15 dark:bg-brand/30"
+                  }`}
+                >
+                  {v.kind}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <Link
+                    href={`/players/${v.user_id}`}
+                    className="font-bold hover:text-brand"
+                  >
+                    {v.users?.display_name ?? v.user_id}
+                  </Link>
+                  <div className="text-sm text-ink/70 truncate">“{v.content}”</div>
+                </div>
+                <div className="text-xs text-ink/50 shrink-0">
+                  {new Date(v.created_at).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

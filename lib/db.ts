@@ -51,6 +51,10 @@ export interface ProjectRow {
   repo_url: string | null;
   demo_url: string | null;
   hackatime_projects: string[];
+  status: string;
+  type: string;
+  review_note: string;
+  shipped_at: string | null;
   created_at: string;
 }
 
@@ -204,6 +208,45 @@ export async function getGrowthSeries(days = 30) {
 
 export interface ProjectWithUser extends ProjectRow {
   users?: Pick<UserRow, "id" | "display_name"> | null;
+}
+
+export interface ShippedProject extends ProjectWithUser {
+  hours: number;
+  entries: number;
+}
+
+// Review queue: shipped projects oldest-first, with journal effort totals.
+export async function listShippedProjects(): Promise<ShippedProject[]> {
+  const { data, error } = await db
+    .from("projects")
+    .select("*, users(id, display_name)")
+    .eq("status", "shipped")
+    .order("shipped_at", { ascending: true })
+    .limit(200);
+  if (error) {
+    console.error("listShippedProjects", error.message);
+    return [];
+  }
+  const projects = (data ?? []) as ShippedProject[];
+  if (projects.length === 0) return [];
+
+  const { data: journals } = await db
+    .from("project_journals")
+    .select("project_id, hours")
+    .in("project_id", projects.map((p) => p.id));
+  const totals = new Map<number, { h: number; n: number }>();
+  for (const j of journals ?? []) {
+    const cur = totals.get(j.project_id as number) ?? { h: 0, n: 0 };
+    cur.h += Number(j.hours) || 0;
+    cur.n += 1;
+    totals.set(j.project_id as number, cur);
+  }
+  for (const p of projects) {
+    const cur = totals.get(p.id) ?? { h: 0, n: 0 };
+    p.hours = Math.round(cur.h * 10) / 10;
+    p.entries = cur.n;
+  }
+  return projects;
 }
 
 export async function listProjects(query?: string): Promise<ProjectWithUser[]> {

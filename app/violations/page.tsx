@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/guard";
+import { requirePagePerm } from "@/lib/guard";
 import { listViolations } from "@/lib/db";
 import { BanForm, WarnForm } from "@/app/_components/Moderate";
 
 export const dynamic = "force-dynamic";
 
 export default async function ViolationsPage() {
-  await requireAdmin();
+  await requirePagePerm(["warn", "ban"]);
   const violations = await listViolations(200);
 
   return (

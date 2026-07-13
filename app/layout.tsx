@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { getAccess } from "@/lib/guard";
+import { getAccess, canView } from "@/lib/guard";
 
 export const metadata: Metadata = {
   title: "Pixl — internal",
@@ -64,30 +64,46 @@ export default async function RootLayout({
                 >
                   Overview
                 </Link>
-                <Link
-                  href="/players"
-                  className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
-                >
-                  Players
-                </Link>
-                <Link
-                  href="/projects"
-                  className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
-                >
-                  Projects
-                </Link>
-                <Link
-                  href="/violations"
-                  className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
-                >
-                  Violations
-                </Link>
-                <Link
-                  href="/bans"
-                  className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
-                >
-                  Bans
-                </Link>
+                {access && canView(access, ["warn", "ban"]) && (
+                  <Link
+                    href="/players"
+                    className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                  >
+                    Players
+                  </Link>
+                )}
+                {access && canView(access, ["review", "warn", "ban"]) && (
+                  <Link
+                    href="/projects"
+                    className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                  >
+                    Projects
+                  </Link>
+                )}
+                {access && canView(access, ["review"]) && (
+                  <Link
+                    href="/review"
+                    className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                  >
+                    Review
+                  </Link>
+                )}
+                {access && canView(access, ["warn", "ban"]) && (
+                  <>
+                    <Link
+                      href="/violations"
+                      className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                    >
+                      Violations
+                    </Link>
+                    <Link
+                      href="/bans"
+                      className="px-3 py-2 hover:bg-white dark:hover:bg-gray-800 border-2 border-transparent hover:border-ink"
+                    >
+                      Bans
+                    </Link>
+                  </>
+                )}
                 {(access?.isSuper || access?.perms.has("notify")) && (
                   <Link
                     href="/notify"

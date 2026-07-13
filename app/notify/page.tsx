@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/guard";
+import { requirePagePerm } from "@/lib/guard";
 import { sendNotification } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export default async function NotifyPage({
 }: {
   searchParams: Promise<{ sent?: string; error?: string }>;
 }) {
-  const access = await requireAdmin();
+  const access = await requirePagePerm(["notify"]);
   if (!access.isSuper && !access.perms.has("notify")) redirect("/");
   const { sent, error } = await searchParams;
 

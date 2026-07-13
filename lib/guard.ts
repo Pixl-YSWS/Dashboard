@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession, isAllowed, type AdminSession } from "./session";
 import { getAdmin } from "./db";
 
-export const ALL_PERMISSIONS = ["warn", "ban", "notify"] as const;
+export const ALL_PERMISSIONS = ["warn", "ban", "notify", "review"] as const;
 export type Permission = (typeof ALL_PERMISSIONS)[number];
 
 export interface AdminAccess {
@@ -26,6 +26,18 @@ export async function getAccess(): Promise<AdminAccess | null> {
 export async function requireAdmin(): Promise<AdminAccess> {
   const access = await getAccess();
   if (!access) redirect("/login");
+  return access;
+}
+
+export function canView(access: AdminAccess, perms: Permission[]): boolean {
+  return access.isSuper || perms.some((p) => access.perms.has(p));
+}
+
+// Page-level gate: sub-admins only reach pages matching one of their
+// permissions; everyone else bounces back to the overview.
+export async function requirePagePerm(perms: Permission[]): Promise<AdminAccess> {
+  const access = await requireAdmin();
+  if (!canView(access, perms)) redirect("/");
   return access;
 }
 

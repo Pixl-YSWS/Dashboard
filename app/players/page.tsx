@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/guard";
+import { requirePagePerm } from "@/lib/guard";
 import { listPlayers } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,7 @@ export default async function PlayersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  await requireAdmin();
+  await requirePagePerm(["warn", "ban"]);
   const { q } = await searchParams;
   const players = await listPlayers(q);
 

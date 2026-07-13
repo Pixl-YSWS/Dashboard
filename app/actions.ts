@@ -48,6 +48,59 @@ export async function warnPlayer(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+export async function reviewProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const verdict = String(formData.get("verdict") ?? "");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 1000);
+  if (!projectId || (verdict !== "approved" && verdict !== "needs_changes")) return;
+  if (verdict === "needs_changes" && !note)
+    redirect(`/review?error=${encodeURIComponent("A note is required when sending a project back.")}`);
+
+  const { data: project, error } = await db
+    .from("projects")
+    .update({ status: verdict, review_note: note })
+    .eq("id", projectId)
+    .eq("status", "shipped")
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("reviewProject failed", error?.message);
+    return;
+  }
+
+  const approved = verdict === "approved";
+  const title = approved ? "Project approved!" : "Project needs changes";
+  const body = approved
+    ? `"${project.name}" passed review. Congrats on shipping!${note ? `\n\nReviewer note: ${note}` : ""}`
+    : `"${project.name}" was sent back by a reviewer:\n\n${note}\n\nUpdate your project and ship it again.`;
+  const { error: notifyError } = await db
+    .from("notifications")
+    .insert({ user_id: project.user_id, title, body });
+  if (notifyError) console.error("review notification failed", notifyError.message);
+
+  const { data: owner } = await db
+    .from("users")
+    .select("slack_id")
+    .eq("id", project.user_id)
+    .single();
+  if (owner?.slack_id) {
+    try {
+      await dmUser(owner.slack_id, `${title}\n\n${body}`);
+    } catch (e) {
+      console.error("review DM failed", e);
+    }
+  }
+  await logModAction(
+    project.user_id,
+    approved ? "project_approved" : "project_needs_changes",
+    `${project.name}${note ? `: ${note}` : ""}`,
+    by,
+  );
+  revalidatePath("/review");
+}
+
 export async function banPlayer(formData: FormData): Promise<void> {
   const access = await requirePerm("ban");
   const by = actorName(access);

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/guard";
+import { requirePagePerm } from "@/lib/guard";
 import { listBans, banIsActive } from "@/lib/db";
 import { LiftBanForm } from "@/app/_components/Moderate";
 
 export const dynamic = "force-dynamic";
 
 export default async function BansPage() {
-  await requireAdmin();
+  await requirePagePerm(["warn", "ban"]);
   const bans = await listBans();
 
   return (
