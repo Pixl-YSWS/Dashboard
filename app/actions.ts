@@ -71,10 +71,11 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
 
   const approved = verdict === "approved";
+  const reviewer = access.session.name;
   const title = approved ? "Project approved!" : "Project needs changes";
   const body = approved
-    ? `"${project.name}" passed review. Congrats on shipping!${note ? `\n\nReviewer note: ${note}` : ""}`
-    : `"${project.name}" was sent back by a reviewer:\n\n${note}\n\nUpdate your project and ship it again.`;
+    ? `"${project.name}" passed review — approved by ${reviewer}. Congrats on shipping!${note ? `\n\nReviewer note: ${note}` : ""}`
+    : `"${project.name}" was sent back by ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`;
   const { error: notifyError } = await db
     .from("notifications")
     .insert({ user_id: project.user_id, title, body });

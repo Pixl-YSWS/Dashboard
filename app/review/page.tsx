@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
-import { listShippedProjects } from "@/lib/db";
-import { reviewProject } from "@/app/actions";
+import { listShippedProjects, listReviewLog } from "@/lib/db";
+import { ReviewForm } from "@/app/_components/ReviewForm";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +19,12 @@ export default async function ReviewPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  await requirePagePerm(["review"]);
+  const access = await requirePagePerm(["review"]);
   const { error } = await searchParams;
-  const queue = await listShippedProjects();
+  const [queue, log] = await Promise.all([
+    listShippedProjects(),
+    access.isSuper ? listReviewLog() : Promise.resolve([]),
+  ]);
 
   return (
     <div>
@@ -99,32 +102,45 @@ export default async function ReviewPage({
                 </div>
               )}
 
-              <form action={reviewProject} className="mt-4 flex flex-wrap gap-2 items-start">
-                <input type="hidden" name="projectId" value={p.id} />
-                <textarea
-                  name="note"
-                  placeholder="Reviewer note (required to send back, optional on approve)"
-                  className="pixl-input flex-1 min-w-64 text-sm"
-                  rows={2}
-                />
-                <button
-                  name="verdict"
-                  value="approved"
-                  className="pixl-btn bg-emerald-700 text-white"
-                >
-                  Approve
-                </button>
-                <button
-                  name="verdict"
-                  value="needs_changes"
-                  className="pixl-btn bg-red-700 text-white"
-                >
-                  Send back
-                </button>
-              </form>
+              <ReviewForm projectId={p.id} />
             </div>
           ))}
         </div>
+      )}
+
+      {access.isSuper && (
+        <>
+          <h2 className="font-pixel text-3xl text-ink mt-10 mb-3">Review log</h2>
+          <div className="pixl-card divide-y-2 divide-ink/10">
+            {log.length === 0 && (
+              <div className="p-5 text-ink/50 text-sm">No verdicts yet.</div>
+            )}
+            {log.map((r) => (
+              <div key={r.id} className="p-4 flex items-center gap-4 text-sm">
+                <span
+                  className={`font-pixel px-2 py-0.5 border-2 border-ink shrink-0 ${
+                    r.action === "project_approved"
+                      ? "bg-emerald-600/20 dark:bg-emerald-600/30"
+                      : "bg-brand/15 dark:bg-brand/30"
+                  }`}
+                >
+                  {r.action === "project_approved" ? "approved" : "sent back"}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="font-bold">{r.actor}</span>
+                  {" → "}
+                  <Link href={`/players/${r.user_id}`} className="font-bold hover:text-brand">
+                    {r.player_name}
+                  </Link>
+                  <div className="text-ink/70 truncate">{r.detail}</div>
+                </div>
+                <div className="text-xs text-ink/50 shrink-0">
+                  {new Date(r.created_at).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

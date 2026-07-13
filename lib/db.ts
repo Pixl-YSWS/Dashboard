@@ -249,6 +249,32 @@ export async function listShippedProjects(): Promise<ShippedProject[]> {
   return projects;
 }
 
+export interface ReviewLogRow extends ModActionRow {
+  player_name: string;
+}
+
+// Verdict history for the review log, newest first.
+export async function listReviewLog(limit = 50): Promise<ReviewLogRow[]> {
+  const { data, error } = await db
+    .from("mod_actions")
+    .select("*")
+    .in("action", ["project_approved", "project_needs_changes"])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listReviewLog", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as ReviewLogRow[];
+  const ids = [...new Set(rows.map((r) => r.user_id))];
+  if (ids.length > 0) {
+    const { data: users } = await db.from("users").select("id, display_name").in("id", ids);
+    const names = new Map((users ?? []).map((u) => [u.id as string, u.display_name as string]));
+    for (const r of rows) r.player_name = names.get(r.user_id) ?? r.user_id;
+  }
+  return rows;
+}
+
 export async function listProjects(query?: string): Promise<ProjectWithUser[]> {
   let q = db
     .from("projects")
