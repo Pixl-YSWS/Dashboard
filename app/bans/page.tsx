@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
-import { listBans, banIsActive } from "@/lib/db";
+import { listBans, listBanLog, banIsActive } from "@/lib/db";
 import { LiftBanForm } from "@/app/_components/Moderate";
 
 export const dynamic = "force-dynamic";
 
 export default async function BansPage() {
   await requirePagePerm(["warn", "ban"]);
-  const bans = await listBans();
+  const [bans, log] = await Promise.all([listBans(), listBanLog()]);
 
   return (
     <div>
-      <h1 className="font-pixel text-5xl text-brand mb-2">Bans</h1>
+      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-2">Bans</h1>
       <p className="text-sm text-ink/60 mb-6">
         Every ban ever issued, newest first. Lifting removes all active bans for that player.
       </p>
@@ -76,6 +76,40 @@ export default async function BansPage() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <h2 className="font-pixel text-2xl md:text-3xl text-ink mt-10 mb-3">Ban log</h2>
+      <p className="text-sm text-ink/60 mb-4">
+        Every ban and lift action with who did it, newest first.
+      </p>
+      <div className="pixl-card divide-y-2 divide-ink/10">
+        {log.length === 0 && (
+          <div className="p-5 text-ink/50 text-sm">No ban actions yet.</div>
+        )}
+        {log.map((r) => (
+          <div key={r.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span
+              className={`font-pixel px-2 py-0.5 border-2 border-ink shrink-0 ${
+                r.action === "ban"
+                  ? "bg-brand/15 dark:bg-brand/30"
+                  : "bg-mint/30 dark:bg-mint/20"
+              }`}
+            >
+              {r.action === "ban" ? "banned" : "lifted"}
+            </span>
+            <div className="flex-1 min-w-48">
+              <span className="font-bold">{r.actor}</span>
+              {" → "}
+              <Link href={`/players/${r.user_id}`} className="font-bold hover:text-brand">
+                {r.player_name}
+              </Link>
+              <div className="text-ink/70 break-words">{r.detail}</div>
+            </div>
+            <div className="text-xs text-ink/50 shrink-0">
+              {new Date(r.created_at).toLocaleString()}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

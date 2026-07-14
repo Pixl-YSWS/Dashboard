@@ -11,7 +11,7 @@ export default async function ViolationsPage() {
 
   return (
     <div>
-      <h1 className="font-pixel text-5xl text-brand mb-2">Violations</h1>
+      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-2">Violations</h1>
       <p className="text-sm text-ink/60 mb-6">
         Every censored chat message and rejected display name, newest first.
       </p>

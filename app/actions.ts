@@ -48,6 +48,12 @@ export async function warnPlayer(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
 }
 
+function readSeconds(value: FormDataEntryValue | null): number {
+  const n = Number(String(value ?? "0"));
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(Math.round(n), 86400);
+}
+
 export async function reviewProject(formData: FormData): Promise<void> {
   const access = await requirePerm("review");
   const by = actorName(access);
@@ -55,12 +61,24 @@ export async function reviewProject(formData: FormData): Promise<void> {
   const verdict = String(formData.get("verdict") ?? "");
   const note = String(formData.get("note") ?? "").trim().slice(0, 1000);
   if (!projectId || (verdict !== "approved" && verdict !== "needs_changes")) return;
-  if (verdict === "needs_changes" && !note)
-    redirect(`/review?error=${encodeURIComponent("A note is required when sending a project back.")}`);
+  if (!note)
+    redirect(`/review?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
 
+  const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
+  let approvedHours: number | null = null;
+  if (hoursRaw !== "") {
+    const n = Number(hoursRaw);
+    if (!Number.isFinite(n) || n < 0)
+      redirect(`/review?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
+    approvedHours = Math.min(Math.round(n * 10) / 10, 10000);
+  }
+
+  const approved = verdict === "approved";
+  const update: Record<string, unknown> = { status: verdict, review_note: note };
+  if (approved) update.approved_hours = approvedHours;
   const { data: project, error } = await db
     .from("projects")
-    .update({ status: verdict, review_note: note })
+    .update(update)
     .eq("id", projectId)
     .eq("status", "shipped")
     .select("id, name, user_id")
@@ -70,11 +88,39 @@ export async function reviewProject(formData: FormData): Promise<void> {
     return;
   }
 
-  const approved = verdict === "approved";
+  const { data: journals } = await db
+    .from("project_journals")
+    .select("hours")
+    .eq("project_id", projectId);
+  const claimedHours =
+    Math.round(
+      (journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
+    ) / 10;
+
+  const { error: auditError } = await db.from("review_audits").insert({
+    project_id: projectId,
+    user_id: project.user_id,
+    reviewer: by,
+    verdict,
+    note,
+    claimed_hours: claimedHours,
+    approved_hours: approvedHours,
+    repo_opened: formData.get("repoOpened") === "1",
+    demo_opened: formData.get("demoOpened") === "1",
+    repo_seconds: readSeconds(formData.get("repoSeconds")),
+    demo_seconds: readSeconds(formData.get("demoSeconds")),
+    total_seconds: readSeconds(formData.get("totalSeconds")),
+  });
+  if (auditError) console.error("review audit insert failed", auditError.message);
+
   const reviewer = access.session.name;
   const title = approved ? "Project approved!" : "Project needs changes";
+  const credited =
+    approved && approvedHours !== null && approvedHours !== claimedHours
+      ? `\n\nHours credited: ${approvedHours}h (you logged ${claimedHours}h).`
+      : "";
   const body = approved
-    ? `"${project.name}" passed review — approved by ${reviewer}. Congrats on shipping!${note ? `\n\nReviewer note: ${note}` : ""}`
+    ? `"${project.name}" passed review — approved by ${reviewer}. Congrats on shipping!\n\nReviewer note: ${note}${credited}`
     : `"${project.name}" was sent back by ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`;
   const { error: notifyError } = await db
     .from("notifications")

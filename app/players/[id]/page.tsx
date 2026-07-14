@@ -34,7 +34,7 @@ export default async function PlayerPage({
         ← all players
       </Link>
       <div className="flex items-center gap-4 flex-wrap mt-2 mb-1">
-        <h1 className="font-pixel text-5xl text-brand">{user.display_name}</h1>
+        <h1 className="font-pixel text-4xl md:text-5xl text-brand break-words">{user.display_name}</h1>
         {activeBan && (
           <span className="font-pixel px-3 py-1 border-2 border-ink bg-brand text-white">
             banned {activeBan.expires_at ? `until ${new Date(activeBan.expires_at).toLocaleString()}` : "forever"}
@@ -67,7 +67,9 @@ export default async function PlayerPage({
           )}
           {projects.map((p) => (
             <div key={p.id} className="p-4">
-              <div className="font-bold">{p.name}</div>
+              <Link href={`/projects/${p.id}`} className="font-bold hover:text-brand">
+                {p.name}
+              </Link>
               {p.description && (
                 <div className="text-sm text-ink/70 mt-1">{p.description}</div>
               )}

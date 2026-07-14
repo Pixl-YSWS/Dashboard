@@ -52,8 +52,8 @@ export interface ProjectRow {
   demo_url: string | null;
   hackatime_projects: string[];
   status: string;
-  type: string;
   review_note: string;
+  approved_hours: number | null;
   shipped_at: string | null;
   created_at: string;
 }
@@ -249,30 +249,125 @@ export async function listShippedProjects(): Promise<ShippedProject[]> {
   return projects;
 }
 
-export interface ReviewLogRow extends ModActionRow {
-  player_name: string;
+async function attachPlayerNames(rows: (ModActionRow & { player_name?: string })[]) {
+  const ids = [...new Set(rows.map((r) => r.user_id))];
+  if (ids.length === 0) return;
+  const { data: users } = await db.from("users").select("id, display_name").in("id", ids);
+  const names = new Map((users ?? []).map((u) => [u.id as string, u.display_name as string]));
+  for (const r of rows) r.player_name = names.get(r.user_id) ?? r.user_id;
 }
 
-// Verdict history for the review log, newest first.
-export async function listReviewLog(limit = 50): Promise<ReviewLogRow[]> {
+function detailMatchesProject(detail: string, name: string): boolean {
+  return detail === name || detail.startsWith(`${name}:`);
+}
+
+export interface ReviewAuditRow {
+  id: number;
+  project_id: number;
+  user_id: string;
+  reviewer: string;
+  verdict: string;
+  note: string;
+  claimed_hours: number;
+  approved_hours: number | null;
+  repo_opened: boolean;
+  demo_opened: boolean;
+  repo_seconds: number;
+  demo_seconds: number;
+  total_seconds: number;
+  created_at: string;
+  player_name: string;
+  project_name: string;
+}
+
+export async function listReviewAudits(limit = 50): Promise<ReviewAuditRow[]> {
   const { data, error } = await db
-    .from("mod_actions")
+    .from("review_audits")
     .select("*")
-    .in("action", ["project_approved", "project_needs_changes"])
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) {
-    console.error("listReviewLog", error.message);
+    console.error("listReviewAudits", error.message);
     return [];
   }
-  const rows = (data ?? []) as ReviewLogRow[];
-  const ids = [...new Set(rows.map((r) => r.user_id))];
-  if (ids.length > 0) {
-    const { data: users } = await db.from("users").select("id, display_name").in("id", ids);
-    const names = new Map((users ?? []).map((u) => [u.id as string, u.display_name as string]));
-    for (const r of rows) r.player_name = names.get(r.user_id) ?? r.user_id;
+  const rows = (data ?? []) as ReviewAuditRow[];
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const projectIds = [...new Set(rows.map((r) => r.project_id))];
+  const [users, projects] = await Promise.all([
+    userIds.length > 0
+      ? db.from("users").select("id, display_name").in("id", userIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length > 0
+      ? db.from("projects").select("id, name").in("id", projectIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const names = new Map((users.data ?? []).map((u) => [u.id as string, u.display_name as string]));
+  const projectNames = new Map((projects.data ?? []).map((p) => [p.id as number, p.name as string]));
+  for (const r of rows) {
+    r.player_name = names.get(r.user_id) ?? r.user_id;
+    r.project_name = projectNames.get(r.project_id) ?? `#${r.project_id}`;
   }
   return rows;
+}
+
+export interface BanLogRow extends ModActionRow {
+  player_name: string;
+}
+
+export async function listBanLog(limit = 100): Promise<BanLogRow[]> {
+  const { data, error } = await db
+    .from("mod_actions")
+    .select("*")
+    .in("action", ["ban", "unban"])
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listBanLog", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as BanLogRow[];
+  await attachPlayerNames(rows);
+  return rows;
+}
+
+export interface JournalRow {
+  id: number;
+  project_id: number;
+  user_id: string;
+  content: string;
+  hours: number;
+  created_at: string;
+}
+
+export async function getProject(id: number) {
+  const { data, error } = await db
+    .from("projects")
+    .select("*, users(id, display_name)")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+  const project = data as ProjectWithUser;
+  const [journals, actions] = await Promise.all([
+    db
+      .from("project_journals")
+      .select("*")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false }),
+    db
+      .from("mod_actions")
+      .select("*")
+      .eq("user_id", project.user_id)
+      .in("action", ["project_approved", "project_needs_changes"])
+      .order("created_at", { ascending: false }),
+  ]);
+  const verdicts = ((actions.data ?? []) as ModActionRow[]).filter((a) =>
+    detailMatchesProject(a.detail, project.name),
+  );
+  return {
+    project,
+    journals: (journals.data ?? []) as JournalRow[],
+    verdicts,
+  };
 }
 
 export async function listProjects(query?: string): Promise<ProjectWithUser[]> {

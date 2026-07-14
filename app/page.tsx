@@ -35,11 +35,11 @@ export default async function Overview({
 
   return (
     <div>
-      <h1 className="font-pixel text-5xl text-brand mb-6">Overview</h1>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-6">Overview</h1>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-10">
         {cards.map((c) => (
-          <div key={c.label} className="pixl-card p-5">
-            <div className={`text-5xl font-bold ${c.color}`}>{c.value}</div>
+          <div key={c.label} className="pixl-card p-4 md:p-5">
+            <div className={`text-4xl md:text-5xl font-bold ${c.color}`}>{c.value}</div>
             <div className="text-sm font-bold text-ink/60 mt-1">
               {c.label}
               {c.delta !== null && c.delta > 0 && (
@@ -53,7 +53,7 @@ export default async function Overview({
       </div>
 
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <h2 className="font-pixel text-3xl text-ink mr-3">Growth</h2>
+        <h2 className="font-pixel text-2xl md:text-3xl text-ink mr-3">Growth</h2>
         {RANGES.map((r) => (
           <Link
             key={r}
@@ -84,8 +84,8 @@ export default async function Overview({
 
       {showModeration && (
         <>
-          <div className="flex items-baseline justify-between mb-3">
-            <h2 className="font-pixel text-3xl text-ink">Latest violations</h2>
+          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
+            <h2 className="font-pixel text-2xl md:text-3xl text-ink">Latest violations</h2>
             <Link href="/violations" className="text-brand font-bold text-sm underline">
               see all →
             </Link>
@@ -95,7 +95,7 @@ export default async function Overview({
               <div className="p-5 text-ink/50 text-sm">Nothing yet — squeaky clean.</div>
             )}
             {recent.map((v) => (
-              <div key={v.id} className="p-4 flex items-center gap-4">
+              <div key={v.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <span
                   className={`font-pixel text-sm px-2 py-0.5 border-2 border-ink ${
                     v.kind === "chat" ? "bg-tang/20 dark:bg-tang/30" : "bg-brand/15 dark:bg-brand/30"

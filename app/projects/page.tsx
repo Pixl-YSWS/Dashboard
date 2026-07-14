@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
 import { listProjects } from "@/lib/db";
+import { StatusBadge } from "@/app/_components/ProjectBadges";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +16,13 @@ export default async function ProjectsPage({
 
   return (
     <div>
-      <h1 className="font-pixel text-5xl text-brand mb-6">Projects</h1>
+      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-6">Projects</h1>
       <form className="mb-5 flex gap-2">
         <input
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search project names…"
-          className="pixl-input w-72"
+          className="pixl-input flex-1 min-w-0 max-w-72"
         />
         <button className="pixl-btn bg-ink dark:bg-gray-700 text-white">Search</button>
       </form>
@@ -30,6 +31,7 @@ export default async function ProjectsPage({
           <thead>
             <tr className="text-left border-b-2 border-ink bg-parch">
               <th className="p-3">Project</th>
+              <th className="p-3">Status</th>
               <th className="p-3">Owner</th>
               <th className="p-3">Links</th>
               <th className="p-3">Hackatime</th>
@@ -40,10 +42,18 @@ export default async function ProjectsPage({
             {projects.map((p) => (
               <tr key={p.id} className="hover:bg-cream">
                 <td className="p-3 max-w-72">
-                  <div className="font-bold">{p.name}</div>
+                  <Link
+                    href={`/projects/${p.id}`}
+                    className="font-bold hover:text-brand"
+                  >
+                    {p.name}
+                  </Link>
                   {p.description && (
                     <div className="text-xs text-ink/50 truncate">{p.description}</div>
                   )}
+                </td>
+                <td className="p-3">
+                  <StatusBadge status={p.status} />
                 </td>
                 <td className="p-3">
                   {p.users ? (
@@ -89,7 +99,7 @@ export default async function ProjectsPage({
             ))}
             {projects.length === 0 && (
               <tr>
-                <td className="p-5 text-ink/50" colSpan={5}>
+                <td className="p-5 text-ink/50" colSpan={6}>
                   No projects found.
                 </td>
               </tr>

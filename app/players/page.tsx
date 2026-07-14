@@ -15,13 +15,13 @@ export default async function PlayersPage({
 
   return (
     <div>
-      <h1 className="font-pixel text-5xl text-brand mb-6">Players</h1>
+      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-6">Players</h1>
       <form className="mb-5 flex gap-2">
         <input
           name="q"
           defaultValue={q ?? ""}
           placeholder="Search display names…"
-          className="pixl-input w-72"
+          className="pixl-input flex-1 min-w-0 max-w-72"
         />
         <button className="pixl-btn bg-ink dark:bg-gray-700 text-white">Search</button>
       </form>
