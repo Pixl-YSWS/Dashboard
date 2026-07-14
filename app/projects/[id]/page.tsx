@@ -1,56 +1,118 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePagePerm } from "@/lib/guard";
+import { requirePagePerm, canView } from "@/lib/guard";
 import { getProject } from "@/lib/db";
-import { StatusBadge } from "@/app/_components/ProjectBadges";
+import { fetchCommits } from "@/lib/github";
+import {
+  reReviewProject,
+  archiveProject,
+  rejectProject,
+  unrejectProject,
+} from "@/app/actions";
+import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
+import { CommitList } from "@/app/_components/CommitList";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  await requirePagePerm(["review", "warn", "ban"]);
+  const access = await requirePagePerm(["review", "warn", "ban"]);
   const { id } = await params;
+  const { error } = await searchParams;
   const projectId = Number(id);
   if (!Number.isFinite(projectId)) notFound();
   const data = await getProject(projectId);
   if (!data) notFound();
   const { project, journals, verdicts } = data;
   const totalHours = Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
+  const commits = await fetchCommits(project.repo_url);
+  const canReview = canView(access, ["review"]);
+  const canReReview =
+    canReview && (project.status === "approved" || project.status === "needs_changes");
 
   return (
     <div>
       <Link href="/projects" className="text-sm text-brand font-bold underline">
         ← all projects
       </Link>
-      <div className="flex items-center gap-3 flex-wrap mt-2 mb-1">
-        <h1 className="font-pixel text-4xl md:text-5xl text-brand break-words">{project.name}</h1>
-        <StatusBadge status={project.status} />
-      </div>
-      <div className="text-sm text-ink/60 mb-6 flex gap-x-3 gap-y-1 flex-wrap">
-        <span>
-          by{" "}
-          {project.users ? (
-            <Link href={`/players/${project.user_id}`} className="font-bold hover:text-brand">
-              {project.users.display_name}
-            </Link>
-          ) : (
-            project.user_id
-          )}
-        </span>
-        <span>created {new Date(project.created_at).toLocaleString()}</span>
-        {project.shipped_at && (
-          <span>shipped {new Date(project.shipped_at).toLocaleString()}</span>
+      <div className="flex items-start gap-4 mt-2 mb-1">
+        {project.image_url && (
+          <img
+            src={project.image_url}
+            alt=""
+            className="w-20 h-20 md:w-24 md:h-24 object-cover border-2 border-ink shrink-0"
+          />
         )}
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="font-pixel text-4xl md:text-5xl text-brand break-words">
+              {project.name}
+            </h1>
+            <StatusBadge status={project.status} />
+            <LevelBadge level={project.level} />
+            <ShipBadges project={project} />
+            {project.archived_at && (
+              <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-ink/20 whitespace-nowrap">
+                archived
+              </span>
+            )}
+            {project.rejected_at && (
+              <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-red-700 text-white whitespace-nowrap">
+                rejected
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-ink/60 mt-1 flex gap-x-3 gap-y-1 flex-wrap">
+            <span>
+              by{" "}
+              {project.users ? (
+                <Link href={`/players/${project.user_id}`} className="font-bold hover:text-brand font-mono">
+                  {project.users.slack_id ?? project.users.display_name}
+                </Link>
+              ) : (
+                project.user_id
+              )}
+            </span>
+            <span>created {new Date(project.created_at).toLocaleString()}</span>
+            {project.shipped_at && (
+              <span>shipped {new Date(project.shipped_at).toLocaleString()}</span>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="pixl-card p-5 mb-8">
+      {error && (
+        <div className="pixl-card p-3 my-4 text-sm font-bold text-red-700">{error}</div>
+      )}
+
+      {project.rejected_at && project.reject_reason && (
+        <div className="mt-4 border-2 border-red-700 bg-red-700/10 p-3 text-sm">
+          <span className="font-pixel text-red-700">rejection reason</span>
+          <div className="mt-1 break-words">{project.reject_reason}</div>
+        </div>
+      )}
+      {project.system_note && (
+        <div className="mt-4 border-2 border-brand bg-brand/10 dark:bg-brand/20 p-3 text-sm font-bold text-brand">
+          {project.system_note}
+        </div>
+      )}
+
+      <div className="pixl-card p-5 my-6">
         {project.description ? (
           <p className="text-sm break-words">{project.description}</p>
         ) : (
           <p className="text-sm text-ink/50">No description.</p>
+        )}
+        {project.is_update && project.update_notes && (
+          <div className="mt-3 border-2 border-ink bg-parch p-3 text-sm">
+            <span className="font-pixel">what changed since last approval</span>
+            <div className="mt-1 whitespace-pre-wrap break-words">{project.update_notes}</div>
+          </div>
         )}
         <div className="flex gap-2 flex-wrap mt-4 text-sm font-bold">
           {project.repo_url && (
@@ -90,6 +152,50 @@ export default async function ProjectPage({
         )}
       </div>
 
+      {canReview && (
+        <div className="pixl-card p-4 mb-8">
+          <div className="font-pixel text-xl mb-1">Staff actions</div>
+          <p className="text-sm text-ink/60 mb-3">
+            Everything here is reversible and kept in history — nothing is erased.
+          </p>
+          <div className="flex flex-wrap gap-2 items-center">
+            {canReReview && (
+              <form action={reReviewProject}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <button className="pixl-btn bg-blue-700 text-white text-sm">
+                  Send back to review
+                </button>
+              </form>
+            )}
+            <form action={archiveProject}>
+              <input type="hidden" name="projectId" value={project.id} />
+              {project.archived_at && <input type="hidden" name="unarchive" value="1" />}
+              <button className="pixl-btn bg-white dark:bg-gray-800 text-ink text-sm">
+                {project.archived_at ? "Unarchive" : "Archive"}
+              </button>
+            </form>
+            {project.rejected_at && (
+              <form action={unrejectProject}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <button className="pixl-btn bg-mint text-ink text-sm">Restore (un-reject)</button>
+              </form>
+            )}
+          </div>
+          {!project.rejected_at && (
+            <form action={rejectProject} className="flex flex-wrap gap-2 items-start mt-3">
+              <input type="hidden" name="projectId" value={project.id} />
+              <input
+                name="reason"
+                required
+                placeholder="Reason for permanent rejection…"
+                className="pixl-input flex-1 min-w-64 text-sm"
+              />
+              <button className="pixl-btn bg-red-700 text-white text-sm">Reject / ban</button>
+            </form>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         <div className="pixl-card p-4">
           <div className="text-3xl md:text-4xl font-bold text-brand">{totalHours}h</div>
@@ -103,9 +209,14 @@ export default async function ProjectPage({
           <div className="font-pixel text-ink/70 text-sm">journal entries</div>
         </div>
         <div className="pixl-card p-4 col-span-2 sm:col-span-1">
-          <div className="text-3xl md:text-4xl font-bold text-brand">{verdicts.length}</div>
-          <div className="font-pixel text-ink/70 text-sm">review verdicts</div>
+          <div className="text-3xl md:text-4xl font-bold text-brand">{commits.commits.length}</div>
+          <div className="font-pixel text-ink/70 text-sm">recent commits</div>
         </div>
+      </div>
+
+      <h2 className="font-pixel text-2xl md:text-3xl text-ink mb-3">Commits</h2>
+      <div className="pixl-card mb-8">
+        <CommitList result={commits} />
       </div>
 
       <h2 className="font-pixel text-2xl md:text-3xl text-ink mb-3">Journal</h2>
@@ -139,10 +250,16 @@ export default async function ProjectPage({
               className={`font-pixel px-2 py-0.5 border-2 border-ink shrink-0 ${
                 v.action === "project_approved"
                   ? "bg-emerald-600/20 dark:bg-emerald-600/30"
-                  : "bg-brand/15 dark:bg-brand/30"
+                  : v.action === "review_reverted"
+                    ? "bg-blue-600/20 dark:bg-blue-600/30"
+                    : "bg-brand/15 dark:bg-brand/30"
               }`}
             >
-              {v.action === "project_approved" ? "approved" : "sent back"}
+              {v.action === "project_approved"
+                ? "approved"
+                : v.action === "review_reverted"
+                  ? "reverted"
+                  : "sent back"}
             </span>
             <div className="flex-1 min-w-48">
               <span className="font-bold">{v.actor}</span>

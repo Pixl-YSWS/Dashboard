@@ -38,15 +38,37 @@ export default async function RootLayout({
       html.classList.add("dark");
     }
   } catch(e) {}
-  document.addEventListener("click", function(e) {
-    var btn = e.target.closest("[data-theme-toggle]");
-    if (!btn) return;
-    html.classList.toggle("dark");
-    var dark = html.classList.contains("dark");
-    document.querySelectorAll("[data-theme-toggle]").forEach(function(b) {
-      b.textContent = dark ? "☀" : "☾";
+  var scales = [1, 1.15, 1.3];
+  var labels = ["A", "A+", "A++"];
+  function applyFont(i) {
+    html.style.setProperty("--font-scale", scales[i]);
+    document.querySelectorAll("[data-font-cycle]").forEach(function(b) {
+      b.textContent = labels[i];
     });
-    try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch(e) {}
+  }
+  var fi = 0;
+  try {
+    var saved = parseInt(localStorage.getItem("fontStep") || "0", 10);
+    if (saved >= 0 && saved < scales.length) fi = saved;
+  } catch(e) {}
+  applyFont(fi);
+  document.addEventListener("click", function(e) {
+    var themeBtn = e.target.closest("[data-theme-toggle]");
+    if (themeBtn) {
+      html.classList.toggle("dark");
+      var dark = html.classList.contains("dark");
+      document.querySelectorAll("[data-theme-toggle]").forEach(function(b) {
+        b.textContent = dark ? "☀" : "☾";
+      });
+      try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch(e) {}
+      return;
+    }
+    var fontBtn = e.target.closest("[data-font-cycle]");
+    if (fontBtn) {
+      fi = (fi + 1) % scales.length;
+      applyFont(fi);
+      try { localStorage.setItem("fontStep", String(fi)); } catch(e) {}
+    }
   });
 })();
 `,
@@ -75,6 +97,12 @@ export default async function RootLayout({
                     className="pixl-btn bg-white dark:bg-gray-800 text-ink text-xs"
                   >
                     ☾
+                  </button>
+                  <button
+                    data-font-cycle
+                    className="pixl-btn bg-white dark:bg-gray-800 text-ink text-xs"
+                  >
+                    A
                   </button>
                   <form action="/api/auth/logout" method="post">
                     <button className="pixl-btn bg-white dark:bg-gray-800 text-ink text-xs">
@@ -129,9 +157,17 @@ export default async function RootLayout({
                 <div className="flex gap-2">
                   <button
                     data-theme-toggle
+                    title="Toggle theme"
                     className="pixl-btn bg-white dark:bg-gray-800 text-ink text-xs"
                   >
                     ☾
+                  </button>
+                  <button
+                    data-font-cycle
+                    title="Text size"
+                    className="pixl-btn bg-white dark:bg-gray-800 text-ink text-xs"
+                  >
+                    A
                   </button>
                   <form action="/api/auth/logout" method="post" className="flex-1">
                     <button className="pixl-btn bg-white dark:bg-gray-800 text-ink text-xs w-full">

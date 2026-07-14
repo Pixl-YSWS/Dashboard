@@ -36,7 +36,7 @@ export default async function Overview({
   return (
     <div>
       <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-6">Overview</h1>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-6">
         {cards.map((c) => (
           <div key={c.label} className="pixl-card p-4 md:p-5">
             <div className={`text-4xl md:text-5xl font-bold ${c.color}`}>{c.value}</div>
@@ -48,6 +48,20 @@ export default async function Overview({
                 </span>
               )}
             </div>
+          </div>
+        ))}
+      </div>
+
+      <h2 className="font-pixel text-2xl md:text-3xl text-ink mb-3">New players</h2>
+      <div className="grid grid-cols-3 gap-4 md:gap-5 mb-10">
+        {[
+          { label: "Today", value: stats.playersToday },
+          { label: "This week", value: stats.playersWeek },
+          { label: "This month", value: stats.playersMonth },
+        ].map((c) => (
+          <div key={c.label} className="pixl-card p-4 md:p-5">
+            <div className="text-3xl md:text-5xl font-bold text-brand">+{c.value}</div>
+            <div className="text-sm font-bold text-ink/60 mt-1">{c.label}</div>
           </div>
         ))}
       </div>

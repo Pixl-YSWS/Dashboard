@@ -8,16 +8,28 @@ export const dynamic = "force-dynamic";
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; view?: string }>;
 }) {
   await requirePagePerm(["review", "warn", "ban"]);
-  const { q } = await searchParams;
-  const projects = await listProjects(q);
+  const { q, view } = await searchParams;
+  const archived = view === "archived";
+  const projects = await listProjects(q, { archived });
 
   return (
     <div>
-      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-6">Projects</h1>
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-6">
+        <h1 className="font-pixel text-4xl md:text-5xl text-brand">
+          {archived ? "Archived projects" : "Projects"}
+        </h1>
+        <Link
+          href={archived ? "/projects" : "/projects?view=archived"}
+          className="pixl-btn bg-white dark:bg-gray-800 text-ink text-sm"
+        >
+          {archived ? "← Active projects" : "View archive"}
+        </Link>
+      </div>
       <form className="mb-5 flex gap-2">
+        {archived && <input type="hidden" name="view" value="archived" />}
         <input
           name="q"
           defaultValue={q ?? ""}
@@ -57,8 +69,8 @@ export default async function ProjectsPage({
                 </td>
                 <td className="p-3">
                   {p.users ? (
-                    <Link href={`/players/${p.user_id}`} className="font-bold hover:text-brand">
-                      {p.users.display_name}
+                    <Link href={`/players/${p.user_id}`} className="font-bold hover:text-brand font-mono">
+                      {p.users.slack_id ?? p.users.display_name}
                     </Link>
                   ) : (
                     <span className="text-ink/50">{p.user_id}</span>

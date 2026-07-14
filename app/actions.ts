@@ -64,13 +64,22 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (!note)
     redirect(`/review?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
 
+  const { data: journals } = await db
+    .from("project_journals")
+    .select("hours")
+    .eq("project_id", projectId);
+  const claimedHours =
+    Math.round(
+      (journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
+    ) / 10;
+
   const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
   let approvedHours: number | null = null;
   if (hoursRaw !== "") {
     const n = Number(hoursRaw);
     if (!Number.isFinite(n) || n < 0)
       redirect(`/review?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
-    approvedHours = Math.min(Math.round(n * 10) / 10, 10000);
+    approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
   }
 
   const approved = verdict === "approved";
@@ -88,15 +97,6 @@ export async function reviewProject(formData: FormData): Promise<void> {
     return;
   }
 
-  const { data: journals } = await db
-    .from("project_journals")
-    .select("hours")
-    .eq("project_id", projectId);
-  const claimedHours =
-    Math.round(
-      (journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
-    ) / 10;
-
   const { error: auditError } = await db.from("review_audits").insert({
     project_id: projectId,
     user_id: project.user_id,
@@ -113,7 +113,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   });
   if (auditError) console.error("review audit insert failed", auditError.message);
 
-  const reviewer = access.session.name;
+  const reviewer = access.session.slackId;
   const title = approved ? "Project approved!" : "Project needs changes";
   const credited =
     approved && approvedHours !== null && approvedHours !== claimedHours
@@ -146,6 +146,151 @@ export async function reviewProject(formData: FormData): Promise<void> {
     by,
   );
   revalidatePath("/review");
+}
+
+export async function reReviewProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  if (!projectId) return;
+
+  const { data: project, error } = await db
+    .from("projects")
+    .update({ status: "shipped", review_note: "", approved_hours: null })
+    .eq("id", projectId)
+    .in("status", ["approved", "needs_changes"])
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("reReviewProject failed", error?.message);
+    return;
+  }
+
+  const { data: journals } = await db
+    .from("project_journals")
+    .select("hours")
+    .eq("project_id", projectId);
+  const claimedHours =
+    Math.round(
+      (journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
+    ) / 10;
+
+  await logModAction(
+    project.user_id,
+    "review_reverted",
+    `${project.name}: verdict reverted, back in the review queue`,
+    by,
+  );
+  const { error: auditError } = await db.from("review_audits").insert({
+    project_id: projectId,
+    user_id: project.user_id,
+    reviewer: by,
+    verdict: "reverted",
+    note: "Previous verdict reverted — project returned to the review queue.",
+    claimed_hours: claimedHours,
+  });
+  if (auditError) console.error("re-review audit insert failed", auditError.message);
+
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: project.user_id,
+    title: "Project back in review",
+    body: `"${project.name}" is getting another look from the review team. You'll hear back here soon — nothing needed from you.`,
+  });
+  if (notifyError) console.error("re-review notification failed", notifyError.message);
+  revalidatePath("/", "layout");
+}
+
+export async function archiveProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const unarchive = formData.get("unarchive") === "1";
+  if (!projectId) return;
+  const { data: project, error } = await db
+    .from("projects")
+    .update({ archived_at: unarchive ? null : new Date().toISOString() })
+    .eq("id", projectId)
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("archiveProject failed", error?.message);
+    return;
+  }
+  await logModAction(
+    project.user_id,
+    unarchive ? "project_unarchived" : "project_archived",
+    project.name,
+    by,
+  );
+  revalidatePath("/", "layout");
+}
+
+export async function rejectProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  if (!projectId) return;
+  if (!reason)
+    redirect(`/projects/${projectId}?error=${encodeURIComponent("A reason is required to reject a project.")}`);
+
+  const { data: project, error } = await db
+    .from("projects")
+    .update({ rejected_at: new Date().toISOString(), reject_reason: reason })
+    .eq("id", projectId)
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("rejectProject failed", error?.message);
+    return;
+  }
+  await logModAction(project.user_id, "project_rejected", `${project.name}: ${reason}`, by);
+
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: project.user_id,
+    title: "Project rejected",
+    body: `"${project.name}" was rejected and removed from Pixl:\n\n${reason}\n\nIf you believe this is a mistake, reach out to the Pixl team.`,
+  });
+  if (notifyError) console.error("reject notification failed", notifyError.message);
+
+  const { data: owner } = await db
+    .from("users")
+    .select("slack_id")
+    .eq("id", project.user_id)
+    .single();
+  if (owner?.slack_id) {
+    try {
+      await dmUser(owner.slack_id, `Your project "${project.name}" was rejected:\n\n${reason}`);
+    } catch (e) {
+      console.error("reject DM failed", e);
+    }
+  }
+  revalidatePath("/", "layout");
+}
+
+export async function unrejectProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  if (!projectId) return;
+  const { data: project, error } = await db
+    .from("projects")
+    .update({ rejected_at: null, reject_reason: "" })
+    .eq("id", projectId)
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("unrejectProject failed", error?.message);
+    return;
+  }
+  await logModAction(project.user_id, "project_unrejected", project.name, by);
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: project.user_id,
+    title: "Project restored",
+    body: `"${project.name}" was restored and is visible again. Sorry for the mix-up!`,
+  });
+  if (notifyError) console.error("unreject notification failed", notifyError.message);
+  revalidatePath("/", "layout");
 }
 
 export async function banPlayer(formData: FormData): Promise<void> {

@@ -117,13 +117,14 @@ export function ReviewForm({
           </a>
         )}
         <label className="flex items-center gap-2 ml-auto font-normal text-ink/70">
-          Hours to credit
+          Hours to credit (decrease only)
           <input
             name="approvedHours"
             type="number"
             step="0.1"
             min="0"
-            placeholder={String(claimedHours)}
+            max={claimedHours}
+            defaultValue={claimedHours}
             className="pixl-input w-24 text-sm"
           />
         </label>

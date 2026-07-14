@@ -54,6 +54,16 @@ export interface ProjectRow {
   status: string;
   review_note: string;
   approved_hours: number | null;
+  image_url: string;
+  level: number;
+  used_ai: boolean;
+  is_update: boolean;
+  update_notes: string;
+  other_ysws: boolean;
+  system_note: string;
+  archived_at: string | null;
+  rejected_at: string | null;
+  reject_reason: string;
   shipped_at: string | null;
   created_at: string;
 }
@@ -124,22 +134,47 @@ async function count(table: string, filter?: (q: any) => any): Promise<number> {
 }
 
 export async function getStats() {
+  const now = new Date();
   const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
-  const [players, projects, violations, violations7d, activeBans, playersWeek, projectsWeek] =
-    await Promise.all([
-      count("users"),
-      count("projects"),
-      count("violations"),
-      count("violations", (q) => q.gte("created_at", weekAgo)),
-      count("bans", (q) =>
-        q
-          .is("lifted_at", null)
-          .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
-      ),
-      count("users", (q) => q.gte("created_at", weekAgo)),
-      count("projects", (q) => q.gte("created_at", weekAgo)),
-    ]);
-  return { players, projects, violations, violations7d, activeBans, playersWeek, projectsWeek };
+  const monthAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const [
+    players,
+    projects,
+    violations,
+    violations7d,
+    activeBans,
+    playersToday,
+    playersWeek,
+    playersMonth,
+    projectsWeek,
+  ] = await Promise.all([
+    count("users"),
+    count("projects"),
+    count("violations"),
+    count("violations", (q) => q.gte("created_at", weekAgo)),
+    count("bans", (q) =>
+      q
+        .is("lifted_at", null)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+    ),
+    count("users", (q) => q.gte("created_at", todayStart.toISOString())),
+    count("users", (q) => q.gte("created_at", weekAgo)),
+    count("users", (q) => q.gte("created_at", monthAgo)),
+    count("projects", (q) => q.gte("created_at", weekAgo)),
+  ]);
+  return {
+    players,
+    projects,
+    violations,
+    violations7d,
+    activeBans,
+    playersToday,
+    playersWeek,
+    playersMonth,
+    projectsWeek,
+  };
 }
 
 export interface GrowthPoint {
@@ -207,7 +242,7 @@ export async function getGrowthSeries(days = 30) {
 }
 
 export interface ProjectWithUser extends ProjectRow {
-  users?: Pick<UserRow, "id" | "display_name"> | null;
+  users?: Pick<UserRow, "id" | "display_name" | "slack_id"> | null;
 }
 
 export interface ShippedProject extends ProjectWithUser {
@@ -219,8 +254,9 @@ export interface ShippedProject extends ProjectWithUser {
 export async function listShippedProjects(): Promise<ShippedProject[]> {
   const { data, error } = await db
     .from("projects")
-    .select("*, users(id, display_name)")
+    .select("*, users(id, display_name, slack_id)")
     .eq("status", "shipped")
+    .is("archived_at", null)
     .order("shipped_at", { ascending: true })
     .limit(200);
   if (error) {
@@ -342,7 +378,7 @@ export interface JournalRow {
 export async function getProject(id: number) {
   const { data, error } = await db
     .from("projects")
-    .select("*, users(id, display_name)")
+    .select("*, users(id, display_name, slack_id)")
     .eq("id", id)
     .maybeSingle();
   if (error || !data) return null;
@@ -357,7 +393,7 @@ export async function getProject(id: number) {
       .from("mod_actions")
       .select("*")
       .eq("user_id", project.user_id)
-      .in("action", ["project_approved", "project_needs_changes"])
+      .in("action", ["project_approved", "project_needs_changes", "review_reverted"])
       .order("created_at", { ascending: false }),
   ]);
   const verdicts = ((actions.data ?? []) as ModActionRow[]).filter((a) =>
@@ -370,12 +406,17 @@ export async function getProject(id: number) {
   };
 }
 
-export async function listProjects(query?: string): Promise<ProjectWithUser[]> {
+export async function listProjects(
+  query?: string,
+  opts: { archived?: boolean } = {},
+): Promise<ProjectWithUser[]> {
   let q = db
     .from("projects")
-    .select("*, users(id, display_name)")
+    .select("*, users(id, display_name, slack_id)")
     .order("created_at", { ascending: false })
     .limit(500);
+  if (opts.archived) q = q.not("archived_at", "is", null);
+  else q = q.is("archived_at", null);
   if (query) q = q.ilike("name", `%${query}%`);
   const { data, error } = await q;
   if (error) {

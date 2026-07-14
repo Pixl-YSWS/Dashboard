@@ -40,11 +40,11 @@ export default async function PlayersPage({
             {players.map((p) => (
               <tr key={p.id} className="hover:bg-cream">
                 <td className="p-3">
-                  <Link href={`/players/${p.id}`} className="font-bold hover:text-brand">
-                    {p.display_name}
+                  <Link href={`/players/${p.id}`} className="font-bold hover:text-brand font-mono">
+                    {p.slack_id ?? "no slack id"}
                   </Link>
                   <div className="text-xs text-ink/50">
-                    {p.slack_id ?? "no slack id"} · {p.oauth_provider}
+                    {p.display_name} · {p.oauth_provider}
                   </div>
                 </td>
                 <td className="p-3">{p.projectCount}</td>
