@@ -11,6 +11,7 @@ import {
 } from "@/app/actions";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
 import { CommitList } from "@/app/_components/CommitList";
+import { slackHandle } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function ProjectPage({
   const { project, journals, verdicts } = data;
   const totalHours = Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
   const commits = await fetchCommits(project.repo_url);
+  const ownerHandle = await slackHandle(project.users?.slack_id);
   const canReview = canView(access, ["review"]);
   const canReReview =
     canReview && (project.status === "approved" || project.status === "needs_changes");
@@ -71,8 +73,8 @@ export default async function ProjectPage({
             <span>
               by{" "}
               {project.users ? (
-                <Link href={`/players/${project.user_id}`} className="font-bold hover:text-brand font-mono">
-                  {project.users.slack_id ?? project.users.display_name}
+                <Link href={`/players/${project.user_id}`} className="font-bold hover:text-brand">
+                  {ownerHandle ?? project.users.slack_id ?? project.users.display_name}
                 </Link>
               ) : (
                 project.user_id

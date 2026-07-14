@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
 import { listPlayers } from "@/lib/db";
+import { slackHandles } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function PlayersPage({
   await requirePagePerm(["warn", "ban"]);
   const { q } = await searchParams;
   const players = await listPlayers(q);
+  const handles = await slackHandles(players.map((p) => p.slack_id));
 
   return (
     <div>
@@ -40,8 +42,8 @@ export default async function PlayersPage({
             {players.map((p) => (
               <tr key={p.id} className="hover:bg-cream">
                 <td className="p-3">
-                  <Link href={`/players/${p.id}`} className="font-bold hover:text-brand font-mono">
-                    {p.slack_id ?? "no slack id"}
+                  <Link href={`/players/${p.id}`} className="font-bold hover:text-brand">
+                    {(p.slack_id && handles.get(p.slack_id)) ?? p.slack_id ?? "no slack id"}
                   </Link>
                   <div className="text-xs text-ink/50">
                     {p.display_name} · {p.oauth_provider}

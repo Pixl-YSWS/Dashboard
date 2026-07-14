@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
 import { listProjects } from "@/lib/db";
 import { StatusBadge } from "@/app/_components/ProjectBadges";
+import { slackHandles } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export default async function ProjectsPage({
   const { q, view } = await searchParams;
   const archived = view === "archived";
   const projects = await listProjects(q, { archived });
+  const handles = await slackHandles(projects.map((p) => p.users?.slack_id));
 
   return (
     <div>
@@ -69,8 +71,10 @@ export default async function ProjectsPage({
                 </td>
                 <td className="p-3">
                   {p.users ? (
-                    <Link href={`/players/${p.user_id}`} className="font-bold hover:text-brand font-mono">
-                      {p.users.slack_id ?? p.users.display_name}
+                    <Link href={`/players/${p.user_id}`} className="font-bold hover:text-brand">
+                      {(p.users.slack_id && handles.get(p.users.slack_id)) ??
+                        p.users.slack_id ??
+                        p.users.display_name}
                     </Link>
                   ) : (
                     <span className="text-ink/50">{p.user_id}</span>

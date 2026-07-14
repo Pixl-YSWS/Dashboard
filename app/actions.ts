@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, logModAction } from "@/lib/db";
-import { dmUser } from "@/lib/slack";
+import { dmUser, slackHandle } from "@/lib/slack";
 import { requirePerm, requireSuper, ALL_PERMISSIONS, type AdminAccess } from "@/lib/guard";
 
 const DEFAULT_WARNING =
@@ -113,7 +113,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   });
   if (auditError) console.error("review audit insert failed", auditError.message);
 
-  const reviewer = access.session.slackId;
+  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
   const title = approved ? "Project approved!" : "Project needs changes";
   const credited =
     approved && approvedHours !== null && approvedHours !== claimedHours
