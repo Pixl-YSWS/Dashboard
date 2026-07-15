@@ -88,7 +88,12 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
 
   const approved = verdict === "approved";
-  const update: Record<string, unknown> = { status: verdict, review_note: note };
+  const update: Record<string, unknown> = {
+    status: verdict,
+    review_note: note,
+    reviewing_by: "",
+    reviewing_at: null,
+  };
   if (approved) update.approved_hours = approvedHours;
   const { data: project, error } = await db
     .from("projects")
@@ -296,6 +301,82 @@ export async function unrejectProject(formData: FormData): Promise<void> {
     body: `"${project.name}" was restored and is visible again. Sorry for the mix-up!`,
   });
   if (notifyError) console.error("unreject notification failed", notifyError.message);
+  revalidatePath("/", "layout");
+}
+
+export async function banProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const returnTo = String(formData.get("returnTo") ?? "") || `/projects/${projectId}`;
+  if (!projectId) return;
+  if (!reason)
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("A reason is required to ban a project.")}`);
+
+  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+
+  const { data: project, error } = await db
+    .from("projects")
+    .update({
+      banned_at: new Date().toISOString(),
+      ban_reason: reason,
+      ban_by: reviewer,
+    })
+    .eq("id", projectId)
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("banProject failed", error?.message);
+    return;
+  }
+  await logModAction(project.user_id, "project_banned", `${project.name}: ${reason}`, by);
+
+  const body = `Your project "${project.name}" was permanently banned by ${reviewer} and can no longer be shipped to Pixl.\n\nReason: ${reason}\n\nIf you think this is a mistake, contact the Pixl team.`;
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: project.user_id,
+    title: "Project banned",
+    body,
+  });
+  if (notifyError) console.error("ban notification failed", notifyError.message);
+
+  const { data: owner } = await db
+    .from("users")
+    .select("slack_id")
+    .eq("id", project.user_id)
+    .single();
+  if (owner?.slack_id) {
+    try {
+      await dmUser(owner.slack_id, body);
+    } catch (e) {
+      console.error("ban DM failed", e);
+    }
+  }
+  revalidatePath("/", "layout");
+}
+
+export async function unbanProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  if (!projectId) return;
+  const { data: project, error } = await db
+    .from("projects")
+    .update({ banned_at: null, ban_reason: "", ban_by: "" })
+    .eq("id", projectId)
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("unbanProject failed", error?.message);
+    return;
+  }
+  await logModAction(project.user_id, "project_unbanned", project.name, by);
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: project.user_id,
+    title: "Project ban lifted",
+    body: `The ban on "${project.name}" was lifted. You can ship it again. Sorry for the mix-up!`,
+  });
+  if (notifyError) console.error("unban notification failed", notifyError.message);
   revalidatePath("/", "layout");
 }
 

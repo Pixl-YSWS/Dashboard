@@ -3,9 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function ReviewTabs({ isSuper }: { isSuper: boolean }) {
+export function ReviewTabs({
+  isSuper,
+  pending,
+}: {
+  isSuper: boolean;
+  pending?: number;
+}) {
   const pathname = usePathname();
-  const tabs: { href: string; label: string }[] = [{ href: "/review", label: "Queue" }];
+  const tabs: { href: string; label: string; count?: number }[] = [
+    { href: "/review", label: "Needs review", count: pending },
+    { href: "/review/reviewed", label: "Reviewed" },
+  ];
   if (isSuper) tabs.push({ href: "/review/log", label: "Reviewer log" });
 
   return (
@@ -16,13 +25,22 @@ export function ReviewTabs({ isSuper }: { isSuper: boolean }) {
           <Link
             key={t.href}
             href={t.href}
-            className={`relative -mb-px px-0.5 pb-3 text-sm font-medium transition-colors ${
+            className={`relative -mb-px px-0.5 pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${
               active
                 ? "text-brand border-b-2 border-brand"
                 : "text-ink/55 hover:text-ink border-b-2 border-transparent"
             }`}
           >
             {t.label}
+            {t.count ? (
+              <span
+                className={`text-[0.7rem] font-semibold px-1.5 py-0.5 rounded-full ${
+                  active ? "bg-brand text-white" : "bg-black/[0.06] dark:bg-white/10 text-ink/60"
+                }`}
+              >
+                {t.count}
+              </span>
+            ) : null}
           </Link>
         );
       })}

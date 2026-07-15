@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { getAccess, canView } from "@/lib/guard";
+import { countPendingReviews } from "@/lib/db";
 import { Shell } from "@/app/_components/Shell";
 
 export const metadata: Metadata = {
@@ -31,6 +32,7 @@ export default async function RootLayout({
         admins: access.isSuper,
       }
     : null;
+  const reviewCount = nav?.review ? await countPendingReviews() : 0;
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -41,7 +43,7 @@ export default async function RootLayout({
   var html = document.documentElement;
   try {
     var t = localStorage.getItem("theme");
-    if (t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+    if (t !== "light") {
       html.classList.add("dark");
     }
   } catch(e) {}
@@ -84,7 +86,11 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen">
         {session && nav ? (
-          <Shell session={{ name: session.name, slackId: session.slackId }} nav={nav}>
+          <Shell
+            session={{ name: session.name, slackId: session.slackId }}
+            nav={nav}
+            reviewCount={reviewCount}
+          >
             {children}
           </Shell>
         ) : (

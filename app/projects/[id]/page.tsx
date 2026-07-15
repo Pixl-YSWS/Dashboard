@@ -8,6 +8,8 @@ import {
   archiveProject,
   rejectProject,
   unrejectProject,
+  banProject,
+  unbanProject,
 } from "@/app/actions";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
 import { CommitList } from "@/app/_components/CommitList";
@@ -70,6 +72,11 @@ export default async function ProjectPage({
                 rejected
               </span>
             )}
+            {project.banned_at && (
+              <span className="badge bg-rose-900 text-white whitespace-nowrap">
+                banned
+              </span>
+            )}
           </div>
           <div className="text-sm text-ink/60 mt-1 flex gap-x-3 gap-y-1 flex-wrap">
             <span>
@@ -105,6 +112,20 @@ export default async function ProjectPage({
           <div className="mt-2 text-ink/55 text-xs">
             The owner was told who rejected it, the reason, and to contact the Pixl team if it’s a
             mistake.
+          </div>
+        </div>
+      )}
+      {project.banned_at && (
+        <div className="mt-4 border border-rose-400 dark:border-rose-500/50 rounded-lg bg-rose-600/10 p-3 text-sm">
+          <div className="font-pixel text-rose-700 dark:text-rose-400">
+            Banned{project.ban_by ? ` by ${project.ban_by}` : ""} — permanent
+          </div>
+          {project.ban_reason && (
+            <div className="mt-1 break-words">{project.ban_reason}</div>
+          )}
+          <div className="mt-2 text-ink/55 text-xs">
+            This project can never be shipped again. The owner was told who banned it, the reason,
+            and to contact the Pixl team.
           </div>
         </div>
       )}
@@ -192,6 +213,12 @@ export default async function ProjectPage({
                 <button className="pixl-btn bg-mint text-ink text-sm">Restore (un-reject)</button>
               </form>
             )}
+            {project.banned_at && (
+              <form action={unbanProject}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <button className="pixl-btn bg-mint text-ink text-sm">Lift ban</button>
+              </form>
+            )}
           </div>
           {!project.rejected_at && (
             <div className="mt-4 pt-4 border-t border-[var(--line)]">
@@ -214,6 +241,29 @@ export default async function ProjectPage({
                 />
                 <button className="pixl-btn bg-rose-600 text-white border-transparent text-sm">
                   Reject project
+                </button>
+              </form>
+            </div>
+          )}
+          {!project.banned_at && (
+            <div className="mt-4 pt-4 border-t border-[var(--line)]">
+              <div className="text-sm font-medium text-rose-700 dark:text-rose-400 mb-1">
+                Ban project (permanent)
+              </div>
+              <p className="text-xs text-ink/55 mb-2">
+                Permanently bans this project — it can never be shipped again and is hidden
+                everywhere. Different from a reject. Reversible by staff.
+              </p>
+              <form action={banProject} className="flex flex-wrap gap-2 items-start">
+                <input type="hidden" name="projectId" value={project.id} />
+                <input
+                  name="reason"
+                  required
+                  placeholder="Reason for the ban (shown to the owner)…"
+                  className="pixl-input flex-1 min-w-64 text-sm"
+                />
+                <button className="pixl-btn bg-rose-800 text-white border-transparent text-sm">
+                  Ban project
                 </button>
               </form>
             </div>

@@ -66,6 +66,11 @@ export interface ProjectRow {
   rejected_at: string | null;
   reject_reason: string;
   reject_by: string;
+  banned_at: string | null;
+  ban_reason: string;
+  ban_by: string;
+  reviewing_by: string;
+  reviewing_at: string | null;
   shipped_at: string | null;
   created_at: string;
 }
@@ -254,23 +259,8 @@ export interface ShippedProject extends ProjectWithUser {
   entries: number;
 }
 
-// Review queue: shipped projects oldest-first, with journal effort totals.
-export async function listShippedProjects(): Promise<ShippedProject[]> {
-  const { data, error } = await db
-    .from("projects")
-    .select("*, users(id, display_name, slack_id)")
-    .eq("status", "shipped")
-    .is("archived_at", null)
-    .is("rejected_at", null)
-    .order("shipped_at", { ascending: true })
-    .limit(200);
-  if (error) {
-    console.error("listShippedProjects", error.message);
-    return [];
-  }
-  const projects = (data ?? []) as ShippedProject[];
-  if (projects.length === 0) return [];
-
+async function hydrateHours(projects: ShippedProject[]): Promise<ShippedProject[]> {
+  if (projects.length === 0) return projects;
   const { data: journals } = await db
     .from("project_journals")
     .select("project_id, hours")
@@ -290,6 +280,89 @@ export async function listShippedProjects(): Promise<ShippedProject[]> {
     p.entries = cur.n;
   }
   return projects;
+}
+
+// A project claimed by another reviewer stays hidden from the queue for this long.
+export const REVIEW_LOCK_MS = 15 * 60 * 1000;
+
+function claimedByOther(p: ShippedProject, viewer?: string): boolean {
+  if (!p.reviewing_by || p.reviewing_by === viewer) return false;
+  if (!p.reviewing_at) return false;
+  return Date.now() - new Date(p.reviewing_at).getTime() < REVIEW_LOCK_MS;
+}
+
+// Review queue: shipped projects oldest-first, hiding anything another reviewer
+// is currently reviewing.
+export async function listShippedProjects(viewer?: string): Promise<ShippedProject[]> {
+  const { data, error } = await db
+    .from("projects")
+    .select("*, users(id, display_name, slack_id)")
+    .eq("status", "shipped")
+    .is("archived_at", null)
+    .is("rejected_at", null)
+    .is("banned_at", null)
+    .order("shipped_at", { ascending: true })
+    .limit(500);
+  if (error) {
+    console.error("listShippedProjects", error.message);
+    return [];
+  }
+  const visible = (data ?? []).filter((p) => !claimedByOther(p as ShippedProject, viewer));
+  return hydrateHours(visible as ShippedProject[]);
+}
+
+// Claim a submission for a reviewer. Returns { ok:false, by } if someone else
+// holds an active claim.
+export async function claimReview(
+  projectId: number,
+  viewer: string,
+): Promise<{ ok: boolean; by?: string }> {
+  const { data } = await db
+    .from("projects")
+    .select("reviewing_by, reviewing_at")
+    .eq("id", projectId)
+    .single();
+  const by = (data?.reviewing_by as string) || "";
+  const at = (data?.reviewing_at as string | null) ?? null;
+  const active =
+    by && by !== viewer && at && Date.now() - new Date(at).getTime() < REVIEW_LOCK_MS;
+  if (active) return { ok: false, by };
+  await db
+    .from("projects")
+    .update({ reviewing_by: viewer, reviewing_at: new Date().toISOString() })
+    .eq("id", projectId);
+  return { ok: true };
+}
+
+// Reviewed: projects that already got a verdict, most-recent first.
+export async function listReviewedProjects(): Promise<ShippedProject[]> {
+  const { data, error } = await db
+    .from("projects")
+    .select("*, users(id, display_name, slack_id)")
+    .in("status", ["approved", "needs_changes"])
+    .is("archived_at", null)
+    .order("shipped_at", { ascending: false })
+    .limit(500);
+  if (error) {
+    console.error("listReviewedProjects", error.message);
+    return [];
+  }
+  return hydrateHours((data ?? []) as ShippedProject[]);
+}
+
+export async function countPendingReviews(): Promise<number> {
+  const { count, error } = await db
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "shipped")
+    .is("archived_at", null)
+    .is("rejected_at", null)
+    .is("banned_at", null);
+  if (error) {
+    console.error("countPendingReviews", error.message);
+    return 0;
+  }
+  return count ?? 0;
 }
 
 async function attachPlayerNames(rows: (ModActionRow & { player_name?: string })[]) {

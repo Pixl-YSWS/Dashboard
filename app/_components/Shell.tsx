@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GlobalSearch } from "@/app/_components/GlobalSearch";
 
 export interface NavFlags {
@@ -77,8 +77,8 @@ type IconKey = keyof typeof I;
 function Icon({ name }: { name: IconKey }) {
   return (
     <svg
-      width="18"
-      height="18"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -93,78 +93,37 @@ function Icon({ name }: { name: IconKey }) {
   );
 }
 
-const TITLES: [string, string][] = [
-  ["/players", "Players"],
-  ["/projects", "Projects"],
-  ["/review/log", "Review · Log"],
-  ["/review", "Review queue"],
-  ["/violations", "Violations"],
-  ["/bans", "Bans"],
-  ["/notify", "Notify"],
-  ["/admins", "Sub-admins"],
-];
-
-function ControlButtons() {
-  return (
-    <>
-      <button
-        data-theme-toggle
-        title="Toggle theme"
-        aria-label="Toggle theme"
-        className="pixl-btn bg-transparent border-0 shadow-none w-9 h-9 p-0 text-ink/70 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
-      >
-        ☾
-      </button>
-      <button
-        data-font-cycle
-        title="Text size"
-        aria-label="Text size"
-        className="pixl-btn bg-transparent border-0 shadow-none w-9 h-9 p-0 text-ink/70 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
-      >
-        A
-      </button>
-    </>
-  );
-}
-
 export function Shell({
   session,
   nav,
+  reviewCount = 0,
   children,
 }: {
   session: { name: string; slackId: string };
   nav: NavFlags;
+  reviewCount?: number;
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem("sidebarCollapsed") === "1");
-    } catch {}
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, []);
-
-  const toggleCollapsed = () =>
-    setCollapsed((v) => {
-      const nv = !v;
-      try {
-        localStorage.setItem("sidebarCollapsed", nv ? "1" : "0");
-      } catch {}
-      return nv;
-    });
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  const title = TITLES.find(([h]) => pathname.startsWith(h))?.[1] ?? "Overview";
-
-  const items: { href: string; label: string; icon: IconKey; show: boolean }[] = [
+  const tabs: { href: string; label: string; icon: IconKey; show: boolean; count?: number }[] = [
     { href: "/", label: "Overview", icon: "overview", show: true },
-    { href: "/players", label: "Players", icon: "players", show: nav.players },
+    { href: "/review", label: "Needs review", icon: "review", show: nav.review, count: reviewCount },
     { href: "/projects", label: "Projects", icon: "projects", show: nav.projects },
-    { href: "/review", label: "Review", icon: "review", show: nav.review },
+    { href: "/players", label: "Players", icon: "players", show: nav.players },
     { href: "/violations", label: "Violations", icon: "violations", show: nav.moderation },
     { href: "/bans", label: "Bans", icon: "bans", show: nav.moderation },
     { href: "/notify", label: "Notify", icon: "notify", show: nav.notify },
@@ -178,145 +137,107 @@ export function Shell({
     .join("")
     .toUpperCase();
 
-  const renderSidebar = (mini: boolean) => (
-    <div className="flex h-full flex-col">
-      <div
-        className={`flex items-center h-16 border-b border-[var(--line)] ${
-          mini ? "justify-center px-0" : "gap-2.5 px-5"
-        }`}
-      >
-        <span className="grid place-items-center w-8 h-8 rounded-lg bg-brand text-white font-bold text-sm shrink-0">
-          P
-        </span>
-        {!mini && (
-          <div className="leading-tight">
-            <div className="font-semibold text-[0.95rem] tracking-tight">Pixl</div>
-            <div className="text-[0.7rem] text-ink/50 -mt-0.5">Admin console</div>
-          </div>
-        )}
-      </div>
-
-      <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        {items
-          .filter((i) => i.show)
-          .map((i) => {
-            const active = isActive(i.href);
-            return (
-              <Link
-                key={i.href}
-                href={i.href}
-                onClick={() => setOpen(false)}
-                aria-current={active ? "page" : undefined}
-                title={mini ? i.label : undefined}
-                className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
-                  mini ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"
-                } ${
-                  active
-                    ? "bg-brand/10 text-brand"
-                    : "text-ink/70 hover:text-ink hover:bg-black/[0.045] dark:hover:bg-white/[0.06]"
-                }`}
-              >
-                <Icon name={i.icon} />
-                {!mini && i.label}
-              </Link>
-            );
-          })}
-      </nav>
-
-      <div className="p-3 border-t border-[var(--line)]">
-        <div className={`flex items-center ${mini ? "flex-col gap-2" : "gap-2.5 px-2 py-1.5"}`}>
-          <span className="grid place-items-center w-8 h-8 rounded-full bg-ink text-white text-xs font-semibold shrink-0">
-            {initials || "?"}
-          </span>
-          {!mini && (
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium truncate">{session.name}</div>
-              <div className="text-[0.7rem] text-ink/50 truncate">{session.slackId}</div>
-            </div>
-          )}
-          <form action="/api/auth/logout" method="post">
-            <button
-              title="Sign out"
-              aria-label="Sign out"
-              className="pixl-btn bg-transparent border-0 shadow-none w-8 h-8 p-0 text-ink/60 hover:text-brand hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
-                <path d="M10 17l-5-5 5-5" />
-                <path d="M15 12H5" />
-              </svg>
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="flex min-h-screen">
-      {/* desktop sidebar */}
-      <aside
-        className={`hidden md:block shrink-0 border-r border-[var(--line)] bg-[var(--surface)] sticky top-0 h-screen transition-[width] duration-200 ${
-          collapsed ? "w-16" : "w-64"
-        }`}
-      >
-        {renderSidebar(collapsed)}
-      </aside>
+    <div className="min-h-screen flex flex-col">
+      <header className="sticky top-0 z-30 bg-[var(--surface)]/90 backdrop-blur border-b border-[var(--line)]">
+        <div className="max-w-[1400px] mx-auto w-full px-4 md:px-6">
+          {/* row 1 */}
+          <div className="h-16 flex items-center gap-3 md:gap-5">
+            <Link
+              href="/"
+              className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-1.5 hover:bg-black/5 dark:hover:bg-white/5 shrink-0"
+            >
+              <span className="grid place-items-center w-6 h-6 rounded-lg bg-brand text-white text-xs font-bold">
+                P
+              </span>
+              <span className="font-semibold text-sm tracking-tight hidden sm:block">Pixl</span>
+            </Link>
 
-      {/* mobile slide-over */}
-      {open && (
-        <div className="md:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setOpen(false)} />
-      )}
-      <aside
-        className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[var(--surface)] border-r border-[var(--line)] transition-transform duration-200 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {renderSidebar(false)}
-      </aside>
-
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-30 h-16 flex items-center gap-3 px-4 md:px-8 border-b border-[var(--line)] bg-[var(--surface)]/85 backdrop-blur">
-          <button
-            className="md:hidden pixl-btn bg-transparent border-0 shadow-none w-9 h-9 p-0 text-ink/70"
-            aria-label="Open menu"
-            onClick={() => setOpen(true)}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <button
-            className="hidden md:inline-flex items-center justify-center pixl-btn bg-transparent border-0 shadow-none w-9 h-9 p-0 text-ink/55 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={toggleCollapsed}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="M9 4v16" />
-              {collapsed ? <path d="m13 9 3 3-3 3" /> : <path d="m16 9-3 3 3 3" />}
-            </svg>
-          </button>
-          <div className="min-w-0 hidden lg:flex items-center gap-1.5 text-sm shrink-0">
-            <span className="text-ink/45">Dashboard</span>
-            <span className="text-ink/30">/</span>
-            <span className="font-medium truncate">{title}</span>
-          </div>
-          <div className="flex-1 flex justify-end lg:justify-center px-1">
-            <div className="w-full max-w-md">
+            <div className="flex-1 min-w-0 max-w-xl mx-auto">
               <GlobalSearch />
             </div>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <ControlButtons />
-          </div>
-        </header>
 
-        <main className="flex-1 min-w-0 p-4 md:p-8">
-          <div className="mx-auto max-w-6xl">{children}</div>
-        </main>
-      </div>
+            <div className="relative shrink-0" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="grid place-items-center w-9 h-9 rounded-full bg-brand/15 text-brand text-xs font-semibold hover:ring-2 hover:ring-brand/30"
+                aria-label="Account menu"
+              >
+                {initials || "?"}
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-56 pixl-card p-2 shadow-lg z-40">
+                  <div className="px-2 py-1.5 mb-1 border-b border-[var(--line)]">
+                    <div className="text-sm font-medium truncate">{session.name}</div>
+                    <div className="text-xs text-ink/50 truncate">{session.slackId}</div>
+                  </div>
+                  <div className="flex items-center justify-between px-2 py-1.5 text-sm">
+                    <span className="text-ink/70">Theme</span>
+                    <button
+                      data-theme-toggle
+                      className="pixl-btn bg-transparent border-0 shadow-none w-8 h-8 p-0 text-ink/70 hover:bg-black/5 dark:hover:bg-white/10"
+                      title="Toggle theme"
+                    >
+                      ☾
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between px-2 py-1.5 text-sm">
+                    <span className="text-ink/70">Text size</span>
+                    <button
+                      data-font-cycle
+                      className="pixl-btn bg-transparent border-0 shadow-none w-8 h-8 p-0 text-ink/70 hover:bg-black/5 dark:hover:bg-white/10"
+                      title="Text size"
+                    >
+                      A
+                    </button>
+                  </div>
+                  <form action="/api/auth/logout" method="post" className="mt-1 pt-1 border-t border-[var(--line)]">
+                    <button className="w-full text-left px-2 py-1.5 rounded-lg text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10">
+                      Sign out
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* row 2 — tabs */}
+          <nav className="flex items-center gap-1 overflow-x-auto -mb-px">
+            {tabs
+              .filter((t) => t.show)
+              .map((t) => {
+                const active = isActive(t.href);
+                return (
+                  <Link
+                    key={t.href}
+                    href={t.href}
+                    className={`flex items-center gap-2 px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                      active
+                        ? "border-brand text-brand"
+                        : "border-transparent text-ink/60 hover:text-ink"
+                    }`}
+                  >
+                    <Icon name={t.icon} />
+                    {t.label}
+                    {t.count ? (
+                      <span
+                        className={`ml-0.5 text-[0.7rem] font-semibold px-1.5 py-0.5 rounded-full ${
+                          active ? "bg-brand text-white" : "bg-black/[0.06] dark:bg-white/10 text-ink/60"
+                        }`}
+                      >
+                        {t.count}
+                      </span>
+                    ) : null}
+                  </Link>
+                );
+              })}
+          </nav>
+        </div>
+      </header>
+
+      <main className="flex-1 min-w-0">
+        <div className="max-w-[1400px] mx-auto w-full px-4 md:px-6 py-6">{children}</div>
+      </main>
     </div>
   );
 }
