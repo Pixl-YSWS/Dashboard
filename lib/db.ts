@@ -51,6 +51,7 @@ export interface ProjectRow {
   repo_url: string | null;
   demo_url: string | null;
   hackatime_projects: string[];
+  hackatime_seconds: number;
   status: string;
   review_note: string;
   approved_hours: number | null;
@@ -64,6 +65,7 @@ export interface ProjectRow {
   archived_at: string | null;
   rejected_at: string | null;
   reject_reason: string;
+  reject_by: string;
   shipped_at: string | null;
   created_at: string;
 }
@@ -247,6 +249,8 @@ export interface ProjectWithUser extends ProjectRow {
 
 export interface ShippedProject extends ProjectWithUser {
   hours: number;
+  hackatimeHours: number;
+  journalHours: number;
   entries: number;
 }
 
@@ -280,7 +284,9 @@ export async function listShippedProjects(): Promise<ShippedProject[]> {
   }
   for (const p of projects) {
     const cur = totals.get(p.id) ?? { h: 0, n: 0 };
-    p.hours = Math.round(cur.h * 10) / 10;
+    p.journalHours = Math.round(cur.h * 10) / 10;
+    p.hackatimeHours = Math.round(((p.hackatime_seconds ?? 0) / 3600) * 10) / 10;
+    p.hours = p.hackatimeHours > 0 ? p.hackatimeHours : p.journalHours;
     p.entries = cur.n;
   }
   return projects;

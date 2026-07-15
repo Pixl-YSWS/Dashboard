@@ -2,75 +2,159 @@ import { redirect } from "next/navigation";
 import { requireAdmin, ALL_PERMISSIONS } from "@/lib/guard";
 import { listAdmins } from "@/lib/db";
 import { addAdmin, removeAdmin, updateAdminPerms } from "@/app/actions";
+import { slackHandles } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
+
+const PERM_INFO: Record<string, { label: string; desc: string }> = {
+  warn: { label: "Warn", desc: "Send warnings to players" },
+  ban: { label: "Ban", desc: "Ban and unban players" },
+  notify: { label: "Notify", desc: "Send broadcast notifications" },
+  review: { label: "Review", desc: "Review the ship queue, credit hours" },
+};
+
+function PermToggles({
+  name,
+  checked,
+}: {
+  name: string;
+  checked: (p: string) => boolean;
+}) {
+  return (
+    <div className="grid sm:grid-cols-2 gap-2">
+      {ALL_PERMISSIONS.map((p) => (
+        <label
+          key={p}
+          className="flex items-start gap-2.5 rounded-lg border border-[var(--line)] p-2.5 cursor-pointer transition-colors has-[:checked]:border-brand/40 has-[:checked]:bg-brand/5 hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+        >
+          <input
+            type="checkbox"
+            name={name}
+            value={p}
+            defaultChecked={checked(p)}
+            className="mt-0.5 w-4 h-4 accent-[var(--color-brand)]"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-medium leading-none">{PERM_INFO[p].label}</span>
+            <span className="block text-xs text-ink/55 mt-1">{PERM_INFO[p].desc}</span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
 
 export default async function AdminsPage() {
   const access = await requireAdmin();
   if (!access.isSuper) redirect("/");
   const admins = await listAdmins();
+  const handles = await slackHandles(admins.map((a) => a.slack_id));
 
   return (
-    <div>
-      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-2">Sub-admins</h1>
-      <p className="text-sm text-ink/60 mb-6">
-        Owners (from ADMIN_SLACK_IDS) always have every permission. Sub-admins
-        sign in with Slack like you do, but only get the boxes you tick.
-      </p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold text-ink tracking-tight">Sub-admins</h1>
+        <p className="text-sm text-ink/55 mt-1 max-w-2xl">
+          Owners always have every permission. Sub-admins sign in with Slack and only get the
+          permissions you grant here.
+        </p>
+      </div>
 
-      <div className="pixl-card p-4 mb-8">
-        <div className="font-pixel text-xl mb-3">Add a sub-admin</div>
-        <form action={addAdmin} className="flex gap-2 items-center flex-wrap">
-          <input
-            name="slackId"
-            placeholder="Slack ID (U0…)"
-            className="pixl-input text-sm"
-            required
-          />
-          <input name="name" placeholder="Name" className="pixl-input text-sm" />
-          {ALL_PERMISSIONS.map((p) => (
-            <label key={p} className="flex items-center gap-1 text-sm font-bold">
-              <input type="checkbox" name="perms" value={p} defaultChecked={p === "warn"} />
-              {p}
+      <div className="pixl-card p-5 md:p-6">
+        <div className="text-base font-semibold mb-4">Add a sub-admin</div>
+        <form action={addAdmin} className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="block text-sm font-medium mb-1.5">Name</span>
+              <input
+                name="name"
+                placeholder="e.g. Alex Rivera"
+                className="pixl-input w-full text-sm"
+              />
             </label>
-          ))}
-          <button className="pixl-btn bg-brand text-white text-sm">Add</button>
+            <label className="block">
+              <span className="block text-sm font-medium mb-1.5">Slack member ID</span>
+              <input
+                name="slackId"
+                required
+                placeholder="U0XXXXXXX"
+                className="pixl-input w-full text-sm font-mono"
+              />
+              <span className="block text-xs text-ink/45 mt-1">
+                Slack → profile → ⋯ → Copy member ID
+              </span>
+            </label>
+          </div>
+
+          <div>
+            <div className="text-sm font-medium mb-2">Permissions</div>
+            <PermToggles name="perms" checked={(p) => p === "review"} />
+          </div>
+
+          <div className="flex justify-end">
+            <button className="pixl-btn bg-brand text-white border-transparent">
+              Add sub-admin
+            </button>
+          </div>
         </form>
       </div>
 
-      <div className="pixl-card divide-y divide-[var(--line)]">
-        {admins.length === 0 && (
-          <div className="p-5 text-ink/50 text-sm">No sub-admins yet.</div>
-        )}
-        {admins.map((a) => (
-          <div key={a.slack_id} className="p-4 flex items-center gap-4 flex-wrap">
-            <div className="min-w-40">
-              <div className="font-bold">{a.name}</div>
-              <div className="text-xs text-ink/50">
-                {a.slack_id} · added by {a.added_by || "?"}
-              </div>
-            </div>
-            <form action={updateAdminPerms} className="flex gap-3 items-center flex-1 flex-wrap">
-              <input type="hidden" name="slackId" value={a.slack_id} />
-              {ALL_PERMISSIONS.map((p) => (
-                <label key={p} className="flex items-center gap-1 text-sm font-bold">
-                  <input
-                    type="checkbox"
-                    name="perms"
-                    value={p}
-                    defaultChecked={a.permissions.includes(p)}
-                  />
-                  {p}
-                </label>
-              ))}
-              <button className="pixl-btn bg-mint text-ink text-sm">Save</button>
-            </form>
-            <form action={removeAdmin}>
-              <input type="hidden" name="slackId" value={a.slack_id} />
-              <button className="pixl-btn bg-brand text-white text-sm">Remove</button>
-            </form>
+      <div>
+        <div className="text-sm font-medium text-ink/60 mb-3">
+          {admins.length} sub-admin{admins.length === 1 ? "" : "s"}
+        </div>
+        {admins.length === 0 ? (
+          <div className="pixl-card p-8 text-center text-ink/55 text-sm">
+            No sub-admins yet. Add someone above to share the workload.
           </div>
-        ))}
+        ) : (
+          <div className="space-y-4">
+            {admins.map((a) => {
+              const handle = (a.slack_id && handles.get(a.slack_id)) ?? a.slack_id;
+              const initials =
+                (a.name || handle || "?")
+                  .split(/\s+/)
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase() || "?";
+              return (
+                <div key={a.slack_id} className="pixl-card p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="grid place-items-center w-10 h-10 rounded-full bg-brand/10 text-brand text-sm font-semibold shrink-0">
+                        {initials}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{a.name || handle}</div>
+                        <div className="text-xs text-ink/50 truncate font-mono">
+                          {handle}
+                          {a.added_by ? ` · added by ${a.added_by}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <form action={removeAdmin}>
+                      <input type="hidden" name="slackId" value={a.slack_id} />
+                      <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
+                        Remove
+                      </button>
+                    </form>
+                  </div>
+
+                  <form action={updateAdminPerms} className="mt-4">
+                    <input type="hidden" name="slackId" value={a.slack_id} />
+                    <PermToggles name="perms" checked={(p) => a.permissions.includes(p)} />
+                    <div className="flex justify-end mt-3">
+                      <button className="pixl-btn bg-[var(--surface)] text-ink text-sm">
+                        Save permissions
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

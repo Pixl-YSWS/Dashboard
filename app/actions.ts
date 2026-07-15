@@ -54,6 +54,18 @@ function readSeconds(value: FormDataEntryValue | null): number {
   return Math.min(Math.round(n), 86400);
 }
 
+async function claimedHoursFor(projectId: number): Promise<number> {
+  const [{ data: journals }, { data: proj }] = await Promise.all([
+    db.from("project_journals").select("hours").eq("project_id", projectId),
+    db.from("projects").select("hackatime_seconds").eq("id", projectId).single(),
+  ]);
+  const journalHours =
+    Math.round((journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
+  const hackatimeHours =
+    Math.round(((Number(proj?.hackatime_seconds) || 0) / 3600) * 10) / 10;
+  return hackatimeHours > 0 ? hackatimeHours : journalHours;
+}
+
 export async function reviewProject(formData: FormData): Promise<void> {
   const access = await requirePerm("review");
   const by = actorName(access);
@@ -64,14 +76,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (!note)
     redirect(`/review?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
 
-  const { data: journals } = await db
-    .from("project_journals")
-    .select("hours")
-    .eq("project_id", projectId);
-  const claimedHours =
-    Math.round(
-      (journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
-    ) / 10;
+  const claimedHours = await claimedHoursFor(projectId);
 
   const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
   let approvedHours: number | null = null;
@@ -166,14 +171,7 @@ export async function reReviewProject(formData: FormData): Promise<void> {
     return;
   }
 
-  const { data: journals } = await db
-    .from("project_journals")
-    .select("hours")
-    .eq("project_id", projectId);
-  const claimedHours =
-    Math.round(
-      (journals ?? []).reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10,
-    ) / 10;
+  const claimedHours = await claimedHoursFor(projectId);
 
   await logModAction(
     project.user_id,
@@ -235,9 +233,15 @@ export async function rejectProject(formData: FormData): Promise<void> {
   if (!reason)
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("A reason is required to reject a project.")}`);
 
+  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+
   const { data: project, error } = await db
     .from("projects")
-    .update({ rejected_at: new Date().toISOString(), reject_reason: reason })
+    .update({
+      rejected_at: new Date().toISOString(),
+      reject_reason: reason,
+      reject_by: reviewer,
+    })
     .eq("id", projectId)
     .select("id, name, user_id")
     .single();
@@ -247,10 +251,11 @@ export async function rejectProject(formData: FormData): Promise<void> {
   }
   await logModAction(project.user_id, "project_rejected", `${project.name}: ${reason}`, by);
 
+  const body = `Your project "${project.name}" was rejected by ${reviewer} and removed from Pixl.\n\nReason: ${reason}\n\nIf you think this is a mistake, contact the Pixl team.`;
   const { error: notifyError } = await db.from("notifications").insert({
     user_id: project.user_id,
     title: "Project rejected",
-    body: `"${project.name}" was rejected and removed from Pixl:\n\n${reason}\n\nIf you believe this is a mistake, reach out to the Pixl team.`,
+    body,
   });
   if (notifyError) console.error("reject notification failed", notifyError.message);
 
@@ -261,7 +266,7 @@ export async function rejectProject(formData: FormData): Promise<void> {
     .single();
   if (owner?.slack_id) {
     try {
-      await dmUser(owner.slack_id, `Your project "${project.name}" was rejected:\n\n${reason}`);
+      await dmUser(owner.slack_id, body);
     } catch (e) {
       console.error("reject DM failed", e);
     }
@@ -276,7 +281,7 @@ export async function unrejectProject(formData: FormData): Promise<void> {
   if (!projectId) return;
   const { data: project, error } = await db
     .from("projects")
-    .update({ rejected_at: null, reject_reason: "" })
+    .update({ rejected_at: null, reject_reason: "", reject_by: "" })
     .eq("id", projectId)
     .select("id, name, user_id")
     .single();

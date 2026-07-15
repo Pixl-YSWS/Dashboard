@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { GlobalSearch } from "@/app/_components/GlobalSearch";
 
 export interface NavFlags {
@@ -138,6 +138,22 @@ export function Shell({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem("sidebarCollapsed") === "1");
+    } catch {}
+  }, []);
+
+  const toggleCollapsed = () =>
+    setCollapsed((v) => {
+      const nv = !v;
+      try {
+        localStorage.setItem("sidebarCollapsed", nv ? "1" : "0");
+      } catch {}
+      return nv;
+    });
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -162,16 +178,22 @@ export function Shell({
     .join("")
     .toUpperCase();
 
-  const sidebar = (
+  const renderSidebar = (mini: boolean) => (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2.5 px-5 h-16 border-b border-[var(--line)]">
-        <span className="grid place-items-center w-8 h-8 rounded-lg bg-brand text-white font-bold text-sm">
+      <div
+        className={`flex items-center h-16 border-b border-[var(--line)] ${
+          mini ? "justify-center px-0" : "gap-2.5 px-5"
+        }`}
+      >
+        <span className="grid place-items-center w-8 h-8 rounded-lg bg-brand text-white font-bold text-sm shrink-0">
           P
         </span>
-        <div className="leading-tight">
-          <div className="font-semibold text-[0.95rem] tracking-tight">Pixl</div>
-          <div className="text-[0.7rem] text-ink/50 -mt-0.5">Admin console</div>
-        </div>
+        {!mini && (
+          <div className="leading-tight">
+            <div className="font-semibold text-[0.95rem] tracking-tight">Pixl</div>
+            <div className="text-[0.7rem] text-ink/50 -mt-0.5">Admin console</div>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
@@ -185,28 +207,33 @@ export function Shell({
                 href={i.href}
                 onClick={() => setOpen(false)}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                title={mini ? i.label : undefined}
+                className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
+                  mini ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2"
+                } ${
                   active
                     ? "bg-brand/10 text-brand"
                     : "text-ink/70 hover:text-ink hover:bg-black/[0.045] dark:hover:bg-white/[0.06]"
                 }`}
               >
                 <Icon name={i.icon} />
-                {i.label}
+                {!mini && i.label}
               </Link>
             );
           })}
       </nav>
 
       <div className="p-3 border-t border-[var(--line)]">
-        <div className="flex items-center gap-2.5 px-2 py-1.5">
+        <div className={`flex items-center ${mini ? "flex-col gap-2" : "gap-2.5 px-2 py-1.5"}`}>
           <span className="grid place-items-center w-8 h-8 rounded-full bg-ink text-white text-xs font-semibold shrink-0">
             {initials || "?"}
           </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">{session.name}</div>
-            <div className="text-[0.7rem] text-ink/50 truncate">{session.slackId}</div>
-          </div>
+          {!mini && (
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium truncate">{session.name}</div>
+              <div className="text-[0.7rem] text-ink/50 truncate">{session.slackId}</div>
+            </div>
+          )}
           <form action="/api/auth/logout" method="post">
             <button
               title="Sign out"
@@ -228,8 +255,12 @@ export function Shell({
   return (
     <div className="flex min-h-screen">
       {/* desktop sidebar */}
-      <aside className="hidden md:block w-64 shrink-0 border-r border-[var(--line)] bg-[var(--surface)] sticky top-0 h-screen">
-        {sidebar}
+      <aside
+        className={`hidden md:block shrink-0 border-r border-[var(--line)] bg-[var(--surface)] sticky top-0 h-screen transition-[width] duration-200 ${
+          collapsed ? "w-16" : "w-64"
+        }`}
+      >
+        {renderSidebar(collapsed)}
       </aside>
 
       {/* mobile slide-over */}
@@ -241,7 +272,7 @@ export function Shell({
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {sidebar}
+        {renderSidebar(false)}
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -253,6 +284,18 @@ export function Shell({
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
               <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <button
+            className="hidden md:inline-flex items-center justify-center pixl-btn bg-transparent border-0 shadow-none w-9 h-9 p-0 text-ink/55 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={toggleCollapsed}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M9 4v16" />
+              {collapsed ? <path d="m13 9 3 3-3 3" /> : <path d="m16 9-3 3 3 3" />}
             </svg>
           </button>
           <div className="min-w-0 hidden lg:flex items-center gap-1.5 text-sm shrink-0">

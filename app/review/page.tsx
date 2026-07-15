@@ -39,7 +39,7 @@ export default async function ReviewPage({
       <ReviewTabs isSuper={access.isSuper} />
       <p className="text-sm text-ink/55 mb-6">
         Oldest first, no skipping. Every verdict needs a note. Hours default to
-        logged time — you can only lower them.
+        tracked Hackatime time — you can only lower them.
       </p>
       {error && (
         <div className="pixl-card p-3 mb-5 text-sm font-medium text-rose-600">{error}</div>
@@ -126,10 +126,14 @@ export default async function ReviewPage({
 
             <aside className="lg:w-64 shrink-0">
               <div className="pixl-card p-4 lg:sticky lg:top-6">
-                <div className="font-pixel text-ink/70 text-sm mb-1">Logged hours</div>
+                <div className="font-pixel text-ink/70 text-sm mb-1">
+                  {p.hackatimeHours > 0 ? "Hackatime hours" : "Logged hours"}
+                </div>
                 <div className="text-4xl font-bold text-brand">{p.hours}h</div>
                 <div className="text-sm text-ink/60 mb-3">
-                  across {p.entries} journal entr{p.entries === 1 ? "y" : "ies"}
+                  {p.hackatimeHours > 0
+                    ? `tracked on Hackatime · ${p.journalHours}h journalled`
+                    : `across ${p.entries} journal entr${p.entries === 1 ? "y" : "ies"}`}
                 </div>
                 <div className="flex flex-col gap-2 text-sm font-bold">
                   {p.repo_url && (
@@ -158,11 +162,12 @@ export default async function ReviewPage({
               <details className="pixl-card p-4 mt-4 group">
                 <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-rose-600 select-none list-none">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                  Reject / ban project
+                  Reject project
                 </summary>
                 <p className="text-xs text-ink/55 mt-2">
-                  Permanent — removes it from the queue and Pixl, notifies the owner. Reversible
-                  from the project page.
+                  Rejects this project — removes it from the queue and Pixl and tells the owner
+                  who rejected it and why. Reversible from the project page. This does not ban the
+                  player.
                 </p>
                 <form action={rejectProject} className="mt-3 flex flex-col gap-2">
                   <input type="hidden" name="projectId" value={p.id} />
@@ -175,7 +180,7 @@ export default async function ReviewPage({
                     className="pixl-input text-sm resize-y"
                   />
                   <button className="pixl-btn bg-rose-600 text-white border-transparent text-sm">
-                    Reject / ban
+                    Reject project
                   </button>
                 </form>
               </details>

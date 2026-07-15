@@ -30,7 +30,9 @@ export default async function ProjectPage({
   const data = await getProject(projectId);
   if (!data) notFound();
   const { project, journals, verdicts } = data;
-  const totalHours = Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
+  const journalHours = Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
+  const hackatimeHours = Math.round(((project.hackatime_seconds ?? 0) / 3600) * 10) / 10;
+  const totalHours = hackatimeHours > 0 ? hackatimeHours : journalHours;
   const commits = await fetchCommits(project.repo_url);
   const ownerHandle = await slackHandle(project.users?.slack_id);
   const canReview = canView(access, ["review"]);
@@ -92,10 +94,18 @@ export default async function ProjectPage({
         <div className="pixl-card p-3 my-4 text-sm font-bold text-red-700">{error}</div>
       )}
 
-      {project.rejected_at && project.reject_reason && (
-        <div className="mt-4 border border-rose-300 dark:border-rose-500/40 rounded-lg bg-red-700/10 p-3 text-sm">
-          <span className="font-pixel text-red-700">rejection reason</span>
-          <div className="mt-1 break-words">{project.reject_reason}</div>
+      {project.rejected_at && (
+        <div className="mt-4 border border-rose-300 dark:border-rose-500/40 rounded-lg bg-rose-500/10 p-3 text-sm">
+          <div className="font-pixel text-rose-600">
+            Rejected{project.reject_by ? ` by ${project.reject_by}` : ""}
+          </div>
+          {project.reject_reason && (
+            <div className="mt-1 break-words">{project.reject_reason}</div>
+          )}
+          <div className="mt-2 text-ink/55 text-xs">
+            The owner was told who rejected it, the reason, and to contact the Pixl team if it’s a
+            mistake.
+          </div>
         </div>
       )}
       {project.system_note && (
@@ -184,16 +194,29 @@ export default async function ProjectPage({
             )}
           </div>
           {!project.rejected_at && (
-            <form action={rejectProject} className="flex flex-wrap gap-2 items-start mt-3">
-              <input type="hidden" name="projectId" value={project.id} />
-              <input
-                name="reason"
-                required
-                placeholder="Reason for permanent rejection…"
-                className="pixl-input flex-1 min-w-64 text-sm"
-              />
-              <button className="pixl-btn bg-red-700 text-white text-sm">Reject / ban</button>
-            </form>
+            <div className="mt-4 pt-4 border-t border-[var(--line)]">
+              <div className="text-sm font-medium text-rose-600 mb-1">Reject project</div>
+              <p className="text-xs text-ink/55 mb-2">
+                Removes this project from Pixl and tells the owner who rejected it and why.
+                Reversible. This is not a player ban — ban the player from their{" "}
+                <Link href={`/players/${project.user_id}`} className="text-brand hover:underline">
+                  player page
+                </Link>
+                .
+              </p>
+              <form action={rejectProject} className="flex flex-wrap gap-2 items-start">
+                <input type="hidden" name="projectId" value={project.id} />
+                <input
+                  name="reason"
+                  required
+                  placeholder="Reason (shown to the owner)…"
+                  className="pixl-input flex-1 min-w-64 text-sm"
+                />
+                <button className="pixl-btn bg-rose-600 text-white border-transparent text-sm">
+                  Reject project
+                </button>
+              </form>
+            </div>
           )}
         </div>
       )}
@@ -202,7 +225,7 @@ export default async function ProjectPage({
         <div className="pixl-card p-4">
           <div className="text-3xl md:text-4xl font-bold text-brand">{totalHours}h</div>
           <div className="font-pixel text-ink/70 text-sm">
-            logged
+            {hackatimeHours > 0 ? "Hackatime" : "logged"}
             {project.approved_hours !== null && ` · ${project.approved_hours}h credited`}
           </div>
         </div>
