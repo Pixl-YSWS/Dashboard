@@ -11,7 +11,11 @@ import {
   banProject,
   unbanProject,
 } from "@/app/actions";
-import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
+import {
+  LevelBadge,
+  ShipBadges,
+  StatusBadge,
+} from "@/app/_components/ProjectBadges";
 import { CommitList } from "@/app/_components/CommitList";
 import { slackHandle } from "@/lib/slack";
 
@@ -32,14 +36,18 @@ export default async function ProjectPage({
   const data = await getProject(projectId);
   if (!data) notFound();
   const { project, journals, verdicts } = data;
-  const journalHours = Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
-  const hackatimeHours = Math.round(((project.hackatime_seconds ?? 0) / 3600) * 10) / 10;
+  const journalHours =
+    Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) /
+    10;
+  const hackatimeHours =
+    Math.round(((project.hackatime_seconds ?? 0) / 3600) * 10) / 10;
   const totalHours = hackatimeHours > 0 ? hackatimeHours : journalHours;
   const commits = await fetchCommits(project.repo_url);
   const ownerHandle = await slackHandle(project.users?.slack_id);
   const canReview = canView(access, ["review"]);
   const canReReview =
-    canReview && (project.status === "approved" || project.status === "needs_changes");
+    canReview &&
+    (project.status === "approved" || project.status === "needs_changes");
 
   return (
     <div>
@@ -82,8 +90,13 @@ export default async function ProjectPage({
             <span>
               by{" "}
               {project.users ? (
-                <Link href={`/players/${project.user_id}`} className="font-bold hover:text-brand">
-                  {ownerHandle ?? project.users.display_name ?? project.users.slack_id}
+                <Link
+                  href={`/players/${project.user_id}`}
+                  className="font-bold hover:text-brand"
+                >
+                  {ownerHandle ??
+                    project.users.display_name ??
+                    project.users.slack_id}
                 </Link>
               ) : (
                 project.user_id
@@ -91,14 +104,18 @@ export default async function ProjectPage({
             </span>
             <span>created {new Date(project.created_at).toLocaleString()}</span>
             {project.shipped_at && (
-              <span>shipped {new Date(project.shipped_at).toLocaleString()}</span>
+              <span>
+                shipped {new Date(project.shipped_at).toLocaleString()}
+              </span>
             )}
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="pixl-card p-3 my-4 text-sm font-bold text-red-700">{error}</div>
+        <div className="pixl-card p-3 my-4 text-sm font-bold text-red-700">
+          {error}
+        </div>
       )}
 
       {project.rejected_at && (
@@ -110,8 +127,8 @@ export default async function ProjectPage({
             <div className="mt-1 break-words">{project.reject_reason}</div>
           )}
           <div className="mt-2 text-ink/55 text-xs">
-            The owner was told who rejected it, the reason, and to contact the Pixl team if it’s a
-            mistake.
+            The owner was told who rejected it, the reason, and to contact the
+            Pixl team if it’s a mistake.
           </div>
         </div>
       )}
@@ -124,8 +141,8 @@ export default async function ProjectPage({
             <div className="mt-1 break-words">{project.ban_reason}</div>
           )}
           <div className="mt-2 text-ink/55 text-xs">
-            This project can never be shipped again. The owner was told who banned it, the reason,
-            and to contact the Pixl team.
+            This project can never be shipped again. The owner was told who
+            banned it, the reason, and to contact the Pixl team.
           </div>
         </div>
       )}
@@ -144,7 +161,9 @@ export default async function ProjectPage({
         {project.is_update && project.update_notes && (
           <div className="mt-3 border border-[var(--line)] rounded-lg bg-parch p-3 text-sm">
             <span className="font-pixel">what changed since last approval</span>
-            <div className="mt-1 whitespace-pre-wrap break-words">{project.update_notes}</div>
+            <div className="mt-1 whitespace-pre-wrap break-words">
+              {project.update_notes}
+            </div>
           </div>
         )}
         <div className="flex gap-2 flex-wrap mt-4 text-sm font-bold">
@@ -189,7 +208,8 @@ export default async function ProjectPage({
         <div className="pixl-card p-4 mb-8">
           <div className="font-pixel text-xl mb-1">Staff actions</div>
           <p className="text-sm text-ink/60 mb-3">
-            Everything here is reversible and kept in history — nothing is erased.
+            Everything here is reversible and kept in history — nothing is
+            erased.
           </p>
           <div className="flex flex-wrap gap-2 items-center">
             {canReReview && (
@@ -202,7 +222,9 @@ export default async function ProjectPage({
             )}
             <form action={archiveProject}>
               <input type="hidden" name="projectId" value={project.id} />
-              {project.archived_at && <input type="hidden" name="unarchive" value="1" />}
+              {project.archived_at && (
+                <input type="hidden" name="unarchive" value="1" />
+              )}
               <button className="pixl-btn bg-white dark:bg-gray-800 text-ink text-sm">
                 {project.archived_at ? "Unarchive" : "Archive"}
               </button>
@@ -210,28 +232,41 @@ export default async function ProjectPage({
             {project.rejected_at && (
               <form action={unrejectProject}>
                 <input type="hidden" name="projectId" value={project.id} />
-                <button className="pixl-btn bg-mint text-ink text-sm">Restore (un-reject)</button>
+                <button className="pixl-btn bg-mint text-ink text-sm">
+                  Restore (un-reject)
+                </button>
               </form>
             )}
             {project.banned_at && (
               <form action={unbanProject}>
                 <input type="hidden" name="projectId" value={project.id} />
-                <button className="pixl-btn bg-mint text-ink text-sm">Lift ban</button>
+                <button className="pixl-btn bg-mint text-ink text-sm">
+                  Lift ban
+                </button>
               </form>
             )}
           </div>
           {!project.rejected_at && (
             <div className="mt-4 pt-4 border-t border-[var(--line)]">
-              <div className="text-sm font-medium text-rose-600 mb-1">Reject project</div>
+              <div className="text-sm font-medium text-rose-600 mb-1">
+                Reject project
+              </div>
               <p className="text-xs text-ink/55 mb-2">
-                Removes this project from Pixl and tells the owner who rejected it and why.
-                Reversible. This is not a player ban — ban the player from their{" "}
-                <Link href={`/players/${project.user_id}`} className="text-brand hover:underline">
+                Removes this project from Pixl and tells the owner who rejected
+                it and why. Reversible. This is not a player ban — ban the
+                player from their{" "}
+                <Link
+                  href={`/players/${project.user_id}`}
+                  className="text-brand hover:underline"
+                >
                   player page
                 </Link>
                 .
               </p>
-              <form action={rejectProject} className="flex flex-wrap gap-2 items-start">
+              <form
+                action={rejectProject}
+                className="flex flex-wrap gap-2 items-start"
+              >
                 <input type="hidden" name="projectId" value={project.id} />
                 <input
                   name="reason"
@@ -251,10 +286,14 @@ export default async function ProjectPage({
                 Ban project (permanent)
               </div>
               <p className="text-xs text-ink/55 mb-2">
-                Permanently bans this project — it can never be shipped again and is hidden
-                everywhere. Different from a reject. Reversible by staff.
+                Permanently bans this project — it can never be shipped again
+                and is hidden everywhere. Different from a reject. Reversible by
+                staff.
               </p>
-              <form action={banProject} className="flex flex-wrap gap-2 items-start">
+              <form
+                action={banProject}
+                className="flex flex-wrap gap-2 items-start"
+              >
                 <input type="hidden" name="projectId" value={project.id} />
                 <input
                   name="reason"
@@ -273,28 +312,39 @@ export default async function ProjectPage({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
         <div className="pixl-card p-4">
-          <div className="text-3xl md:text-4xl font-bold text-brand">{totalHours}h</div>
+          <div className="text-3xl md:text-4xl font-bold text-brand">
+            {totalHours}h
+          </div>
           <div className="font-pixel text-ink/70 text-sm">
             {hackatimeHours > 0 ? "Hackatime" : "logged"}
-            {project.approved_hours !== null && ` · ${project.approved_hours}h credited`}
+            {project.approved_hours !== null &&
+              ` · ${project.approved_hours}h credited`}
           </div>
         </div>
         <div className="pixl-card p-4">
-          <div className="text-3xl md:text-4xl font-bold text-brand">{journals.length}</div>
+          <div className="text-3xl md:text-4xl font-bold text-brand">
+            {journals.length}
+          </div>
           <div className="font-pixel text-ink/70 text-sm">journal entries</div>
         </div>
         <div className="pixl-card p-4 col-span-2 sm:col-span-1">
-          <div className="text-3xl md:text-4xl font-bold text-brand">{commits.commits.length}</div>
+          <div className="text-3xl md:text-4xl font-bold text-brand">
+            {commits.commits.length}
+          </div>
           <div className="font-pixel text-ink/70 text-sm">recent commits</div>
         </div>
       </div>
 
-      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">Commits</h2>
+      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">
+        Commits
+      </h2>
       <div className="pixl-card mb-8">
         <CommitList result={commits} />
       </div>
 
-      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">Journal</h2>
+      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">
+        Journal
+      </h2>
       <div className="pixl-card divide-y divide-[var(--line)] mb-8">
         {journals.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">No journal entries yet.</div>
@@ -309,18 +359,25 @@ export default async function ProjectPage({
                 {new Date(j.created_at).toLocaleString()}
               </span>
             </div>
-            <div className="text-sm whitespace-pre-wrap break-words">{j.content}</div>
+            <div className="text-sm whitespace-pre-wrap break-words">
+              {j.content}
+            </div>
           </div>
         ))}
       </div>
 
-      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">Review history</h2>
+      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">
+        Review history
+      </h2>
       <div className="pixl-card divide-y divide-[var(--line)]">
         {verdicts.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">Not reviewed yet.</div>
         )}
         {verdicts.map((v) => (
-          <div key={v.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <div
+            key={v.id}
+            className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
+          >
             <span
               className={`badge shrink-0 ${
                 v.action === "project_approved"
