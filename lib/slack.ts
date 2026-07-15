@@ -93,6 +93,7 @@ export async function dmUser(slackUserId: string, text: string): Promise<void> {
     method: "POST",
     headers: { "x-api-key": key, "Content-Type": "application/json" },
     body: JSON.stringify({ userId: slackUserId, message: text }),
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) {
     let detail = "";
