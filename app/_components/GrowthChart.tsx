@@ -38,6 +38,12 @@ export function GrowthChart({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [hover, setHover] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 30);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -107,7 +113,15 @@ export function GrowthChart({
           {kind === "cumulative" ? "total over time" : "per day"}
         </div>
       </div>
-      <div ref={wrapRef} className="relative">
+      <div
+        ref={wrapRef}
+        className="relative"
+        style={{
+          transition: "opacity 0.5s ease, transform 0.5s ease",
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? "none" : "translateY(8px)",
+        }}
+      >
         {width > 0 && n > 0 && (
           <svg
             width={width}
@@ -144,10 +158,26 @@ export function GrowthChart({
                 <path d={areaPath} fill={color} fillOpacity="0.1" />
                 <path d={linePath} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
                 {hover !== null && (
-                  <line x1={hoverX} x2={hoverX} y1={top} y2={y(0)} stroke="var(--chart-cross)" strokeWidth="1" />
+                  <line
+                    x1={hoverX}
+                    x2={hoverX}
+                    y1={top}
+                    y2={y(0)}
+                    stroke="var(--chart-cross)"
+                    strokeWidth="1"
+                    style={{ transition: "x1 0.12s ease, x2 0.12s ease" }}
+                  />
                 )}
                 {hover !== null && hover !== last && (
-                  <circle cx={x(hover)} cy={y(values[hover])} r="4" fill={color} stroke="var(--chart-surface)" strokeWidth="2" />
+                  <circle
+                    cx={x(hover)}
+                    cy={y(values[hover])}
+                    r="4"
+                    fill={color}
+                    stroke="var(--chart-surface)"
+                    strokeWidth="2"
+                    style={{ transition: "cx 0.12s ease, cy 0.12s ease" }}
+                  />
                 )}
                 <circle cx={x(last)} cy={y(values[last])} r="4" fill={color} stroke="var(--chart-surface)" strokeWidth="2" />
                 <text
@@ -168,7 +198,10 @@ export function GrowthChart({
                     key={p.date}
                     d={barPath(i)}
                     fill={color}
-                    style={{ filter: hover === i ? "brightness(1.15)" : undefined }}
+                    style={{
+                      filter: hover === i ? "brightness(1.15)" : undefined,
+                      transition: "filter 0.12s ease",
+                    }}
                   />
                 ) : null,
               )

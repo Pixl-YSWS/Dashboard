@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin, ALL_PERMISSIONS } from "@/lib/guard";
 import { listAdmins } from "@/lib/db";
@@ -44,10 +45,21 @@ function PermToggles({
   );
 }
 
-export default async function AdminsPage() {
+const PER = 8;
+
+export default async function AdminsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const access = await requireAdmin();
   if (!access.isSuper) redirect("/");
-  const admins = await listAdmins();
+  const { page } = await searchParams;
+  const allAdmins = await listAdmins();
+  const pages = Math.max(1, Math.ceil(allAdmins.length / PER));
+  const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
+  const start = (cur - 1) * PER;
+  const admins = allAdmins.slice(start, start + PER);
   const handles = await slackHandles(admins.map((a) => a.slack_id));
 
   return (
@@ -101,9 +113,9 @@ export default async function AdminsPage() {
 
       <div>
         <div className="text-sm font-medium text-ink/60 mb-3">
-          {admins.length} sub-admin{admins.length === 1 ? "" : "s"}
+          {allAdmins.length} sub-admin{allAdmins.length === 1 ? "" : "s"}
         </div>
-        {admins.length === 0 ? (
+        {allAdmins.length === 0 ? (
           <div className="pixl-card p-8 text-center text-ink/55 text-sm">
             No sub-admins yet. Add someone above to share the workload.
           </div>
@@ -153,6 +165,34 @@ export default async function AdminsPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+        {pages > 1 && (
+          <div className="flex items-center justify-between gap-3 mt-4 text-sm">
+            <span className="text-ink/50">
+              Showing {start + 1}–{Math.min(start + PER, allAdmins.length)} of {allAdmins.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/admins?page=${cur - 1}`}
+                className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
+                  cur <= 1 ? "pointer-events-none opacity-40" : ""
+                }`}
+              >
+                ←
+              </Link>
+              <span className="text-ink/60 tabular-nums px-1">
+                {cur} / {pages}
+              </span>
+              <Link
+                href={`/admins?page=${cur + 1}`}
+                className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
+                  cur >= pages ? "pointer-events-none opacity-40" : ""
+                }`}
+              >
+                →
+              </Link>
+            </div>
           </div>
         )}
       </div>

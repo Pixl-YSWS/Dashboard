@@ -144,7 +144,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     .single();
   if (owner?.slack_id) {
     try {
-      await dmUser(owner.slack_id, `${title}\n\n${body}`);
+      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${title}\n\n${body}`);
     } catch (e) {
       console.error("review DM failed", e);
     }
@@ -271,7 +271,7 @@ export async function rejectProject(formData: FormData): Promise<void> {
     .single();
   if (owner?.slack_id) {
     try {
-      await dmUser(owner.slack_id, body);
+      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${body}`);
     } catch (e) {
       console.error("reject DM failed", e);
     }
@@ -347,7 +347,7 @@ export async function banProject(formData: FormData): Promise<void> {
     .single();
   if (owner?.slack_id) {
     try {
-      await dmUser(owner.slack_id, body);
+      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${body}`);
     } catch (e) {
       console.error("ban DM failed", e);
     }
