@@ -73,8 +73,8 @@ export default async function ProjectsPage({
                   {p.users ? (
                     <Link href={`/players/${p.user_id}`} className="font-bold hover:text-brand">
                       {(p.users.slack_id && handles.get(p.users.slack_id)) ??
-                        p.users.slack_id ??
-                        p.users.display_name}
+                        p.users.display_name ??
+                        p.users.slack_id}
                     </Link>
                   ) : (
                     <span className="text-ink/50">{p.user_id}</span>

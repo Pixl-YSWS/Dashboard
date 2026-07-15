@@ -83,7 +83,7 @@ export default async function ProjectPage({
               by{" "}
               {project.users ? (
                 <Link href={`/players/${project.user_id}`} className="font-bold hover:text-brand">
-                  {ownerHandle ?? project.users.slack_id ?? project.users.display_name}
+                  {ownerHandle ?? project.users.display_name ?? project.users.slack_id}
                 </Link>
               ) : (
                 project.user_id

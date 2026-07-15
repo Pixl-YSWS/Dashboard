@@ -55,8 +55,8 @@ export function ReviewTable({
         {rows.map((p) => {
           const maker =
             (p.users?.slack_id && handles.get(p.users.slack_id)) ??
-            p.users?.slack_id ??
             p.users?.display_name ??
+            p.users?.slack_id ??
             p.user_id;
           return (
             <Link

@@ -56,7 +56,7 @@ export default async function ReviewDetail({
 
   const commits = await fetchCommits(p.repo_url);
   const ownerHandle = await slackHandle(p.users?.slack_id);
-  const ownerName = ownerHandle ?? p.users?.slack_id ?? p.users?.display_name ?? p.user_id;
+  const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;
 
   const queue = await listShippedProjects(viewer);
   const idx = queue.findIndex((q) => q.id === projectId);

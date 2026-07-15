@@ -43,10 +43,10 @@ export default async function PlayersPage({
               <tr key={p.id} className="hover:bg-cream">
                 <td className="p-3">
                   <Link href={`/players/${p.id}`} className="font-bold hover:text-brand">
-                    {(p.slack_id && handles.get(p.slack_id)) ?? p.slack_id ?? "no slack id"}
+                    {(p.slack_id && handles.get(p.slack_id)) ?? p.display_name ?? "Unknown"}
                   </Link>
                   <div className="text-xs text-ink/50">
-                    {p.display_name} · {p.oauth_provider}
+                    {p.slack_id ?? "no slack id"} · {p.oauth_provider}
                   </div>
                 </td>
                 <td className="p-3">{p.projectCount}</td>
