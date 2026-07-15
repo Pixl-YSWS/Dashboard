@@ -81,11 +81,24 @@ export async function slackHandles(
 }
 
 // Opens (or reuses) a DM with the user and sends the message.
+const EXTERNAL_DM_URL =
+  process.env.EXTERNAL_DM_URL ?? "https://dashboard.gabintavernier.com/api/external/dm";
+
+// All player-facing DMs (warns, bans, project approve/reject/ban, notices) go
+// out as Pixorpheus via the external DM API, not the internal dashboard bot.
 export async function dmUser(slackUserId: string, text: string): Promise<void> {
-  const open = (await slackCall("conversations.open", {
-    users: slackUserId,
-  })) as { channel?: { id?: string } };
-  const channel = open.channel?.id;
-  if (!channel) throw new Error("Could not open a DM with that user");
-  await slackCall("chat.postMessage", { channel, text });
+  const key = process.env.EXTERNAL_API_KEY;
+  if (!key) throw new Error("EXTERNAL_API_KEY is not set");
+  const res = await fetch(EXTERNAL_DM_URL, {
+    method: "POST",
+    headers: { "x-api-key": key, "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: slackUserId, message: text }),
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = ((await res.json()) as { error?: string }).error ?? "";
+    } catch {}
+    throw new Error(`Pixorpheus DM failed (${res.status})${detail ? `: ${detail}` : ""}`);
+  }
 }
