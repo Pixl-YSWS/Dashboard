@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
-import { sendNotification } from "@/app/actions";
+import { NotifyForm } from "@/app/_components/NotifyForm";
 
 export const dynamic = "force-dynamic";
 
@@ -15,49 +15,24 @@ export default async function NotifyPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-2">Notify</h1>
-      <p className="text-sm text-ink/60 mb-6">
-        Drops a message into players&apos; in-game inbox (the [N] menu). Leave
-        the player field empty to send to everyone.
+      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-1">Notify</h1>
+      <p className="text-sm text-ink/55 mb-5 max-w-2xl">
+        Drop a message into players&apos; in-game inbox (the [N] menu). Choose everyone or a
+        single player.
       </p>
 
       {sent && (
-        <div className="pixl-card p-3 mb-4 bg-mint/20 text-sm font-bold">
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 p-3 text-sm font-medium">
           Sent to {sent === "1" ? "1 player" : `${sent} players`}.
         </div>
       )}
       {error && (
-        <div className="pixl-card p-3 mb-4 bg-brand/15 text-sm font-bold">{error}</div>
+        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 p-3 text-sm font-medium">
+          {error}
+        </div>
       )}
 
-      <div className="pixl-card p-4 max-w-xl">
-        <form action={sendNotification} className="flex flex-col gap-3">
-          <input type="hidden" name="backTo" value="/notify" />
-          <input
-            name="playerName"
-            placeholder="Player name (empty = everyone)"
-            className="pixl-input text-sm"
-          />
-          <input
-            name="title"
-            placeholder="Title"
-            maxLength={100}
-            className="pixl-input text-sm"
-            required
-          />
-          <textarea
-            name="body"
-            placeholder="Message"
-            maxLength={500}
-            rows={4}
-            className="pixl-input text-sm"
-            required
-          />
-          <button className="pixl-btn bg-brand text-white text-sm self-start">
-            Send
-          </button>
-        </form>
-      </div>
+      <NotifyForm />
     </div>
   );
 }

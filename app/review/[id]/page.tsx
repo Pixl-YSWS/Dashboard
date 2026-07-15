@@ -5,7 +5,7 @@ import { getProject, listShippedProjects, claimReview } from "@/lib/db";
 import { fetchCommits } from "@/lib/github";
 import { ReviewForm } from "@/app/_components/ReviewForm";
 import { rejectProject, banProject } from "@/app/actions";
-import { CommitList } from "@/app/_components/CommitList";
+import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
 import { slackHandle } from "@/lib/slack";
 
@@ -43,7 +43,7 @@ export default async function ReviewDetail({
 
   const data = await getProject(projectId);
   if (!data) notFound();
-  const { project: p, journals } = data;
+  const { project: p, journals, verdicts } = data;
 
   const claim = await claimReview(projectId, viewer);
   const claimHandle = !claim.ok && claim.by ? await slackHandle(claim.by) : null;
@@ -149,17 +149,7 @@ export default async function ReviewDetail({
             {p.hackatime_projects?.length > 0 && <> · hackatime: {p.hackatime_projects.join(", ")}</>}
           </div>
 
-          <div className="pixl-card overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--line)]">
-              <span className="text-sm font-semibold">Commits</span>
-              {commits?.commits.length ? (
-                <span className="badge bg-black/[0.05] text-ink/70 dark:bg-white/[0.08]">
-                  {commits.commits.length}
-                </span>
-              ) : null}
-            </div>
-            <CommitList result={commits} />
-          </div>
+          <ReviewDetailTabs commits={commits} journals={journals} verdicts={verdicts} />
         </div>
 
         {/* sidebar */}
