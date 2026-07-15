@@ -11,14 +11,14 @@ export default async function BansPage() {
 
   return (
     <div>
-      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-2">Bans</h1>
+      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-2">Bans</h1>
       <p className="text-sm text-ink/60 mb-6">
         Every ban ever issued, newest first. Lifting removes all active bans for that player.
       </p>
       <div className="pixl-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left border-b-2 border-ink bg-parch">
+            <tr className="text-left border-b border-[var(--line)] bg-parch">
               <th className="p-3">Player</th>
               <th className="p-3">Reason</th>
               <th className="p-3">Banned by</th>
@@ -28,7 +28,7 @@ export default async function BansPage() {
               <th className="p-3"></th>
             </tr>
           </thead>
-          <tbody className="divide-y-2 divide-ink/10">
+          <tbody className="divide-y divide-[var(--line)]">
             {bans.map((b) => {
               const active = banIsActive(b);
               return (
@@ -47,15 +47,15 @@ export default async function BansPage() {
                   </td>
                   <td className="p-3">
                     {active ? (
-                      <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-brand text-white">
+                      <span className="badge bg-brand text-white">
                         active
                       </span>
                     ) : b.lifted_at ? (
-                      <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-mint/30 dark:bg-mint/20">
+                      <span className="badge bg-mint/30 dark:bg-mint/20">
                         lifted
                       </span>
                     ) : (
-                      <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-ink/10">
+                      <span className="badge bg-ink/10">
                         expired
                       </span>
                     )}
@@ -78,18 +78,18 @@ export default async function BansPage() {
         </table>
       </div>
 
-      <h2 className="font-pixel text-2xl md:text-3xl text-ink mt-10 mb-3">Ban log</h2>
+      <h2 className="text-lg font-semibold text-ink tracking-tight mt-10 mb-3">Ban log</h2>
       <p className="text-sm text-ink/60 mb-4">
         Every ban and lift action with who did it, newest first.
       </p>
-      <div className="pixl-card divide-y-2 divide-ink/10">
+      <div className="pixl-card divide-y divide-[var(--line)]">
         {log.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">No ban actions yet.</div>
         )}
         {log.map((r) => (
           <div key={r.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             <span
-              className={`font-pixel px-2 py-0.5 border-2 border-ink shrink-0 ${
+              className={`badge shrink-0 ${
                 r.action === "ban"
                   ? "bg-brand/15 dark:bg-brand/30"
                   : "bg-mint/30 dark:bg-mint/20"

@@ -257,6 +257,7 @@ export async function listShippedProjects(): Promise<ShippedProject[]> {
     .select("*, users(id, display_name, slack_id)")
     .eq("status", "shipped")
     .is("archived_at", null)
+    .is("rejected_at", null)
     .order("shipped_at", { ascending: true })
     .limit(200);
   if (error) {
@@ -517,4 +518,45 @@ export async function logModAction(
     .from("mod_actions")
     .insert({ user_id: userId, action, detail, actor });
   if (error) console.error("logModAction", error.message);
+}
+
+export interface SearchResults {
+  players: { id: string; display_name: string; slack_id: string | null }[];
+  projects: { id: number; name: string; status: string; user_id: string }[];
+}
+
+export async function globalSearch(
+  query: string,
+  opts: { players: boolean; projects: boolean },
+): Promise<SearchResults> {
+  const clean = query.replace(/[,()%*\\]/g, " ").trim();
+  if (clean.length < 2) return { players: [], projects: [] };
+  const like = `%${clean}%`;
+
+  const [playersRes, projectsRes] = await Promise.all([
+    opts.players
+      ? db
+          .from("users")
+          .select("id, display_name, slack_id")
+          .or(`display_name.ilike.${like},slack_id.ilike.${like}`)
+          .order("created_at", { ascending: false })
+          .limit(6)
+      : Promise.resolve({ data: [], error: null }),
+    opts.projects
+      ? db
+          .from("projects")
+          .select("id, name, status, user_id")
+          .is("archived_at", null)
+          .ilike("name", like)
+          .order("created_at", { ascending: false })
+          .limit(6)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (playersRes.error) console.error("globalSearch players", playersRes.error.message);
+  if (projectsRes.error) console.error("globalSearch projects", projectsRes.error.message);
+
+  return {
+    players: (playersRes.data ?? []) as SearchResults["players"],
+    projects: (projectsRes.data ?? []) as SearchResults["projects"],
+  };
 }

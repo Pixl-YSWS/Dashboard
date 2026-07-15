@@ -15,7 +15,7 @@ export default async function NotifyPage({
 
   return (
     <div>
-      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-2">Notify</h1>
+      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-2">Notify</h1>
       <p className="text-sm text-ink/60 mb-6">
         Drops a message into players&apos; in-game inbox (the [N] menu). Leave
         the player field empty to send to everyone.

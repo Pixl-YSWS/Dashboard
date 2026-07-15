@@ -230,9 +230,10 @@ export async function rejectProject(formData: FormData): Promise<void> {
   const by = actorName(access);
   const projectId = Number(formData.get("projectId") ?? 0);
   const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
+  const returnTo = String(formData.get("returnTo") ?? "") || `/projects/${projectId}`;
   if (!projectId) return;
   if (!reason)
-    redirect(`/projects/${projectId}?error=${encodeURIComponent("A reason is required to reject a project.")}`);
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("A reason is required to reject a project.")}`);
 
   const { data: project, error } = await db
     .from("projects")

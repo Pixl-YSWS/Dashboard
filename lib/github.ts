@@ -26,7 +26,7 @@ function parseRepo(url: string): { owner: string; repo: string } | null {
 
 // Newest commits for a repo via the public GitHub API. Auth via GITHUB_TOKEN
 // when present to lift the 60/hr unauthenticated rate limit.
-export async function fetchCommits(repoUrl: string | null, limit = 30): Promise<CommitResult> {
+export async function fetchCommits(repoUrl: string | null, limit = 50): Promise<CommitResult> {
   if (!repoUrl) return { repo: null, commits: [], error: null };
   const parsed = parseRepo(repoUrl);
   if (!parsed) return { repo: null, commits: [], error: "not_github" };

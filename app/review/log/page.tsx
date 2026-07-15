@@ -18,20 +18,20 @@ export default async function ReviewLogPage() {
 
   return (
     <div>
-      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-3">Review log</h1>
+      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-3">Review log</h1>
       <ReviewTabs isSuper={access.isSuper} />
       <p className="text-sm text-ink/60 mb-4">
         Owners only — every verdict with whether the reviewer opened the repo and
         demo, how long they spent in each, and any hour adjustments.
       </p>
-      <div className="pixl-card divide-y-2 divide-ink/10">
+      <div className="pixl-card divide-y divide-[var(--line)]">
         {log.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">No verdicts yet.</div>
         )}
         {log.map((r) => (
           <div key={r.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             <span
-              className={`font-pixel px-2 py-0.5 border-2 border-ink shrink-0 ${
+              className={`badge shrink-0 ${
                 r.verdict === "approved"
                   ? "bg-emerald-600/20 dark:bg-emerald-600/30"
                   : r.verdict === "reverted"

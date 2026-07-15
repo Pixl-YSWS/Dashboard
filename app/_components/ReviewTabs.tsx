@@ -6,20 +6,20 @@ import { usePathname } from "next/navigation";
 export function ReviewTabs({ isSuper }: { isSuper: boolean }) {
   const pathname = usePathname();
   const tabs: { href: string; label: string }[] = [{ href: "/review", label: "Queue" }];
-  if (isSuper) tabs.push({ href: "/review/log", label: "Log" });
+  if (isSuper) tabs.push({ href: "/review/log", label: "Reviewer log" });
 
   return (
-    <div className="flex gap-2 mb-4 border-b-2 border-ink/20">
+    <div className="flex gap-6 mb-6 border-b border-[var(--line)]">
       {tabs.map((t) => {
         const active = pathname === t.href;
         return (
           <Link
             key={t.href}
             href={t.href}
-            className={`px-4 py-2 font-pixel border-2 border-b-0 -mb-0.5 ${
+            className={`relative -mb-px px-0.5 pb-3 text-sm font-medium transition-colors ${
               active
-                ? "border-ink bg-parch text-ink"
-                : "border-transparent text-ink/50 hover:text-ink"
+                ? "text-brand border-b-2 border-brand"
+                : "text-ink/55 hover:text-ink border-b-2 border-transparent"
             }`}
           >
             {t.label}

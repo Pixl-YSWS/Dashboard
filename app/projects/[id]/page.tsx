@@ -47,24 +47,24 @@ export default async function ProjectPage({
           <img
             src={project.image_url}
             alt=""
-            className="w-20 h-20 md:w-24 md:h-24 object-cover border-2 border-ink shrink-0"
+            className="w-20 h-20 md:w-24 md:h-24 object-cover border border-[var(--line)] rounded-xl shrink-0"
           />
         )}
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-pixel text-4xl md:text-5xl text-brand break-words">
+            <h1 className="text-2xl font-semibold text-ink tracking-tight break-words">
               {project.name}
             </h1>
             <StatusBadge status={project.status} />
             <LevelBadge level={project.level} />
             <ShipBadges project={project} />
             {project.archived_at && (
-              <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-ink/20 whitespace-nowrap">
+              <span className="badge bg-ink/20 whitespace-nowrap">
                 archived
               </span>
             )}
             {project.rejected_at && (
-              <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-red-700 text-white whitespace-nowrap">
+              <span className="badge bg-red-700 text-white whitespace-nowrap">
                 rejected
               </span>
             )}
@@ -93,13 +93,13 @@ export default async function ProjectPage({
       )}
 
       {project.rejected_at && project.reject_reason && (
-        <div className="mt-4 border-2 border-red-700 bg-red-700/10 p-3 text-sm">
+        <div className="mt-4 border border-rose-300 dark:border-rose-500/40 rounded-lg bg-red-700/10 p-3 text-sm">
           <span className="font-pixel text-red-700">rejection reason</span>
           <div className="mt-1 break-words">{project.reject_reason}</div>
         </div>
       )}
       {project.system_note && (
-        <div className="mt-4 border-2 border-brand bg-brand/10 dark:bg-brand/20 p-3 text-sm font-bold text-brand">
+        <div className="mt-4 border border-brand/30 rounded-lg bg-brand/10 dark:bg-brand/20 p-3 text-sm font-bold text-brand">
           {project.system_note}
         </div>
       )}
@@ -111,7 +111,7 @@ export default async function ProjectPage({
           <p className="text-sm text-ink/50">No description.</p>
         )}
         {project.is_update && project.update_notes && (
-          <div className="mt-3 border-2 border-ink bg-parch p-3 text-sm">
+          <div className="mt-3 border border-[var(--line)] rounded-lg bg-parch p-3 text-sm">
             <span className="font-pixel">what changed since last approval</span>
             <div className="mt-1 whitespace-pre-wrap break-words">{project.update_notes}</div>
           </div>
@@ -147,7 +147,7 @@ export default async function ProjectPage({
           </div>
         )}
         {project.review_note && (
-          <div className="mt-4 border-2 border-ink bg-parch p-3 text-sm">
+          <div className="mt-4 border border-[var(--line)] rounded-lg bg-parch p-3 text-sm">
             <span className="font-pixel">reviewer note</span>
             <div className="mt-1 break-words">{project.review_note}</div>
           </div>
@@ -216,20 +216,20 @@ export default async function ProjectPage({
         </div>
       </div>
 
-      <h2 className="font-pixel text-2xl md:text-3xl text-ink mb-3">Commits</h2>
+      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">Commits</h2>
       <div className="pixl-card mb-8">
         <CommitList result={commits} />
       </div>
 
-      <h2 className="font-pixel text-2xl md:text-3xl text-ink mb-3">Journal</h2>
-      <div className="pixl-card divide-y-2 divide-ink/10 mb-8">
+      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">Journal</h2>
+      <div className="pixl-card divide-y divide-[var(--line)] mb-8">
         {journals.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">No journal entries yet.</div>
         )}
         {journals.map((j) => (
           <div key={j.id} className="p-4">
             <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
-              <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-parch">
+              <span className="badge bg-parch">
                 {Math.round((Number(j.hours) || 0) * 10) / 10}h
               </span>
               <span className="text-xs text-ink/50">
@@ -241,15 +241,15 @@ export default async function ProjectPage({
         ))}
       </div>
 
-      <h2 className="font-pixel text-2xl md:text-3xl text-ink mb-3">Review history</h2>
-      <div className="pixl-card divide-y-2 divide-ink/10">
+      <h2 className="text-lg font-semibold text-ink tracking-tight mb-3">Review history</h2>
+      <div className="pixl-card divide-y divide-[var(--line)]">
         {verdicts.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">Not reviewed yet.</div>
         )}
         {verdicts.map((v) => (
           <div key={v.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             <span
-              className={`font-pixel px-2 py-0.5 border-2 border-ink shrink-0 ${
+              className={`badge shrink-0 ${
                 v.action === "project_approved"
                   ? "bg-emerald-600/20 dark:bg-emerald-600/30"
                   : v.action === "review_reverted"

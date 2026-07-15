@@ -191,7 +191,7 @@ export function GrowthChart({
 
         {hover !== null && n > 0 && (
           <div
-            className="absolute top-1 pointer-events-none border-2 border-ink bg-white dark:bg-gray-900 px-2.5 py-1.5 text-xs z-10"
+            className="absolute top-1 pointer-events-none rounded-lg border border-[var(--line)] shadow-sm bg-[var(--surface)] px-2.5 py-1.5 text-xs z-10"
             style={{ left: Math.max(0, Math.min(hoverX + 10, width - tooltipW)) }}
           >
             <div className="flex items-center gap-1.5">
@@ -206,7 +206,7 @@ export function GrowthChart({
 
       <details className="mt-2 text-xs">
         <summary className="cursor-pointer font-bold text-ink/50 select-none">data table</summary>
-        <div className="mt-1 max-h-40 overflow-y-auto border-2 border-ink/20">
+        <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-[var(--line)]">
           <table className="w-full">
             <thead>
               <tr className="text-left bg-parch">

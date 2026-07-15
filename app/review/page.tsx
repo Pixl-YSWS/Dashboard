@@ -3,6 +3,7 @@ import { requirePagePerm } from "@/lib/guard";
 import { listShippedProjects } from "@/lib/db";
 import { fetchCommits } from "@/lib/github";
 import { ReviewForm } from "@/app/_components/ReviewForm";
+import { rejectProject } from "@/app/actions";
 import { CommitList } from "@/app/_components/CommitList";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
 import { LevelBadge, ShipBadges } from "@/app/_components/ProjectBadges";
@@ -27,27 +28,26 @@ export default async function ReviewPage({
 
   return (
     <div>
-      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-        <h1 className="font-pixel text-4xl md:text-5xl text-brand">Review queue</h1>
+      <div className="flex items-baseline justify-between gap-3 flex-wrap mb-1">
+        <h1 className="text-2xl font-semibold text-ink tracking-tight">Review queue</h1>
         {total > 0 && (
-          <div className="font-pixel text-lg text-ink/70">
-            Submission {idx + 1} of {total}
+          <div className="text-sm text-ink/50 tabular-nums">
+            {idx + 1} of {total}
           </div>
         )}
       </div>
       <ReviewTabs isSuper={access.isSuper} />
-      <p className="text-sm text-ink/60 mb-6">
-        One submission at a time, oldest first — no cherry-picking. Every verdict
-        needs feedback. Leave the hours field alone to credit logged hours; you can
-        only lower it.
+      <p className="text-sm text-ink/55 mb-6">
+        Oldest first, no skipping. Every verdict needs a note. Hours default to
+        logged time — you can only lower them.
       </p>
       {error && (
-        <div className="pixl-card p-3 mb-5 text-sm font-bold text-red-700">{error}</div>
+        <div className="pixl-card p-3 mb-5 text-sm font-medium text-rose-600">{error}</div>
       )}
 
       {!p ? (
-        <div className="pixl-card p-6 text-ink/60">
-          Nothing to review — the queue is empty. 🎉
+        <div className="pixl-card p-8 text-center text-ink/55">
+          Queue&apos;s clear. Nothing waiting for review.
         </div>
       ) : (
         <>
@@ -59,7 +59,7 @@ export default async function ReviewPage({
                     <img
                       src={p.image_url}
                       alt=""
-                      className="w-24 h-24 object-cover border-2 border-ink shrink-0"
+                      className="w-24 h-24 object-cover border border-[var(--line)] rounded-xl shrink-0"
                     />
                   )}
                   <div className="min-w-0">
@@ -91,13 +91,13 @@ export default async function ReviewPage({
                 </div>
 
                 {p.system_note && (
-                  <div className="mt-3 border-2 border-brand bg-brand/10 dark:bg-brand/20 p-3 text-sm font-bold text-brand">
+                  <div className="mt-3 border border-brand/30 rounded-lg bg-brand/10 dark:bg-brand/20 p-3 text-sm font-bold text-brand">
                     {p.system_note}
                   </div>
                 )}
                 {p.description && <p className="text-sm mt-3">{p.description}</p>}
                 {p.is_update && p.update_notes && (
-                  <div className="mt-3 border-2 border-ink bg-parch p-3 text-sm">
+                  <div className="mt-3 border border-[var(--line)] rounded-lg bg-parch p-3 text-sm">
                     <span className="font-pixel">what changed since last approval</span>
                     <div className="mt-1 whitespace-pre-wrap break-words">{p.update_notes}</div>
                   </div>
@@ -117,7 +117,7 @@ export default async function ReviewPage({
               </div>
 
               <div className="pixl-card">
-                <div className="p-3 border-b-2 border-ink bg-parch font-pixel">
+                <div className="p-3 border-b border-[var(--line)] bg-parch font-pixel">
                   Commits{commits?.commits.length ? ` · ${commits.commits.length}` : ""}
                 </div>
                 {commits && <CommitList result={commits} />}
@@ -154,6 +154,31 @@ export default async function ReviewPage({
                   )}
                 </div>
               </div>
+
+              <details className="pixl-card p-4 mt-4 group">
+                <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-rose-600 select-none list-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  Reject / ban project
+                </summary>
+                <p className="text-xs text-ink/55 mt-2">
+                  Permanent — removes it from the queue and Pixl, notifies the owner. Reversible
+                  from the project page.
+                </p>
+                <form action={rejectProject} className="mt-3 flex flex-col gap-2">
+                  <input type="hidden" name="projectId" value={p.id} />
+                  <input type="hidden" name="returnTo" value={`/review?i=${idx}`} />
+                  <textarea
+                    name="reason"
+                    required
+                    rows={2}
+                    placeholder="Reason (shown to the owner)…"
+                    className="pixl-input text-sm resize-y"
+                  />
+                  <button className="pixl-btn bg-rose-600 text-white border-transparent text-sm">
+                    Reject / ban
+                  </button>
+                </form>
+              </details>
             </aside>
           </div>
 

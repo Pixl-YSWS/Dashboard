@@ -12,7 +12,7 @@ export default async function AdminsPage() {
 
   return (
     <div>
-      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-2">Sub-admins</h1>
+      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-2">Sub-admins</h1>
       <p className="text-sm text-ink/60 mb-6">
         Owners (from ADMIN_SLACK_IDS) always have every permission. Sub-admins
         sign in with Slack like you do, but only get the boxes you tick.
@@ -38,7 +38,7 @@ export default async function AdminsPage() {
         </form>
       </div>
 
-      <div className="pixl-card divide-y-2 divide-ink/10">
+      <div className="pixl-card divide-y divide-[var(--line)]">
         {admins.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">No sub-admins yet.</div>
         )}

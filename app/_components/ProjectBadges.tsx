@@ -1,18 +1,36 @@
-const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-  draft: { label: "draft", className: "bg-ink/10" },
-  shipped: { label: "in review", className: "bg-tang/30 dark:bg-tang/40" },
-  approved: { label: "approved", className: "bg-mint/40 dark:bg-mint/30" },
-  needs_changes: { label: "needs changes", className: "bg-brand/15 dark:bg-brand/30" },
+const TONES = {
+  gray: "bg-black/[0.05] text-ink/70 dark:bg-white/[0.08]",
+  green: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+  amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
+  rose: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  violet: "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
+};
+
+export function Badge({
+  tone = "gray",
+  children,
+}: {
+  tone?: keyof typeof TONES;
+  children: React.ReactNode;
+}) {
+  return <span className={`badge ${TONES[tone]}`}>{children}</span>;
+}
+
+const STATUS: Record<string, { label: string; tone: keyof typeof TONES; dot: string }> = {
+  draft: { label: "Draft", tone: "gray", dot: "bg-gray-400" },
+  shipped: { label: "In review", tone: "amber", dot: "bg-amber-500" },
+  approved: { label: "Approved", tone: "green", dot: "bg-emerald-500" },
+  needs_changes: { label: "Needs changes", tone: "rose", dot: "bg-rose-500" },
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLES[status] ?? { label: status, className: "bg-ink/10" };
+  const s = STATUS[status] ?? { label: status, tone: "gray" as const, dot: "bg-gray-400" };
   return (
-    <span
-      className={`font-pixel text-sm px-2 py-0.5 border-2 border-ink whitespace-nowrap ${s.className}`}
-    >
+    <Badge tone={s.tone}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
       {s.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -21,9 +39,9 @@ const LEVEL_NAMES = ["Greenhorn", "Deputy", "Outlaw", "Legend"];
 export function LevelBadge({ level }: { level: number }) {
   const idx = Math.min(Math.max(Math.round(level) || 1, 1), 4);
   return (
-    <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-parch whitespace-nowrap">
+    <Badge tone="blue">
       L{idx} · {LEVEL_NAMES[idx - 1]}
-    </span>
+    </Badge>
   );
 }
 
@@ -34,21 +52,9 @@ export function ShipBadges({
 }) {
   return (
     <>
-      {project.is_update && (
-        <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-blue-600/20 dark:bg-blue-600/30 whitespace-nowrap">
-          update
-        </span>
-      )}
-      {project.used_ai && (
-        <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-purple-600/20 dark:bg-purple-600/30 whitespace-nowrap">
-          AI used
-        </span>
-      )}
-      {project.other_ysws && (
-        <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-tang/30 dark:bg-tang/40 whitespace-nowrap">
-          other YSWS disclosed
-        </span>
-      )}
+      {project.is_update && <Badge tone="blue">Update</Badge>}
+      {project.used_ai && <Badge tone="violet">AI used</Badge>}
+      {project.other_ysws && <Badge tone="amber">Other YSWS disclosed</Badge>}
     </>
   );
 }

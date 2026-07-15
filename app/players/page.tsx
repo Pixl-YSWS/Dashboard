@@ -17,7 +17,7 @@ export default async function PlayersPage({
 
   return (
     <div>
-      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-6">Players</h1>
+      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-6">Players</h1>
       <form className="mb-5 flex gap-2">
         <input
           name="q"
@@ -30,7 +30,7 @@ export default async function PlayersPage({
       <div className="pixl-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left border-b-2 border-ink bg-parch">
+            <tr className="text-left border-b border-[var(--line)] bg-parch">
               <th className="p-3">Player</th>
               <th className="p-3">Projects</th>
               <th className="p-3">Violations</th>
@@ -38,7 +38,7 @@ export default async function PlayersPage({
               <th className="p-3">Joined</th>
             </tr>
           </thead>
-          <tbody className="divide-y-2 divide-ink/10">
+          <tbody className="divide-y divide-[var(--line)]">
             {players.map((p) => (
               <tr key={p.id} className="hover:bg-cream">
                 <td className="p-3">
@@ -55,11 +55,11 @@ export default async function PlayersPage({
                 </td>
                 <td className="p-3">
                   {p.activeBan ? (
-                    <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-brand text-white">
+                    <span className="badge bg-brand text-white">
                       banned
                     </span>
                   ) : (
-                    <span className="font-pixel text-sm px-2 py-0.5 border-2 border-ink bg-mint/30 dark:bg-mint/20">
+                    <span className="badge bg-mint/30 dark:bg-mint/20">
                       ok
                     </span>
                   )}

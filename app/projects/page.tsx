@@ -20,7 +20,7 @@ export default async function ProjectsPage({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3 flex-wrap mb-6">
-        <h1 className="font-pixel text-4xl md:text-5xl text-brand">
+        <h1 className="text-2xl font-semibold text-ink tracking-tight">
           {archived ? "Archived projects" : "Projects"}
         </h1>
         <Link
@@ -43,7 +43,7 @@ export default async function ProjectsPage({
       <div className="pixl-card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left border-b-2 border-ink bg-parch">
+            <tr className="text-left border-b border-[var(--line)] bg-parch">
               <th className="p-3">Project</th>
               <th className="p-3">Status</th>
               <th className="p-3">Owner</th>
@@ -52,7 +52,7 @@ export default async function ProjectsPage({
               <th className="p-3">Created</th>
             </tr>
           </thead>
-          <tbody className="divide-y-2 divide-ink/10">
+          <tbody className="divide-y divide-[var(--line)]">
             {projects.map((p) => (
               <tr key={p.id} className="hover:bg-cream">
                 <td className="p-3 max-w-72">

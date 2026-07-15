@@ -11,11 +11,11 @@ export default async function ViolationsPage() {
 
   return (
     <div>
-      <h1 className="font-pixel text-4xl md:text-5xl text-brand mb-2">Violations</h1>
+      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-2">Violations</h1>
       <p className="text-sm text-ink/60 mb-6">
         Every censored chat message and rejected display name, newest first.
       </p>
-      <div className="pixl-card divide-y-2 divide-ink/10">
+      <div className="pixl-card divide-y divide-[var(--line)]">
         {violations.length === 0 && (
           <div className="p-5 text-ink/50 text-sm">No violations logged yet.</div>
         )}
@@ -23,7 +23,7 @@ export default async function ViolationsPage() {
           <div key={v.id} className="p-4">
             <div className="flex items-center gap-3 flex-wrap">
               <span
-                className={`font-pixel text-sm px-2 py-0.5 border-2 border-ink ${
+                className={`badge ${
                   v.kind === "chat" ? "bg-tang/20 dark:bg-tang/30" : "bg-brand/15 dark:bg-brand/30"
                 }`}
               >
@@ -42,7 +42,7 @@ export default async function ViolationsPage() {
                 {new Date(v.created_at).toLocaleString()}
               </span>
             </div>
-            <div className="text-sm bg-parch border-2 border-ink/20 px-3 py-1.5 my-2 break-words">
+            <div className="text-sm bg-parch border border-[var(--line)] rounded-lg px-3 py-1.5 my-2 break-words">
               {v.content}
             </div>
             <div className="flex gap-3 flex-wrap">

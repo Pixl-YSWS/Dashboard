@@ -34,9 +34,9 @@ export default async function PlayerPage({
         ← all players
       </Link>
       <div className="flex items-center gap-4 flex-wrap mt-2 mb-1">
-        <h1 className="font-pixel text-4xl md:text-5xl text-brand break-words">{user.display_name}</h1>
+        <h1 className="text-2xl font-semibold text-ink tracking-tight break-words">{user.display_name}</h1>
         {activeBan && (
-          <span className="font-pixel px-3 py-1 border-2 border-ink bg-brand text-white">
+          <span className="badge bg-brand text-white">
             banned {activeBan.expires_at ? `until ${new Date(activeBan.expires_at).toLocaleString()}` : "forever"}
           </span>
         )}
@@ -61,7 +61,7 @@ export default async function PlayerPage({
       </div>
 
       <Section title={`Projects (${projects.length})`}>
-        <div className="pixl-card divide-y-2 divide-ink/10">
+        <div className="pixl-card divide-y divide-[var(--line)]">
           {projects.length === 0 && (
             <div className="p-4 text-ink/50 text-sm">No projects yet.</div>
           )}
@@ -95,13 +95,13 @@ export default async function PlayerPage({
       </Section>
 
       <Section title={`Violations (${violations.length})`}>
-        <div className="pixl-card divide-y-2 divide-ink/10">
+        <div className="pixl-card divide-y divide-[var(--line)]">
           {violations.length === 0 && (
             <div className="p-4 text-ink/50 text-sm">Clean record.</div>
           )}
           {violations.map((v) => (
             <div key={v.id} className="p-3 flex gap-3 items-baseline">
-              <span className="font-pixel text-xs px-2 border-2 border-ink bg-tang/20 dark:bg-tang/30">
+              <span className="badge bg-tang/20 dark:bg-tang/30">
                 {v.kind}
               </span>
               <span className="text-sm flex-1 break-words">{v.content}</span>
@@ -114,12 +114,12 @@ export default async function PlayerPage({
       </Section>
 
       <Section title={`Bans (${bans.length})`}>
-        <div className="pixl-card divide-y-2 divide-ink/10">
+        <div className="pixl-card divide-y divide-[var(--line)]">
           {bans.length === 0 && <div className="p-4 text-ink/50 text-sm">Never banned.</div>}
           {bans.map((b) => (
             <div key={b.id} className="p-3 text-sm flex gap-3 items-baseline flex-wrap">
               <span
-                className={`font-pixel text-xs px-2 border-2 border-ink ${
+                className={`badge ${
                   banIsActive(b) ? "bg-brand text-white" : "bg-ink/10"
                 }`}
               >
@@ -141,7 +141,7 @@ export default async function PlayerPage({
         <div className="pixl-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left border-b-2 border-ink bg-parch">
+              <tr className="text-left border-b border-[var(--line)] bg-parch">
                 <th className="p-2">Scene</th>
                 <th className="p-2">X</th>
                 <th className="p-2">Y</th>
@@ -149,7 +149,7 @@ export default async function PlayerPage({
                 <th className="p-2">Updated</th>
               </tr>
             </thead>
-            <tbody className="divide-y-2 divide-ink/10">
+            <tbody className="divide-y divide-[var(--line)]">
               {states.map((s) => (
                 <tr key={s.scene}>
                   <td className="p-2 font-mono">{s.scene}</td>
@@ -174,13 +174,13 @@ export default async function PlayerPage({
       </Section>
 
       <Section title="Moderation log">
-        <div className="pixl-card divide-y-2 divide-ink/10">
+        <div className="pixl-card divide-y divide-[var(--line)]">
           {actions.length === 0 && (
             <div className="p-4 text-ink/50 text-sm">No moderation actions yet.</div>
           )}
           {actions.map((a) => (
             <div key={a.id} className="p-3 text-sm flex gap-3 items-baseline flex-wrap">
-              <span className="font-pixel text-xs px-2 border-2 border-ink bg-parch">
+              <span className="badge bg-parch">
                 {a.action}
               </span>
               <span className="flex-1">{a.detail}</span>
