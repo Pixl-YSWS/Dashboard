@@ -615,6 +615,35 @@ export async function sendNotification(formData: FormData): Promise<void> {
   if (backTo) redirect(`${backTo}?sent=${rows.length}`);
 }
 
+export interface PlayerHit {
+  id: string;
+  name: string;
+  hasSlack: boolean;
+}
+
+// Typeahead for the notify page: find players by display name so an admin can
+// pick one instead of guessing the exact spelling.
+export async function searchPlayers(query: string): Promise<PlayerHit[]> {
+  await requirePerm("notify");
+  const clean = query.replace(/[%_,()\\]/g, " ").trim();
+  if (clean.length < 2) return [];
+  const { data, error } = await db
+    .from("users")
+    .select("id, display_name, slack_id")
+    .ilike("display_name", `%${clean}%`)
+    .order("display_name", { ascending: true })
+    .limit(8);
+  if (error) {
+    console.error("searchPlayers", error.message);
+    return [];
+  }
+  return (data ?? []).map((u) => ({
+    id: u.id as string,
+    name: (u.display_name as string) ?? "(unnamed)",
+    hasSlack: Boolean(u.slack_id),
+  }));
+}
+
 export async function addAdmin(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
