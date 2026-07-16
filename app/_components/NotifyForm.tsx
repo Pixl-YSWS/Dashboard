@@ -15,19 +15,25 @@ export function NotifyForm() {
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (selected && player === selected.name) return;
+    if (selected && player === selected.name) {
+      setOpen(false);
+      return;
+    }
     const q = player.trim();
     if (q.length < 2) {
       setHits([]);
       setOpen(false);
+      setSearching(false);
       return;
     }
     setSearching(true);
+    setOpen(true);
     const t = setTimeout(async () => {
       try {
         const res = await searchPlayers(q);
         setHits(res);
-        setOpen(true);
+      } catch {
+        setHits([]);
       } finally {
         setSearching(false);
       }
@@ -96,7 +102,7 @@ export function NotifyForm() {
                 required={!everyone}
                 className="pixl-input w-full text-sm"
               />
-              {open && (hits.length > 0 || searching) && (
+              {open && (
                 <div className="absolute z-20 mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg overflow-hidden">
                   {searching && hits.length === 0 && (
                     <div className="px-3 py-2 text-sm text-ink/50">Searching…</div>
