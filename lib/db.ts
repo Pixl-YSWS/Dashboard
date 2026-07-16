@@ -296,6 +296,11 @@ function claimedByOther(p: ShippedProject, viewer?: string): boolean {
   return Date.now() - new Date(p.reviewing_at).getTime() < REVIEW_LOCK_MS;
 }
 
+// A reviewer must never see or grade their own submission.
+function ownedByViewer(p: ShippedProject, viewer?: string): boolean {
+  return !!viewer && !!p.users?.slack_id && p.users.slack_id === viewer;
+}
+
 // Review queue: shipped projects oldest-first, hiding anything another reviewer
 // is currently reviewing.
 export async function listShippedProjects(viewer?: string): Promise<ShippedProject[]> {
@@ -312,7 +317,11 @@ export async function listShippedProjects(viewer?: string): Promise<ShippedProje
     console.error("listShippedProjects", error.message);
     return [];
   }
-  const visible = (data ?? []).filter((p) => !claimedByOther(p as ShippedProject, viewer));
+  const visible = (data ?? []).filter(
+    (p) =>
+      !claimedByOther(p as ShippedProject, viewer) &&
+      !ownedByViewer(p as ShippedProject, viewer),
+  );
   return hydrateHours(visible as ShippedProject[]);
 }
 
@@ -355,7 +364,11 @@ export async function listSecondReviewProjects(viewer?: string): Promise<Shipped
     console.error("listSecondReviewProjects", error.message);
     return [];
   }
-  const visible = (data ?? []).filter((p) => !claimedByOther(p as ShippedProject, viewer));
+  const visible = (data ?? []).filter(
+    (p) =>
+      !claimedByOther(p as ShippedProject, viewer) &&
+      !ownedByViewer(p as ShippedProject, viewer),
+  );
   return hydrateHours(visible as ShippedProject[]);
 }
 
