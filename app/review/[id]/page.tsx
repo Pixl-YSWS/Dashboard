@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { getProject, listShippedProjects, listSecondReviewProjects, claimReview } from "@/lib/db";
 import { fetchCommits } from "@/lib/github";
+import { yswsShipsFor } from "@/lib/ysws";
 import { ReviewForm } from "@/app/_components/ReviewForm";
 import { banProject } from "@/app/actions";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
@@ -66,6 +67,7 @@ export default async function ReviewDetail({
     isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
 
   const commits = await fetchCommits(p.repo_url);
+  const yswsShips = await yswsShipsFor(p.users?.slack_id, p.repo_url, p.demo_url);
   const ownerHandle = await slackHandle(p.users?.slack_id);
   const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;
 
@@ -162,7 +164,12 @@ export default async function ReviewDetail({
             {p.hackatime_projects?.length > 0 && <> · hackatime: {p.hackatime_projects.join(", ")}</>}
           </div>
 
-          <ReviewDetailTabs commits={commits} journals={journals} verdicts={verdicts} />
+          <ReviewDetailTabs
+            commits={commits}
+            journals={journals}
+            verdicts={verdicts}
+            yswsShips={yswsShips}
+          />
         </div>
 
         {/* sidebar */}

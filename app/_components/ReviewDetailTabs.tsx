@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CommitResult } from "@/lib/github";
 import type { JournalRow, ModActionRow } from "@/lib/db";
+import type { YswsShip } from "@/lib/ysws";
 import { CommitList } from "@/app/_components/CommitList";
 
 const VERDICT_LABEL: Record<string, { label: string; cls: string }> = {
@@ -15,17 +16,20 @@ export function ReviewDetailTabs({
   commits,
   journals,
   verdicts,
+  yswsShips,
 }: {
   commits: CommitResult;
   journals: JournalRow[];
   verdicts: ModActionRow[];
+  yswsShips: YswsShip[];
 }) {
-  const [tab, setTab] = useState<"commits" | "journals" | "reviews">("commits");
+  const [tab, setTab] = useState<"commits" | "journals" | "reviews" | "ysws">("commits");
 
   const tabs = [
     { key: "commits" as const, label: "Commits", count: commits.commits.length },
     { key: "journals" as const, label: "Journals", count: journals.length },
     { key: "reviews" as const, label: "Past reviews", count: verdicts.length },
+    { key: "ysws" as const, label: "Other YSWS", count: yswsShips.length },
   ];
 
   return (
@@ -75,6 +79,49 @@ export function ReviewDetailTabs({
                 </span>
               </div>
               <div className="text-sm whitespace-pre-wrap break-words text-ink/80">{j.content}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === "ysws" && (
+        <div className="divide-y divide-[var(--line)]">
+          {yswsShips.length === 0 && (
+            <div className="p-5 text-sm text-ink/50">
+              Nothing from this maker (or these URLs) in the YSWS archive.
+            </div>
+          )}
+          {yswsShips.map((s, i) => (
+            <div key={i} className="p-4">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <span className="font-medium text-sm">{s.ysws}</span>
+                {s.urlMatch && (
+                  <span className="badge bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                    same repo/demo as this submission
+                  </span>
+                )}
+                <span className="badge bg-black/[0.05] text-ink/70 dark:bg-white/[0.08]">
+                  {s.hours}h
+                </span>
+                <span className="text-xs text-ink/45 ml-auto">
+                  {s.approvedAt ? `approved ${new Date(s.approvedAt).toLocaleDateString()}` : "no date"}
+                </span>
+              </div>
+              {s.description && (
+                <div className="text-sm text-ink/70 break-words mb-1">{s.description}</div>
+              )}
+              <div className="flex gap-3 text-xs">
+                {s.codeUrl && s.codeUrl !== "null" && (
+                  <a href={s.codeUrl} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+                    repo ↗
+                  </a>
+                )}
+                {s.demoUrl && s.demoUrl !== "null" && (
+                  <a href={s.demoUrl} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+                    demo ↗
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </div>
