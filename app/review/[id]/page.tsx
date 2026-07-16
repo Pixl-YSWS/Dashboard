@@ -175,17 +175,17 @@ export default async function ReviewDetail({
                 <span className="text-ink/50 text-sm">logged</span>
               </div>
               <div className="h-2 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden flex">
-                <div className="h-full bg-teal-500" style={{ width: `${htPct}%` }} />
-                <div className="h-full bg-indigo-500" style={{ width: `${100 - htPct}%` }} />
+                <div className="h-full bg-[color:var(--color-hc-blue)]" style={{ width: `${htPct}%` }} />
+                <div className="h-full bg-[color:var(--color-hc-purple)]" style={{ width: `${100 - htPct}%` }} />
               </div>
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--color-hc-blue)]" />
                   <span className="text-ink/70">Hackatime</span>
                   <span className="ml-auto tabular-nums font-medium">{fmtHM(hackatimeHours)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--color-hc-purple)]" />
                   <span className="text-ink/70">Journals</span>
                   <span className="ml-auto tabular-nums font-medium">{fmtHM(journalHours)}</span>
                 </div>

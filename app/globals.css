@@ -6,9 +6,18 @@
   --color-ink: #111827;
   --color-cream: #f3f4f6;
   --color-parch: #f9fafb;
-  --color-brand: #0d9488;
-  --color-tang: #f59e0b;
-  --color-mint: #10b981;
+  /* Hack Club palette */
+  --color-brand: #ec3750;
+  --color-tang: #ff8c37;
+  --color-mint: #33d6a6;
+  --color-hc-red: #ec3750;
+  --color-hc-orange: #ff8c37;
+  --color-hc-yellow: #f1c40f;
+  --color-hc-green: #33d6a6;
+  --color-hc-cyan: #5bc0de;
+  --color-hc-blue: #338eda;
+  --color-hc-purple: #a633d6;
+  --color-hc-muted: #8492a6;
   --font-pixel: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -21,9 +30,9 @@
   --text: #111827;
   --text-muted: #6b7280;
 
-  --chart-players: #0d9488;
-  --chart-projects: #6366f1;
-  --chart-violations: #f97316;
+  --chart-players: #33d6a6;
+  --chart-projects: #338eda;
+  --chart-violations: #ff8c37;
   --chart-grid: #eef0f3;
   --chart-surface: #ffffff;
   --chart-cross: rgba(17, 24, 39, 0.28);
@@ -40,9 +49,9 @@
   --text: #e6e7ea;
   --text-muted: #9096a1;
 
-  --chart-players: #2dd4bf;
-  --chart-projects: #818cf8;
-  --chart-violations: #fb923c;
+  --chart-players: #33d6a6;
+  --chart-projects: #5bc0de;
+  --chart-violations: #ff8c37;
   --chart-grid: #23252f;
   --chart-surface: #16171d;
   --chart-cross: rgba(230, 231, 234, 0.28);
