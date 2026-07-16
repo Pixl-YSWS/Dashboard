@@ -471,6 +471,53 @@ export async function listReviewAudits(limit = 50): Promise<ReviewAuditRow[]> {
   return rows;
 }
 
+export interface PixelTxRow {
+  id: number;
+  user_id: string;
+  project_id: number | null;
+  amount: number;
+  hours: number;
+  reason: string;
+  created_by: string;
+  created_at: string;
+  player_name: string;
+  project_name: string | null;
+}
+
+// The pixel ledger, newest first: every credit (and, later, spend). amount is
+// signed — positive is pixels given out, negative is spent.
+export async function listPixelTransactions(limit = 1000): Promise<PixelTxRow[]> {
+  const { data, error } = await db
+    .from("pixel_transactions")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listPixelTransactions", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as PixelTxRow[];
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const projectIds = [
+    ...new Set(rows.map((r) => r.project_id).filter((x): x is number => x != null)),
+  ];
+  const [users, projects] = await Promise.all([
+    userIds.length > 0
+      ? db.from("users").select("id, display_name").in("id", userIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length > 0
+      ? db.from("projects").select("id, name").in("id", projectIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const names = new Map((users.data ?? []).map((u) => [u.id as string, u.display_name as string]));
+  const pnames = new Map((projects.data ?? []).map((p) => [p.id as number, p.name as string]));
+  for (const r of rows) {
+    r.player_name = names.get(r.user_id) ?? r.user_id;
+    r.project_name = r.project_id != null ? (pnames.get(r.project_id) ?? `#${r.project_id}`) : null;
+  }
+  return rows;
+}
+
 export interface BanLogRow extends ModActionRow {
   player_name: string;
 }

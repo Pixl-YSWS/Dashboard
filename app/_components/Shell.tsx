@@ -10,6 +10,7 @@ export interface NavFlags {
   players: boolean;
   projects: boolean;
   review: boolean;
+  pixels: boolean;
   moderation: boolean;
   notify: boolean;
   admins: boolean;
@@ -21,6 +22,7 @@ const GLYPHS = {
   review: "flag",
   projects: "code",
   players: "people-3",
+  pixels: "bank",
   violations: "message",
   bans: "private",
   notify: "bell",
@@ -68,6 +70,7 @@ export function Shell({
     { href: "/review", label: "Needs review", icon: "review", show: nav.review, count: reviewCount },
     { href: "/projects", label: "Projects", icon: "projects", show: nav.projects },
     { href: "/players", label: "Players", icon: "players", show: nav.players },
+    { href: "/pixels", label: "Pixels", icon: "pixels", show: nav.pixels },
     { href: "/violations", label: "Violations", icon: "violations", show: nav.moderation },
     { href: "/bans", label: "Bans", icon: "bans", show: nav.moderation },
     { href: "/notify", label: "Notify", icon: "notify", show: nav.notify },

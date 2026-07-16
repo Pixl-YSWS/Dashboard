@@ -27,6 +27,7 @@ export default async function RootLayout({
         players: canView(access, ["warn", "ban"]),
         projects: canView(access, ["review", "warn", "ban"]),
         review: canView(access, ["review"]),
+        pixels: canView(access, ["review"]),
         moderation: canView(access, ["warn", "ban"]),
         notify: access.isSuper || access.perms.has("notify"),
         admins: access.isSuper,
