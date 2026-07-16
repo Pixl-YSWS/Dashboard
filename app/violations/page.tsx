@@ -96,30 +96,42 @@ export default async function ViolationsPage({
           <div className="p-6 text-ink/50 text-sm text-center">No violations match.</div>
         )}
         {slice.map((v) => {
-          const handle =
-            (v.users?.slack_id && handles.get(v.users.slack_id)) ??
-            v.users?.display_name ??
-            v.user_id;
+          const name = v.users?.display_name ?? v.user_id;
+          const handle = (v.users?.slack_id && handles.get(v.users.slack_id)) ?? null;
+          const initials =
+            (name || "?")
+              .split(/\s+/)
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase() || "?";
           return (
             <div key={v.id} className="p-4">
               <div className="flex items-center gap-3 flex-wrap">
+                <span className="grid place-items-center w-8 h-8 rounded-full bg-brand/15 text-brand text-xs font-semibold shrink-0">
+                  {initials}
+                </span>
+                <div className="min-w-0">
+                  <Link
+                    href={`/players/${v.user_id}`}
+                    className="font-medium hover:text-brand block truncate"
+                  >
+                    {name}
+                  </Link>
+                  <span className="text-xs text-ink/45">
+                    {handle ? `${handle} · ` : ""}
+                    {!v.users?.slack_id && "no slack — can't DM · "}
+                    {new Date(v.created_at).toLocaleString()}
+                  </span>
+                </div>
                 <span
-                  className={`badge ${
+                  className={`badge ml-auto ${
                     v.kind === "chat"
                       ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
                       : "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
                   }`}
                 >
                   {v.kind === "chat" ? "chat" : v.kind}
-                </span>
-                <Link href={`/players/${v.user_id}`} className="font-medium hover:text-brand">
-                  {handle}
-                </Link>
-                {!v.users?.slack_id && (
-                  <span className="text-xs text-ink/40">(no slack id — can&apos;t DM)</span>
-                )}
-                <span className="text-xs text-ink/45 ml-auto">
-                  {new Date(v.created_at).toLocaleString()}
                 </span>
               </div>
               <div className="text-sm bg-[var(--surface-2)] border border-[var(--line)] rounded-lg px-3 py-1.5 my-2 break-words">
