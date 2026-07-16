@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db, logModAction } from "@/lib/db";
+import { db, logModAction, creditProjectPixels } from "@/lib/db";
 import { dmUser, slackHandle } from "@/lib/slack";
 import { requirePerm, requireSuper, ALL_PERMISSIONS, type AdminAccess } from "@/lib/guard";
 
@@ -66,51 +66,20 @@ async function claimedHoursFor(projectId: number): Promise<number> {
   return hackatimeHours > 0 ? hackatimeHours : journalHours;
 }
 
-export async function reviewProject(formData: FormData): Promise<void> {
-  const access = await requirePerm("review");
-  const by = actorName(access);
-  const projectId = Number(formData.get("projectId") ?? 0);
-  const verdict = String(formData.get("verdict") ?? "");
-  const note = String(formData.get("note") ?? "").trim().slice(0, 1000);
-  if (!projectId || (verdict !== "approved" && verdict !== "needs_changes")) return;
-  if (!note)
-    redirect(`/review?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
-
-  const claimedHours = await claimedHoursFor(projectId);
-
-  const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
-  let approvedHours: number | null = null;
-  if (hoursRaw !== "") {
-    const n = Number(hoursRaw);
-    if (!Number.isFinite(n) || n < 0)
-      redirect(`/review?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
-    approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
-  }
-
-  const approved = verdict === "approved";
-  const update: Record<string, unknown> = {
-    status: verdict,
-    review_note: note,
-    reviewing_by: "",
-    reviewing_at: null,
-  };
-  if (approved) update.approved_hours = approvedHours;
-  const { data: project, error } = await db
-    .from("projects")
-    .update(update)
-    .eq("id", projectId)
-    .eq("status", "shipped")
-    .select("id, name, user_id")
-    .single();
-  if (error || !project) {
-    console.error("reviewProject failed", error?.message);
-    return;
-  }
-
-  const { error: auditError } = await db.from("review_audits").insert({
+async function insertReviewAudit(
+  formData: FormData,
+  projectId: number,
+  userId: string,
+  reviewer: string,
+  verdict: string,
+  note: string,
+  claimedHours: number,
+  approvedHours: number | null,
+): Promise<void> {
+  const { error } = await db.from("review_audits").insert({
     project_id: projectId,
-    user_id: project.user_id,
-    reviewer: by,
+    user_id: userId,
+    reviewer,
     verdict,
     note,
     claimed_hours: claimedHours,
@@ -121,27 +90,17 @@ export async function reviewProject(formData: FormData): Promise<void> {
     demo_seconds: readSeconds(formData.get("demoSeconds")),
     total_seconds: readSeconds(formData.get("totalSeconds")),
   });
-  if (auditError) console.error("review audit insert failed", auditError.message);
+  if (error) console.error("review audit insert failed", error.message);
+}
 
-  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
-  const title = approved ? "Project approved!" : "Project needs changes";
-  const credited =
-    approved && approvedHours !== null && approvedHours !== claimedHours
-      ? `\n\nHours credited: ${approvedHours}h (you logged ${claimedHours}h).`
-      : "";
-  const body = approved
-    ? `"${project.name}" passed review — approved by ${reviewer}. Congrats on shipping!\n\nReviewer note: ${note}${credited}`
-    : `"${project.name}" was sent back by ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`;
-  const { error: notifyError } = await db
-    .from("notifications")
-    .insert({ user_id: project.user_id, title, body });
-  if (notifyError) console.error("review notification failed", notifyError.message);
-
-  const { data: owner } = await db
-    .from("users")
-    .select("slack_id")
-    .eq("id", project.user_id)
-    .single();
+async function notifyOwner(
+  userId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  const { error } = await db.from("notifications").insert({ user_id: userId, title, body });
+  if (error) console.error("review notification failed", error.message);
+  const { data: owner } = await db.from("users").select("slack_id").eq("id", userId).single();
   if (owner?.slack_id) {
     try {
       await dmUser(owner.slack_id, `<@${owner.slack_id}> ${title}\n\n${body}`);
@@ -149,13 +108,147 @@ export async function reviewProject(formData: FormData): Promise<void> {
       console.error("review DM failed", e);
     }
   }
-  await logModAction(
+}
+
+// Two-pass review. A shipped project gets a first pass from any reviewer; if
+// approved it moves to 'second_review' for a final reviewer's sign-off (unless
+// that first reviewer is themselves a final reviewer, in which case it's
+// approved outright). Pixels are credited only on final approval. "Request
+// changes" bounces it back to the maker from either stage.
+export async function reviewProject(formData: FormData): Promise<void> {
+  const access = await requirePerm("review");
+  const by = actorName(access);
+  const projectId = Number(formData.get("projectId") ?? 0);
+  const verdict = String(formData.get("verdict") ?? "");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 1000);
+  if (!projectId || (verdict !== "approved" && verdict !== "needs_changes")) return;
+
+  const { data: current } = await db
+    .from("projects")
+    .select("status, user_id, name, first_pass_by")
+    .eq("id", projectId)
+    .single();
+  if (!current) return;
+  const stage = String(current.status);
+  const back = `/review/${projectId}`;
+  if (stage !== "shipped" && stage !== "second_review")
+    redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
+  if (!note)
+    redirect(`${back}?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
+
+  const claimedHours = await claimedHoursFor(projectId);
+  const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
+  let approvedHours: number | null = null;
+  if (hoursRaw !== "") {
+    const n = Number(hoursRaw);
+    if (!Number.isFinite(n) || n < 0)
+      redirect(`${back}?error=${encodeURIComponent("Credited hours must be a number of 0 or more.")}`);
+    approvedHours = Math.min(Math.round(n * 10) / 10, claimedHours);
+  }
+  const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
+
+  // Request changes — bounce back to the maker from either stage.
+  if (verdict === "needs_changes") {
+    const { data: project, error } = await db
+      .from("projects")
+      .update({
+        status: "needs_changes",
+        review_note: note,
+        reviewing_by: "",
+        reviewing_at: null,
+        first_pass_by: "",
+        first_pass_at: null,
+        first_pass_note: "",
+        first_pass_hours: null,
+      })
+      .eq("id", projectId)
+      .in("status", ["shipped", "second_review"])
+      .select("id, name, user_id")
+      .single();
+    if (error || !project) {
+      console.error("reviewProject (changes) failed", error?.message);
+      return;
+    }
+    await insertReviewAudit(formData, projectId, project.user_id, by, "needs_changes", note, claimedHours, approvedHours);
+    await notifyOwner(
+      project.user_id,
+      "Changes requested",
+      `"${project.name}" needs changes before it can be approved — ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
+    );
+    await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
+    revalidatePath("/review");
+    redirect("/review");
+  }
+
+  // First pass without final-reviewer rights → hold for a second pass.
+  if (stage === "shipped" && !access.canSecondPass) {
+    const { data: project, error } = await db
+      .from("projects")
+      .update({
+        status: "second_review",
+        review_note: note,
+        approved_hours: approvedHours,
+        reviewing_by: "",
+        reviewing_at: null,
+        first_pass_by: by,
+        first_pass_at: new Date().toISOString(),
+        first_pass_note: note,
+        first_pass_hours: approvedHours,
+      })
+      .eq("id", projectId)
+      .eq("status", "shipped")
+      .select("id, name, user_id")
+      .single();
+    if (error || !project) {
+      console.error("reviewProject (first pass) failed", error?.message);
+      return;
+    }
+    await insertReviewAudit(formData, projectId, project.user_id, by, "first_pass_approved", note, claimedHours, approvedHours);
+    await logModAction(project.user_id, "project_first_pass", `${project.name}: ${note}`, by);
+    revalidatePath("/review");
+    redirect("/review");
+  }
+
+  // Final approval — credit pixels. Only final reviewers reach here.
+  if (stage === "second_review" && !access.canSecondPass)
+    redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can approve this stage.")}`);
+  if (stage === "second_review" && current.first_pass_by && current.first_pass_by === by)
+    redirect(`${back}?error=${encodeURIComponent("A different reviewer must do the final pass.")}`);
+
+  const credit = approvedHours ?? claimedHours;
+  const { data: project, error } = await db
+    .from("projects")
+    .update({
+      status: "approved",
+      review_note: note,
+      approved_hours: approvedHours,
+      reviewing_by: "",
+      reviewing_at: null,
+    })
+    .eq("id", projectId)
+    .in("status", ["shipped", "second_review"])
+    .select("id, name, user_id")
+    .single();
+  if (error || !project) {
+    console.error("reviewProject (approve) failed", error?.message);
+    return;
+  }
+  await insertReviewAudit(formData, projectId, project.user_id, by, "approved", note, claimedHours, approvedHours);
+  await creditProjectPixels(project.user_id, project.id, credit, credit, by);
+
+  const px = Math.round(credit * 100) / 100;
+  const credited =
+    approvedHours !== null && approvedHours !== claimedHours
+      ? `\n\n${px} pixels credited (${approvedHours}h approved of ${claimedHours}h logged).`
+      : `\n\n${px} pixels credited for ${px}h approved.`;
+  await notifyOwner(
     project.user_id,
-    approved ? "project_approved" : "project_needs_changes",
-    `${project.name}${note ? `: ${note}` : ""}`,
-    by,
+    "Project approved!",
+    `"${project.name}" passed review — approved by ${reviewer}. Congrats on shipping!\n\nReviewer note: ${note}${credited}`,
   );
+  await logModAction(project.user_id, "project_approved", `${project.name}: ${px} pixels`, by);
   revalidatePath("/review");
+  redirect("/review");
 }
 
 export async function reReviewProject(formData: FormData): Promise<void> {

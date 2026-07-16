@@ -20,6 +20,7 @@ export interface UserRow {
   avatar_url: string | null;
   skin: string;
   slack_id: string | null;
+  pixels: number;
   created_at: string;
 }
 
@@ -71,6 +72,10 @@ export interface ProjectRow {
   ban_by: string;
   reviewing_by: string;
   reviewing_at: string | null;
+  first_pass_by: string;
+  first_pass_at: string | null;
+  first_pass_note: string;
+  first_pass_hours: number | null;
   shipped_at: string | null;
   created_at: string;
 }
@@ -334,6 +339,46 @@ export async function claimReview(
   return { ok: true };
 }
 
+// Second-pass queue: projects that passed a first review and await a final
+// reviewer's sign-off, oldest-first, hiding anything another reviewer holds.
+export async function listSecondReviewProjects(viewer?: string): Promise<ShippedProject[]> {
+  const { data, error } = await db
+    .from("projects")
+    .select("*, users(id, display_name, slack_id)")
+    .eq("status", "second_review")
+    .is("archived_at", null)
+    .is("rejected_at", null)
+    .is("banned_at", null)
+    .order("first_pass_at", { ascending: true })
+    .limit(500);
+  if (error) {
+    console.error("listSecondReviewProjects", error.message);
+    return [];
+  }
+  const visible = (data ?? []).filter((p) => !claimedByOther(p as ShippedProject, viewer));
+  return hydrateHours(visible as ShippedProject[]);
+}
+
+// Credit a project's approval to the owner's pixel balance exactly once. The
+// atomic insert-and-increment lives in a Postgres function so the game can
+// never write pixels and repeats can't double-credit.
+export async function creditProjectPixels(
+  userId: string,
+  projectId: number,
+  amount: number,
+  hours: number,
+  by: string,
+): Promise<void> {
+  const { error } = await db.rpc("credit_project_pixels", {
+    p_user_id: userId,
+    p_project_id: projectId,
+    p_amount: amount,
+    p_hours: hours,
+    p_created_by: by,
+  });
+  if (error) console.error("creditProjectPixels", error.message);
+}
+
 // Reviewed: projects that already got a verdict, most-recent first.
 export async function listReviewedProjects(): Promise<ShippedProject[]> {
   const { data, error } = await db
@@ -354,7 +399,7 @@ export async function countPendingReviews(): Promise<number> {
   const { count, error } = await db
     .from("projects")
     .select("id", { count: "exact", head: true })
-    .eq("status", "shipped")
+    .in("status", ["shipped", "second_review"])
     .is("archived_at", null)
     .is("rejected_at", null)
     .is("banned_at", null);

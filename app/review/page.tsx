@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
-import { listShippedProjects } from "@/lib/db";
+import { listShippedProjects, listSecondReviewProjects } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
 import { ReviewTable } from "@/app/_components/ReviewTable";
@@ -23,6 +23,11 @@ export default async function ReviewListPage({
   const viewer = access.session.slackId;
   const { page, sort } = await searchParams;
 
+  const finalRows = access.canSecondPass ? await listSecondReviewProjects(viewer) : [];
+  const finalHandles = finalRows.length
+    ? await slackHandles(finalRows.map((p) => p.users?.slack_id))
+    : new Map<string, string>();
+
   let rows = await listShippedProjects(viewer);
   if (sort === "hours") rows = [...rows].sort((a, b) => b.hours - a.hours);
   else if (sort === "status") rows = [...rows].sort((a, b) => a.status.localeCompare(b.status));
@@ -39,6 +44,28 @@ export default async function ReviewListPage({
   return (
     <div>
       <ReviewTabs isSuper={access.isSuper} pending={total} />
+
+      {finalRows.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+            <h2 className="text-sm font-semibold text-ink">
+              Awaiting your final pass
+              <span className="ml-2 badge bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+                {finalRows.length}
+              </span>
+            </h2>
+          </div>
+          <p className="text-xs text-ink/55 mb-3">
+            These passed a first review. Your approval credits pixels and ships them.
+          </p>
+          <ReviewTable
+            rows={finalRows}
+            handles={finalHandles}
+            emptyLabel="Nothing waiting on a final pass."
+          />
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
         <div className="inline-flex items-center rounded-lg border border-[var(--line)] p-0.5 bg-[var(--surface)]">

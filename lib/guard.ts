@@ -9,6 +9,19 @@ export interface AdminAccess {
   session: AdminSession;
   isSuper: boolean;
   perms: Set<string>;
+  canSecondPass: boolean;
+}
+
+// Final reviewers do the mandatory second pass and are the only ones who can
+// approve (and credit pixels). Configured via SECOND_PASS_SLACK_IDS; if unset,
+// only owners (ADMIN_SLACK_IDS) qualify.
+export function isSecondPassReviewer(slackId: string): boolean {
+  const ids = (process.env.SECOND_PASS_SLACK_IDS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (ids.length === 0) return isAllowed(slackId);
+  return ids.includes(slackId);
 }
 
 // Owners come from the ADMIN_SLACK_IDS env allowlist and hold every
@@ -16,11 +29,12 @@ export interface AdminAccess {
 export async function getAccess(): Promise<AdminAccess | null> {
   const session = await getSession();
   if (!session) return null;
+  const canSecondPass = isSecondPassReviewer(session.slackId);
   if (isAllowed(session.slackId))
-    return { session, isSuper: true, perms: new Set(ALL_PERMISSIONS) };
+    return { session, isSuper: true, perms: new Set(ALL_PERMISSIONS), canSecondPass };
   const row = await getAdmin(session.slackId);
   if (!row) return null;
-  return { session, isSuper: false, perms: new Set(row.permissions) };
+  return { session, isSuper: false, perms: new Set(row.permissions), canSecondPass };
 }
 
 export async function requireAdmin(): Promise<AdminAccess> {

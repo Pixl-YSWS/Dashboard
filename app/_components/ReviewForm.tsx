@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { reviewProject } from "@/app/actions";
 
-function VerdictButtons() {
+function VerdictButtons({ secondPass }: { secondPass: boolean }) {
   const { pending } = useFormStatus();
   const [clicked, setClicked] = useState("");
+  const approveLabel = secondPass ? "Approve & credit pixels" : "Approve";
   return (
     <>
       <button
@@ -16,7 +17,7 @@ function VerdictButtons() {
         onClick={() => setClicked("approved")}
         className="pixl-btn bg-emerald-700 text-white disabled:opacity-60"
       >
-        {pending && clicked === "approved" ? "Approving…" : "Approve"}
+        {pending && clicked === "approved" ? "Approving…" : approveLabel}
       </button>
       <button
         name="verdict"
@@ -25,7 +26,7 @@ function VerdictButtons() {
         onClick={() => setClicked("needs_changes")}
         className="pixl-btn bg-red-700 text-white disabled:opacity-60"
       >
-        {pending && clicked === "needs_changes" ? "Sending back…" : "Send back"}
+        {pending && clicked === "needs_changes" ? "Sending back…" : "Request changes"}
       </button>
     </>
   );
@@ -36,11 +37,15 @@ export function ReviewForm({
   repoUrl,
   demoUrl,
   claimedHours,
+  defaultHours,
+  secondPass = false,
 }: {
   projectId: number;
   repoUrl: string | null;
   demoUrl: string | null;
   claimedHours: number;
+  defaultHours?: number;
+  secondPass?: boolean;
 }) {
   const repoOpened = useRef<HTMLInputElement>(null);
   const demoOpened = useRef<HTMLInputElement>(null);
@@ -124,7 +129,7 @@ export function ReviewForm({
             step="0.1"
             min="0"
             max={claimedHours}
-            defaultValue={claimedHours}
+            defaultValue={defaultHours ?? claimedHours}
             className="pixl-input w-24 text-sm"
           />
         </label>
@@ -137,7 +142,7 @@ export function ReviewForm({
           className="pixl-input flex-1 min-w-64 text-sm"
           rows={2}
         />
-        <VerdictButtons />
+        <VerdictButtons secondPass={secondPass} />
       </div>
     </form>
   );

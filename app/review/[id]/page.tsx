@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
-import { getProject, listShippedProjects, claimReview } from "@/lib/db";
+import { getProject, listShippedProjects, listSecondReviewProjects, claimReview } from "@/lib/db";
 import { fetchCommits } from "@/lib/github";
 import { ReviewForm } from "@/app/_components/ReviewForm";
-import { rejectProject, banProject } from "@/app/actions";
+import { banProject } from "@/app/actions";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
 import { slackHandle } from "@/lib/slack";
@@ -36,6 +36,7 @@ export default async function ReviewDetail({
 }) {
   const access = await requirePagePerm(["review"]);
   const viewer = access.session.slackId;
+  const canSecondPass = access.canSecondPass;
   const { id } = await params;
   const { error } = await searchParams;
   const projectId = Number(id);
@@ -45,7 +46,12 @@ export default async function ReviewDetail({
   if (!data) notFound();
   const { project: p, journals, verdicts } = data;
 
-  const claim = await claimReview(projectId, viewer);
+  const isFinalStage = p.status === "second_review";
+  const canReview = p.status === "shipped" || (isFinalStage && canSecondPass);
+
+  const claim = canReview
+    ? await claimReview(projectId, viewer)
+    : { ok: true as const, by: undefined };
   const claimHandle = !claim.ok && claim.by ? await slackHandle(claim.by) : null;
 
   const journalHours =
@@ -54,11 +60,16 @@ export default async function ReviewDetail({
   const hours = hackatimeHours > 0 ? hackatimeHours : journalHours;
   const htPct = hours > 0 ? Math.round((hackatimeHours / hours) * 100) : 0;
 
+  const formDefaultHours =
+    isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
+
   const commits = await fetchCommits(p.repo_url);
   const ownerHandle = await slackHandle(p.users?.slack_id);
   const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;
 
-  const queue = await listShippedProjects(viewer);
+  const queue = isFinalStage
+    ? await listSecondReviewProjects(viewer)
+    : await listShippedProjects(viewer);
   const idx = queue.findIndex((q) => q.id === projectId);
   const prev = idx > 0 ? queue[idx - 1] : null;
   const next = idx >= 0 && idx < queue.length - 1 ? queue[idx + 1] : null;
@@ -181,46 +192,43 @@ export default async function ReviewDetail({
               </div>
             </div>
 
-            {p.status === "shipped" ? (
+            {isFinalStage && (
+              <div className="pixl-card p-5 border-violet-300 dark:border-violet-500/30">
+                <div className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-2">
+                  First pass
+                </div>
+                <div className="text-sm text-ink/70">
+                  Passed by <span className="font-medium text-ink">{p.first_pass_by || "a reviewer"}</span>
+                  {p.first_pass_hours != null && <> · credited {p.first_pass_hours}h</>}
+                </div>
+                {p.first_pass_note && (
+                  <p className="mt-2 text-sm whitespace-pre-wrap break-words text-ink/80">
+                    {p.first_pass_note}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {canReview ? (
               <>
                 <div className="pixl-card p-5">
-                  <div className="text-sm font-semibold mb-1">Your verdict</div>
+                  <div className="text-sm font-semibold mb-1">
+                    {isFinalStage ? "Final pass" : canSecondPass ? "Your verdict" : "First pass"}
+                  </div>
                   <p className="text-xs text-ink/55 mb-3">
-                    Every verdict needs a note. Hours default to tracked Hackatime time — you can
-                    only lower them.
+                    {canSecondPass
+                      ? "Approving credits pixels (1h = 1 pixel) and ships it. Every verdict needs a note. You can only lower the credited hours."
+                      : "Every verdict needs a note. Approving sends this to a final reviewer before pixels are credited. You can only lower the credited hours."}
                   </p>
                   <ReviewForm
                     projectId={p.id}
                     repoUrl={p.repo_url}
                     demoUrl={p.demo_url}
                     claimedHours={hours}
+                    defaultHours={formDefaultHours}
+                    secondPass={canSecondPass}
                   />
                 </div>
-
-                <details className="pixl-card p-4">
-                  <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-rose-600 select-none list-none">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                    Reject — fixable
-                  </summary>
-                  <p className="text-xs text-ink/55 mt-2">
-                    Bounces the project back with a reason. The owner can fix it and ship again.
-                    Reversible. Not a ban.
-                  </p>
-                  <form action={rejectProject} className="mt-3 flex flex-col gap-2">
-                    <input type="hidden" name="projectId" value={p.id} />
-                    <input type="hidden" name="returnTo" value={`/review/${p.id}`} />
-                    <textarea
-                      name="reason"
-                      required
-                      rows={2}
-                      placeholder="Reason (shown to the owner)…"
-                      className="pixl-input text-sm resize-y"
-                    />
-                    <button className="pixl-btn bg-rose-600 text-white border-transparent text-sm">
-                      Reject project
-                    </button>
-                  </form>
-                </details>
 
                 <details className="pixl-card p-4 border-rose-300 dark:border-rose-500/30">
                   <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-rose-700 dark:text-rose-400 select-none list-none">
@@ -229,7 +237,7 @@ export default async function ReviewDetail({
                   </summary>
                   <p className="text-xs text-ink/55 mt-2">
                     Permanently bans this project — it can never be shipped again and is hidden
-                    everywhere. Different from a reject. Reversible by staff only.
+                    everywhere. Different from requesting changes. Reversible by staff only.
                   </p>
                   <form action={banProject} className="mt-3 flex flex-col gap-2">
                     <input type="hidden" name="projectId" value={p.id} />
@@ -247,6 +255,11 @@ export default async function ReviewDetail({
                   </form>
                 </details>
               </>
+            ) : isFinalStage ? (
+              <div className="pixl-card p-5 text-sm text-ink/60">
+                Passed the first review — waiting on a final reviewer to sign off before pixels are
+                credited.
+              </div>
             ) : (
               <div className="pixl-card p-5 text-sm text-ink/60">
                 Already reviewed —{" "}
