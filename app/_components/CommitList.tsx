@@ -31,6 +31,23 @@ export function CommitList({ result }: { result: CommitResult }) {
   const shown = result.commits.slice(start, start + PER_PAGE);
   const hasTracking = result.commits.some((c) => c.tracked !== undefined);
 
+  const gaps = new Map<string, number>();
+  const asc = result.commits
+    .filter((c) => c.date)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date));
+  for (let i = 1; i < asc.length; i++) {
+    const s =
+      (new Date(asc[i].date).getTime() - new Date(asc[i - 1].date).getTime()) / 1000;
+    if (Number.isFinite(s) && s >= 0) gaps.set(asc[i].sha, s);
+  }
+  const fmtGap = (s: number) => {
+    if (s < 60) return `${Math.round(s)}s`;
+    if (s < 3600) return `${Math.round(s / 60)}m`;
+    if (s < 86400) return `${Math.round(s / 3600)}h`;
+    return `${Math.round(s / 86400)}d`;
+  };
+
   const trackedBadge = (secs?: number) => {
     if (secs === undefined) return null;
     if (secs < 120)
@@ -74,6 +91,14 @@ export function CommitList({ result }: { result: CommitResult }) {
               {c.sha}
             </a>
             <span className="flex-1 min-w-0 break-words">{c.message}</span>
+            {gaps.has(c.sha) && (
+              <span
+                className="text-xs text-ink/45 shrink-0 tabular-nums"
+                title="Wall-clock time since the previous commit"
+              >
+                +{fmtGap(gaps.get(c.sha)!)}
+              </span>
+            )}
             {trackedBadge(c.tracked)}
             <span className="text-xs text-ink/50 shrink-0 hidden sm:inline">{c.author}</span>
             <span className="text-xs text-ink/40 shrink-0">
