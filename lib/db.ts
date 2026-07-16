@@ -364,11 +364,7 @@ export async function listSecondReviewProjects(viewer?: string): Promise<Shipped
     console.error("listSecondReviewProjects", error.message);
     return [];
   }
-  const visible = (data ?? []).filter(
-    (p) =>
-      !claimedByOther(p as ShippedProject, viewer) &&
-      !ownedByViewer(p as ShippedProject, viewer),
-  );
+  const visible = (data ?? []).filter((p) => !claimedByOther(p as ShippedProject, viewer));
   return hydrateHours(visible as ShippedProject[]);
 }
 

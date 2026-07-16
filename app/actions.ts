@@ -146,8 +146,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (!current) return;
   const stage = String(current.status);
   const back = `/review/${projectId}`;
-  if (await isOwnProject(access, current.user_id))
-    redirect(`${back}?error=${encodeURIComponent("You can't review your own project — another reviewer has to take it.")}`);
+  if (stage === "shipped" && (await isOwnProject(access, current.user_id)))
+    redirect(`${back}?error=${encodeURIComponent("You can't first-pass your own project — another reviewer has to take it.")}`);
   if (stage !== "shipped" && stage !== "second_review")
     redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
   if (!note)

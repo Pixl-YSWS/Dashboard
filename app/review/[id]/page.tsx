@@ -52,7 +52,7 @@ export default async function ReviewDetail({
   const isFinalStage = p.status === "second_review";
   const isOwn = !!p.users?.slack_id && p.users.slack_id === viewer;
   const canReview =
-    !isOwn && (p.status === "shipped" || (isFinalStage && canSecondPass));
+    (p.status === "shipped" && !isOwn) || (isFinalStage && canSecondPass);
 
   const claim = canReview
     ? await claimReview(projectId, viewer)
@@ -233,10 +233,15 @@ export default async function ReviewDetail({
               </div>
             )}
 
-            {isOwn && (
+            {isOwn && p.status === "shipped" && (
               <div className="pixl-card p-5 text-sm border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-300">
-                This is your own submission — you can&apos;t review, reject or ban it. Another
-                reviewer has to take it.
+                This is your own submission — another reviewer has to do the first pass.
+              </div>
+            )}
+            {isOwn && isFinalStage && canReview && (
+              <div className="pixl-card p-4 text-xs border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-300">
+                Your own submission — someone else first-passed it, so you may finalize. This is
+                logged.
               </div>
             )}
 
