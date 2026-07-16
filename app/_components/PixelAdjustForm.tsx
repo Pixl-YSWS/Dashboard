@@ -1,7 +1,28 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { adjustPixels, searchPlayers, type PlayerHit } from "@/app/actions";
+
+function SubmitButton({ mode }: { mode: "deduct" | "grant" }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      disabled={pending}
+      className={`pixl-btn text-white border-transparent text-sm disabled:opacity-60 ${
+        mode === "deduct" ? "bg-brand" : "bg-hc-green"
+      }`}
+    >
+      {pending
+        ? mode === "deduct"
+          ? "Deducting…"
+          : "Granting…"
+        : mode === "deduct"
+          ? "Deduct pixels"
+          : "Grant pixels"}
+    </button>
+  );
+}
 
 // Owner-only manual pixel correction: pick a player, deduct or grant whole
 // pixels with a mandatory reason. Everything lands in the ledger.
@@ -130,13 +151,7 @@ export function PixelAdjustForm() {
           placeholder="Reason (required — shown to the player and kept in the log)…"
           className="pixl-input text-sm resize-y sm:col-span-2"
         />
-        <button
-          className={`pixl-btn text-white border-transparent text-sm ${
-            mode === "deduct" ? "bg-brand" : "bg-hc-green"
-          }`}
-        >
-          {mode === "deduct" ? "Deduct pixels" : "Grant pixels"}
-        </button>
+        <SubmitButton mode={mode} />
       </form>
     </details>
   );

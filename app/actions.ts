@@ -371,12 +371,21 @@ export async function adjustPixels(formData: FormData): Promise<void> {
     `${deduct ? "-" : "+"}${amount} pixels — ${reason}`,
     by,
   );
-  const { error: notifyError } = await db.from("notifications").insert({
-    user_id: userId,
-    title: deduct ? "Pixels deducted" : "Pixels granted",
-    body: `${deduct ? `${amount} pixels were removed from` : `${amount} pixels were added to`} your balance by the Pixl team.\n\nReason: ${reason}\n\nIf you think this is a mistake, contact the Pixl team.`,
-  });
+  const title = deduct ? "Pixels deducted" : "Pixels granted";
+  const body = `${deduct ? `${amount} pixels were removed from` : `${amount} pixels were added to`} your balance by the Pixl team.\n\nReason: ${reason}\n\nIf you think this is a mistake, contact the Pixl team.`;
+  const { error: notifyError } = await db
+    .from("notifications")
+    .insert({ user_id: userId, title, body });
   if (notifyError) console.error("adjustPixels notification failed", notifyError.message);
+
+  const { data: owner } = await db.from("users").select("slack_id").eq("id", userId).single();
+  if (owner?.slack_id) {
+    try {
+      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${title}\n\n${body}`);
+    } catch (e) {
+      console.error("adjustPixels DM failed", e);
+    }
+  }
   revalidatePath("/pixels");
   redirect("/pixels?adjusted=1");
 }
