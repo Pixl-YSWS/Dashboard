@@ -5,15 +5,25 @@ import { slackHandles } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
 
+const PER = 25;
+
 export default async function PlayersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
   await requirePagePerm(["warn", "ban"]);
-  const { q } = await searchParams;
-  const players = await listPlayers(q);
+  const { q, page } = await searchParams;
+  const all = await listPlayers(q);
+
+  const total = all.length;
+  const pages = Math.max(1, Math.ceil(total / PER));
+  const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
+  const start = (cur - 1) * PER;
+  const players = all.slice(start, start + PER);
   const handles = await slackHandles(players.map((p) => p.slack_id));
+  const qp = (n: number) =>
+    `/players?page=${n}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
 
   return (
     <div>
@@ -79,6 +89,35 @@ export default async function PlayersPage({
           </tbody>
         </table>
       </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between gap-3 mt-4 text-sm">
+          <span className="text-ink/50">
+            Showing {start + 1}–{Math.min(start + PER, total)} of {total}
+          </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href={qp(cur - 1)}
+              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
+                cur <= 1 ? "pointer-events-none opacity-40" : ""
+              }`}
+            >
+              ←
+            </Link>
+            <span className="text-ink/60 tabular-nums px-1">
+              {cur} / {pages}
+            </span>
+            <Link
+              href={qp(cur + 1)}
+              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
+                cur >= pages ? "pointer-events-none opacity-40" : ""
+              }`}
+            >
+              →
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
