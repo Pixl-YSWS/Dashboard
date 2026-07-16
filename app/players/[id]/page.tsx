@@ -109,7 +109,9 @@ export default async function PlayerPage({
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        <Stat label="Pixels" value={fmt(pixels)} tone="text-amber-600 dark:text-amber-400" />
+        <Link href={`/pixels?user=${user.id}`} className="contents">
+          <Stat label="Pixels" value={fmt(pixels)} tone="text-amber-600 dark:text-amber-400" />
+        </Link>
         <Stat label="Approved hrs" value={`${fmt(approvedHours)}h`} />
         <Stat label="Projects" value={String(projects.length)} />
         <Stat label="Violations" value={String(violations.length)} />

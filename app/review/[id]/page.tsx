@@ -47,7 +47,9 @@ export default async function ReviewDetail({
   const { project: p, journals, verdicts } = data;
 
   const isFinalStage = p.status === "second_review";
-  const canReview = p.status === "shipped" || (isFinalStage && canSecondPass);
+  const isOwn = !!p.users?.slack_id && p.users.slack_id === viewer;
+  const canReview =
+    !isOwn && (p.status === "shipped" || (isFinalStage && canSecondPass));
 
   const claim = canReview
     ? await claimReview(projectId, viewer)
@@ -209,6 +211,13 @@ export default async function ReviewDetail({
               </div>
             )}
 
+            {isOwn && (
+              <div className="pixl-card p-5 text-sm border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-300">
+                This is your own submission — you can&apos;t review, reject or ban it. Another
+                reviewer has to take it.
+              </div>
+            )}
+
             {canReview ? (
               <>
                 <div className="pixl-card p-5">
@@ -255,7 +264,7 @@ export default async function ReviewDetail({
                   </form>
                 </details>
               </>
-            ) : isFinalStage ? (
+            ) : isOwn ? null : isFinalStage ? (
               <div className="pixl-card p-5 text-sm text-ink/60">
                 Passed the first review — waiting on a final reviewer to sign off before pixels are
                 credited.

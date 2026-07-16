@@ -392,6 +392,39 @@ export async function creditProjectPixels(
   if (error) console.error("creditProjectPixels", error.message);
 }
 
+// Claw back everything a project was credited (verdict reverted). Returns the
+// number of pixels removed, for logging.
+export async function revokeProjectPixels(
+  userId: string,
+  projectId: number,
+  by: string,
+): Promise<number> {
+  const { data, error } = await db.rpc("revoke_project_pixels", {
+    p_user_id: userId,
+    p_project_id: projectId,
+    p_created_by: by,
+  });
+  if (error) {
+    console.error("revokeProjectPixels", error.message);
+    return 0;
+  }
+  return Number(data) || 0;
+}
+
+// Net pixels a project has been credited so far (for delta display).
+export async function projectPixelTotal(projectId: number): Promise<number> {
+  const { data, error } = await db
+    .from("pixel_transactions")
+    .select("amount")
+    .eq("project_id", projectId)
+    .in("reason", ["project_approved", "review_reverted"]);
+  if (error) {
+    console.error("projectPixelTotal", error.message);
+    return 0;
+  }
+  return (data ?? []).reduce((s, t) => s + (Number(t.amount) || 0), 0);
+}
+
 // Reviewed: projects that already got a verdict, most-recent first.
 export async function listReviewedProjects(): Promise<ShippedProject[]> {
   const { data, error } = await db

@@ -2,7 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { db, logModAction, creditProjectPixels } from "@/lib/db";
+import {
+  db,
+  logModAction,
+  creditProjectPixels,
+  revokeProjectPixels,
+  projectPixelTotal,
+} from "@/lib/db";
 import { dmUser, slackHandle } from "@/lib/slack";
 import { requirePerm, requireSuper, ALL_PERMISSIONS, type AdminAccess } from "@/lib/guard";
 
@@ -11,6 +17,15 @@ const DEFAULT_WARNING =
 
 function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
+}
+
+// 1 hour = 5 pixels, whole pixels only. 10 pixels = $1.
+const PIXELS_PER_HOUR = 5;
+
+// A reviewer may never act on their own submission (self-review = cheating).
+async function isOwnProject(access: AdminAccess, userId: string): Promise<boolean> {
+  const { data } = await db.from("users").select("slack_id").eq("id", userId).single();
+  return !!data?.slack_id && data.slack_id === access.session.slackId;
 }
 
 export async function warnPlayer(formData: FormData): Promise<void> {
@@ -131,6 +146,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (!current) return;
   const stage = String(current.status);
   const back = `/review/${projectId}`;
+  if (await isOwnProject(access, current.user_id))
+    redirect(`${back}?error=${encodeURIComponent("You can't review your own project — another reviewer has to take it.")}`);
   if (stage !== "shipped" && stage !== "second_review")
     redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
   if (!note)
@@ -215,7 +232,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (stage === "second_review" && current.first_pass_by && current.first_pass_by === by)
     redirect(`${back}?error=${encodeURIComponent("A different reviewer must do the final pass.")}`);
 
-  const credit = approvedHours ?? claimedHours;
+  const creditHours = approvedHours ?? claimedHours;
   const { data: project, error } = await db
     .from("projects")
     .update({
@@ -234,19 +251,36 @@ export async function reviewProject(formData: FormData): Promise<void> {
     return;
   }
   await insertReviewAudit(formData, projectId, project.user_id, by, "approved", note, claimedHours, approvedHours);
-  await creditProjectPixels(project.user_id, project.id, credit, credit, by);
 
-  const px = Math.round(credit * 100) / 100;
-  const credited =
-    approvedHours !== null && approvedHours !== claimedHours
-      ? `\n\n${px} pixels credited (${approvedHours}h approved of ${claimedHours}h logged).`
-      : `\n\n${px} pixels credited for ${px}h approved.`;
+  // Lifetime credit for the project = round(hours * 5); the DB function only
+  // adds the delta vs what earlier approvals already paid out.
+  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR);
+  const alreadyPx = await projectPixelTotal(project.id);
+  const deltaPx = totalPx - alreadyPx;
+  await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
+
+  let credited: string;
+  if (alreadyPx > 0 && deltaPx > 0) {
+    credited = `\n\n+${deltaPx} pixels for what's new (${totalPx} pixels total for this project — ${creditHours}h approved).`;
+  } else if (alreadyPx > 0 && deltaPx <= 0) {
+    credited = `\n\nNo new pixels this time — this project already earned ${alreadyPx} pixels.`;
+  } else {
+    credited =
+      approvedHours !== null && approvedHours !== claimedHours
+        ? `\n\n${totalPx} pixels credited (${approvedHours}h approved of ${claimedHours}h logged).`
+        : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
+  }
   await notifyOwner(
     project.user_id,
     "Project approved!",
     `"${project.name}" passed review — approved by ${reviewer}. Congrats on shipping!\n\nReviewer note: ${note}${credited}`,
   );
-  await logModAction(project.user_id, "project_approved", `${project.name}: ${px} pixels`, by);
+  await logModAction(
+    project.user_id,
+    "project_approved",
+    `${project.name}: ${deltaPx >= 0 ? "+" : ""}${deltaPx} pixels (total ${totalPx})`,
+    by,
+  );
   revalidatePath("/review");
   redirect("/review");
 }
@@ -271,10 +305,16 @@ export async function reReviewProject(formData: FormData): Promise<void> {
 
   const claimedHours = await claimedHoursFor(projectId);
 
+  // The verdict is void, so the payout is too — claw back every pixel this
+  // project was credited and leave the reversal in the ledger.
+  const revoked = await revokeProjectPixels(project.user_id, project.id, by);
+
   await logModAction(
     project.user_id,
     "review_reverted",
-    `${project.name}: verdict reverted, back in the review queue`,
+    `${project.name}: verdict reverted, back in the review queue${
+      revoked > 0 ? ` — ${revoked} pixels revoked` : ""
+    }`,
     by,
   );
   const { error: auditError } = await db.from("review_audits").insert({
@@ -290,10 +330,55 @@ export async function reReviewProject(formData: FormData): Promise<void> {
   const { error: notifyError } = await db.from("notifications").insert({
     user_id: project.user_id,
     title: "Project back in review",
-    body: `"${project.name}" is getting another look from the review team. You'll hear back here soon — nothing needed from you.`,
+    body: `"${project.name}" is getting another look from the review team.${
+      revoked > 0
+        ? ` The ${revoked} pixels it earned are on hold until the new verdict.`
+        : ""
+    } You'll hear back here soon — nothing needed from you.`,
   });
   if (notifyError) console.error("re-review notification failed", notifyError.message);
   revalidatePath("/", "layout");
+}
+
+// Manual pixel correction from the Pixels tab. Deducts (or grants) whole
+// pixels with a mandatory reason; owners only, everything lands in the ledger.
+export async function adjustPixels(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "").trim();
+  const amount = Math.round(Number(formData.get("amount") ?? 0));
+  const deduct = formData.get("mode") !== "grant";
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  if (!userId || !Number.isFinite(amount) || amount <= 0)
+    redirect(`/pixels?error=${encodeURIComponent("Pick a player and a whole number of pixels.")}`);
+  if (!reason)
+    redirect(`/pixels?error=${encodeURIComponent("A reason is required for manual pixel changes.")}`);
+
+  const delta = deduct ? -amount : amount;
+  const { error } = await db.rpc("adjust_user_pixels", {
+    p_user_id: userId,
+    p_amount: delta,
+    p_reason: deduct ? "manual_deduction" : "manual_grant",
+    p_created_by: `${by} — ${reason}`,
+  });
+  if (error) {
+    console.error("adjustPixels failed", error.message);
+    redirect(`/pixels?error=${encodeURIComponent("Couldn't adjust pixels — try again.")}`);
+  }
+  await logModAction(
+    userId,
+    deduct ? "pixels_deducted" : "pixels_granted",
+    `${deduct ? "-" : "+"}${amount} pixels — ${reason}`,
+    by,
+  );
+  const { error: notifyError } = await db.from("notifications").insert({
+    user_id: userId,
+    title: deduct ? "Pixels deducted" : "Pixels granted",
+    body: `${deduct ? `${amount} pixels were removed from` : `${amount} pixels were added to`} your balance by the Pixl team.\n\nReason: ${reason}\n\nIf you think this is a mistake, contact the Pixl team.`,
+  });
+  if (notifyError) console.error("adjustPixels notification failed", notifyError.message);
+  revalidatePath("/pixels");
+  redirect("/pixels?adjusted=1");
 }
 
 export async function archiveProject(formData: FormData): Promise<void> {
@@ -330,6 +415,10 @@ export async function rejectProject(formData: FormData): Promise<void> {
   if (!projectId) return;
   if (!reason)
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("A reason is required to reject a project.")}`);
+
+  const { data: target } = await db.from("projects").select("user_id").eq("id", projectId).single();
+  if (target && (await isOwnProject(access, target.user_id)))
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("You can't act on your own project.")}`);
 
   const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
 
@@ -406,6 +495,10 @@ export async function banProject(formData: FormData): Promise<void> {
   if (!projectId) return;
   if (!reason)
     redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("A reason is required to ban a project.")}`);
+
+  const { data: target } = await db.from("projects").select("user_id").eq("id", projectId).single();
+  if (target && (await isOwnProject(access, target.user_id)))
+    redirect(`${returnTo}${returnTo.includes("?") ? "&" : "?"}error=${encodeURIComponent("You can't act on your own project.")}`);
 
   const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
 
