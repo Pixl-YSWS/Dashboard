@@ -29,9 +29,39 @@ export function CommitList({ result }: { result: CommitResult }) {
   const pages = Math.ceil(total / PER_PAGE);
   const start = page * PER_PAGE;
   const shown = result.commits.slice(start, start + PER_PAGE);
+  const hasTracking = result.commits.some((c) => c.tracked !== undefined);
+
+  const trackedBadge = (secs?: number) => {
+    if (secs === undefined) return null;
+    if (secs < 120)
+      return (
+        <span
+          className="badge bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300 shrink-0"
+          title="Almost no tracked coding time between this commit and the previous one — code appeared without coding."
+        >
+          ~0m coded
+        </span>
+      );
+    const h = secs / 3600;
+    return (
+      <span
+        className="badge bg-black/[0.05] text-ink/70 dark:bg-white/[0.08] shrink-0"
+        title="Hackatime coding time between this commit and the previous one"
+      >
+        {h >= 1 ? `${h.toFixed(1)}h` : `${Math.round(secs / 60)}m`} coded
+      </span>
+    );
+  };
 
   return (
     <div>
+      {hasTracking && (
+        <div className="px-3 py-2 text-xs text-ink/50 border-b border-[var(--line)]">
+          &ldquo;coded&rdquo; = Hackatime time between commits.{" "}
+          <span className="text-rose-600 dark:text-rose-400">~0m coded</span> means code landed
+          with no tracked coding behind it — check for pasted/AI-dumped work.
+        </div>
+      )}
       <div className="divide-y divide-[var(--line)]">
         {shown.map((c) => (
           <div key={c.sha} className="p-3 flex items-baseline gap-3 text-sm">
@@ -44,6 +74,7 @@ export function CommitList({ result }: { result: CommitResult }) {
               {c.sha}
             </a>
             <span className="flex-1 min-w-0 break-words">{c.message}</span>
+            {trackedBadge(c.tracked)}
             <span className="text-xs text-ink/50 shrink-0 hidden sm:inline">{c.author}</span>
             <span className="text-xs text-ink/40 shrink-0">
               {c.date ? new Date(c.date).toLocaleDateString() : ""}

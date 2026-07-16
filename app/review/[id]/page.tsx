@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { getProject, listShippedProjects, listSecondReviewProjects, claimReview } from "@/lib/db";
 import { fetchCommits } from "@/lib/github";
+import { fetchUserSpans, attachTrackedTime } from "@/lib/hackatime";
 import { yswsShipsFor } from "@/lib/ysws";
+import { db } from "@/lib/db";
 import { ReviewForm } from "@/app/_components/ReviewForm";
 import { banProject } from "@/app/actions";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
@@ -67,6 +69,19 @@ export default async function ReviewDetail({
     isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
 
   const commits = await fetchCommits(p.repo_url);
+  if (commits.commits.length > 0 && (p.hackatime_projects?.length ?? 0) > 0) {
+    const { data: tokenRow } = await db
+      .from("users")
+      .select("hackatime_token")
+      .eq("id", p.user_id)
+      .single();
+    const spans = await fetchUserSpans(
+      p.users?.slack_id,
+      (tokenRow as { hackatime_token?: string } | null)?.hackatime_token ?? null,
+      p.hackatime_projects,
+    );
+    if (spans) attachTrackedTime(commits.commits, spans);
+  }
   const yswsShips = await yswsShipsFor(p.users?.slack_id, p.repo_url, p.demo_url);
   const ownerHandle = await slackHandle(p.users?.slack_id);
   const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;

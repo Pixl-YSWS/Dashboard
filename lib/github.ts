@@ -4,6 +4,7 @@ export interface Commit {
   author: string;
   date: string;
   url: string;
+  tracked?: number;
 }
 
 export interface CommitResult {
