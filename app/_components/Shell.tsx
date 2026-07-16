@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import HcIcon from "@hackclub/icons";
 import { GlobalSearch } from "@/app/_components/GlobalSearch";
 
 export interface NavFlags {
@@ -14,82 +15,25 @@ export interface NavFlags {
   admins: boolean;
 }
 
-const I = {
-  overview: (
-    <>
-      <rect x="3" y="3" width="7" height="9" rx="1.5" />
-      <rect x="14" y="3" width="7" height="5" rx="1.5" />
-      <rect x="14" y="12" width="7" height="9" rx="1.5" />
-      <rect x="3" y="16" width="7" height="5" rx="1.5" />
-    </>
-  ),
-  players: (
-    <>
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
-      <path d="M16 5.5a3 3 0 0 1 0 5.6" />
-      <path d="M17 14.5a5.2 5.2 0 0 1 3.5 5" />
-    </>
-  ),
-  projects: (
-    <>
-      <path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z" />
-      <path d="M3 7.5V16l9 4.5 9-4.5V7.5" />
-      <path d="M12 12v8.5" />
-    </>
-  ),
-  review: (
-    <>
-      <rect x="5" y="4" width="14" height="17" rx="2" />
-      <path d="M9 4V3h6v1" />
-      <path d="m8.5 12.5 2 2 4-4.5" />
-    </>
-  ),
-  violations: (
-    <>
-      <path d="M12 3.5 22 20H2L12 3.5Z" />
-      <path d="M12 10v4" />
-      <circle cx="12" cy="17.5" r=".6" fill="currentColor" stroke="none" />
-    </>
-  ),
-  bans: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m5.6 5.6 12.8 12.8" />
-    </>
-  ),
-  notify: (
-    <>
-      <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" />
-      <path d="M10 20a2 2 0 0 0 4 0" />
-    </>
-  ),
-  admins: (
-    <>
-      <path d="M12 3 5 6v5.5c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6l-7-3Z" />
-      <path d="m9 12 2 2 4-4" />
-    </>
-  ),
-};
+// Hack Club icon glyphs (icons.hackclub.com) mapped to each nav item.
+const GLYPHS = {
+  overview: "home",
+  review: "flag",
+  projects: "code",
+  players: "people-3",
+  violations: "message",
+  bans: "private",
+  notify: "bell",
+  admins: "person-badge",
+} as const;
 
-type IconKey = keyof typeof I;
+type IconKey = keyof typeof GLYPHS;
 
 function Icon({ name }: { name: IconKey }) {
   return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="shrink-0"
-      aria-hidden
-    >
-      {I[name]}
-    </svg>
+    <span className="shrink-0 inline-flex" aria-hidden>
+      <HcIcon glyph={GLYPHS[name]} size={20} />
+    </span>
   );
 }
 

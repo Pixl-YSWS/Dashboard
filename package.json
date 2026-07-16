@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@hackclub/icons": "^0.2.2",
     "@supabase/supabase-js": "^2.108.2",
     "next": "16.2.6",
     "react": "19.2.4",
