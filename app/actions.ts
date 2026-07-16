@@ -9,7 +9,8 @@ import {
   revokeProjectPixels,
   projectPixelTotal,
 } from "@/lib/db";
-import { dmUser, slackHandle } from "@/lib/slack";
+import { slackHandle } from "@/lib/slack";
+import { dmOrEmail } from "@/lib/notify";
 import { requirePerm, requireSuper, ALL_PERMISSIONS, type AdminAccess } from "@/lib/guard";
 
 const DEFAULT_WARNING =
@@ -42,23 +43,15 @@ export async function warnPlayer(formData: FormData): Promise<void> {
   });
   if (error) console.error("warn notification failed", error.message);
 
-  const { data } = await db
-    .from("users")
-    .select("slack_id, display_name")
-    .eq("id", userId)
-    .single();
-  if (data?.slack_id) {
-    const dm = [
+  await dmOrEmail(
+    userId,
+    "Moderation warning",
+    [
       "You've received a moderation warning from Pixl.",
       message,
       "If you believe this is a mistake, reach out to the Pixl team.",
-    ].join("\n\n");
-    try {
-      await dmUser(data.slack_id, dm);
-    } catch (e) {
-      console.error("warn DM failed", e);
-    }
-  }
+    ].join("\n\n"),
+  );
   await logModAction(userId, "warn", message, by);
   revalidatePath("/", "layout");
 }
@@ -115,14 +108,7 @@ async function notifyOwner(
 ): Promise<void> {
   const { error } = await db.from("notifications").insert({ user_id: userId, title, body });
   if (error) console.error("review notification failed", error.message);
-  const { data: owner } = await db.from("users").select("slack_id").eq("id", userId).single();
-  if (owner?.slack_id) {
-    try {
-      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${title}\n\n${body}`);
-    } catch (e) {
-      console.error("review DM failed", e);
-    }
-  }
+  await dmOrEmail(userId, title, body);
 }
 
 // Two-pass review. A shipped project gets a first pass from any reviewer; if
@@ -378,14 +364,7 @@ export async function adjustPixels(formData: FormData): Promise<void> {
     .insert({ user_id: userId, title, body });
   if (notifyError) console.error("adjustPixels notification failed", notifyError.message);
 
-  const { data: owner } = await db.from("users").select("slack_id").eq("id", userId).single();
-  if (owner?.slack_id) {
-    try {
-      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${title}\n\n${body}`);
-    } catch (e) {
-      console.error("adjustPixels DM failed", e);
-    }
-  }
+  await dmOrEmail(userId, title, body);
   revalidatePath("/pixels");
   redirect("/pixels?adjusted=1");
 }
@@ -455,18 +434,7 @@ export async function rejectProject(formData: FormData): Promise<void> {
   });
   if (notifyError) console.error("reject notification failed", notifyError.message);
 
-  const { data: owner } = await db
-    .from("users")
-    .select("slack_id")
-    .eq("id", project.user_id)
-    .single();
-  if (owner?.slack_id) {
-    try {
-      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${body}`);
-    } catch (e) {
-      console.error("reject DM failed", e);
-    }
-  }
+  await dmOrEmail(project.user_id, "Project rejected", body);
   revalidatePath("/", "layout");
 }
 
@@ -535,18 +503,7 @@ export async function banProject(formData: FormData): Promise<void> {
   });
   if (notifyError) console.error("ban notification failed", notifyError.message);
 
-  const { data: owner } = await db
-    .from("users")
-    .select("slack_id")
-    .eq("id", project.user_id)
-    .single();
-  if (owner?.slack_id) {
-    try {
-      await dmUser(owner.slack_id, `<@${owner.slack_id}> ${body}`);
-    } catch (e) {
-      console.error("ban DM failed", e);
-    }
-  }
+  await dmOrEmail(project.user_id, "Project banned", body);
   revalidatePath("/", "layout");
 }
 
@@ -599,25 +556,14 @@ export async function banPlayer(formData: FormData): Promise<void> {
     by,
   );
 
-  const { data } = await db
-    .from("users")
-    .select("slack_id")
-    .eq("id", userId)
-    .single();
-  if (data?.slack_id) {
-    const lines = [
-      expiresAt
-        ? `You've been temporarily banned from Pixl until ${new Date(expiresAt).toUTCString()}.`
-        : "You've been permanently banned from Pixl.",
-    ];
-    if (reason) lines.push(`Reason: ${reason}`);
-    lines.push("If you believe this is a mistake, reach out to the Pixl team.");
-    try {
-      await dmUser(data.slack_id, lines.join("\n\n"));
-    } catch (e) {
-      console.error("ban DM failed", e);
-    }
-  }
+  const lines = [
+    expiresAt
+      ? `You've been temporarily banned from Pixl until ${new Date(expiresAt).toUTCString()}.`
+      : "You've been permanently banned from Pixl.",
+  ];
+  if (reason) lines.push(`Reason: ${reason}`);
+  lines.push("If you believe this is a mistake, reach out to the Pixl team.");
+  await dmOrEmail(userId, "Banned from Pixl", lines.join("\n\n"));
   revalidatePath("/", "layout");
 }
 
@@ -639,22 +585,14 @@ export async function liftBan(formData: FormData): Promise<void> {
   await logModAction(userId, "unban", `${count} active ban(s) lifted`, by);
 
   if (count > 0) {
-    const { data } = await db
-      .from("users")
-      .select("slack_id")
-      .eq("id", userId)
-      .single();
-    if (data?.slack_id) {
-      const dm = [
+    await dmOrEmail(
+      userId,
+      "Ban lifted",
+      [
         "Your ban from Pixl has been lifted. You're welcome to rejoin the game.",
         "Please keep the community guidelines in mind going forward.",
-      ].join("\n\n");
-      try {
-        await dmUser(data.slack_id, dm);
-      } catch (e) {
-        console.error("unban DM failed", e);
-      }
-    }
+      ].join("\n\n"),
+    );
   }
   revalidatePath("/", "layout");
 }

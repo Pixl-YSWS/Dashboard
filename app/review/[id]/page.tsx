@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { getProject, listShippedProjects, listSecondReviewProjects, claimReview } from "@/lib/db";
-import { fetchCommits } from "@/lib/github";
-import { fetchUserSpans, attachTrackedTime } from "@/lib/hackatime";
+import { fetchCommits, attachCommitStats } from "@/lib/github";
+import { fetchUserSpans, attachTrackedTime, fetchTrustFactor } from "@/lib/hackatime";
 import { yswsShipsFor } from "@/lib/ysws";
 import { db } from "@/lib/db";
 import { ReviewForm } from "@/app/_components/ReviewForm";
@@ -69,6 +69,10 @@ export default async function ReviewDetail({
     isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
 
   const commits = await fetchCommits(p.repo_url);
+  const [trust] = await Promise.all([
+    fetchTrustFactor(p.users?.slack_id),
+    attachCommitStats(commits),
+  ]);
   if (commits.commits.length > 0 && (p.hackatime_projects?.length ?? 0) > 0) {
     const { data: tokenRow } = await db
       .from("users")
@@ -136,6 +140,17 @@ export default async function ReviewDetail({
               {p.system_note}
             </div>
           )}
+          {(() => {
+            const aiCommits = commits.commits.filter((c) => c.ai).length;
+            if (aiCommits === 0 || p.used_ai) return null;
+            return (
+              <div className="rounded-xl border border-violet-300 dark:border-violet-500/40 bg-violet-50 dark:bg-violet-500/10 p-3 text-sm font-medium text-violet-700 dark:text-violet-300">
+                {aiCommits} commit{aiCommits === 1 ? "" : "s"} in this repo {aiCommits === 1 ? "is" : "are"} signed
+                by an AI tool, but the maker did not tick &ldquo;AI used&rdquo;. Undisclosed AI —
+                verify before crediting.
+              </div>
+            );
+          })()}
           {p.is_update && p.update_notes && (
             <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-sm">
               <div className="font-semibold mb-1">What changed since last approval</div>
@@ -215,6 +230,33 @@ export default async function ReviewDetail({
                 </div>
               </div>
             </div>
+
+            {trust && (
+              <div className="pixl-card p-4 flex items-center gap-3">
+                <span
+                  className={`badge ${
+                    trust.level === "green"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                      : trust.level === "red" || trust.level === "convicted"
+                        ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
+                        : trust.level === "yellow" || trust.level === "suspected"
+                          ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+                          : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
+                  }`}
+                >
+                  {trust.level}
+                </span>
+                <span className="text-xs text-ink/55">
+                  Hackatime trust factor — {trust.level === "green"
+                    ? "no fraud flags on this account."
+                    : trust.level === "red" || trust.level === "convicted"
+                      ? "Hackatime has convicted this account of fraud. Do not credit without digging."
+                      : trust.level === "yellow" || trust.level === "suspected"
+                        ? "Hackatime suspects this account — verify carefully."
+                        : "not scored yet."}
+                </span>
+              </div>
+            )}
 
             {isFinalStage && (
               <div className="pixl-card p-5 border-violet-300 dark:border-violet-500/30">

@@ -42,6 +42,31 @@ export async function fetchUserSpans(
   }
 }
 
+export interface TrustFactor {
+  level: string;
+  value: number;
+}
+
+// Hackatime's own fraud signal for a user (blue/green convicted/etc.).
+export async function fetchTrustFactor(
+  slackId: string | null | undefined,
+): Promise<TrustFactor | null> {
+  const id = (slackId ?? "").trim();
+  if (!id) return null;
+  try {
+    const r = await fetch(
+      `${BASE}/api/v1/users/${encodeURIComponent(id)}/trust_factor`,
+      { signal: AbortSignal.timeout(8000), next: { revalidate: 600 } },
+    );
+    if (!r.ok) return null;
+    const json = (await r.json()) as { trust_level?: string; trust_value?: number };
+    if (!json.trust_level) return null;
+    return { level: String(json.trust_level), value: Number(json.trust_value) || 0 };
+  } catch {
+    return null;
+  }
+}
+
 function overlap(spans: Span[], from: number, to: number): number {
   let sum = 0;
   for (const s of spans) {

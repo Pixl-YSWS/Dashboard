@@ -14,6 +14,7 @@ export function ReviewTabs({
   const tabs: { href: string; label: string; count?: number }[] = [
     { href: "/review", label: "Needs review", count: pending },
     { href: "/review/reviewed", label: "Reviewed" },
+    { href: "/review/stats", label: "Stats" },
   ];
   if (isSuper) tabs.push({ href: "/review/log", label: "Reviewer log" });
 

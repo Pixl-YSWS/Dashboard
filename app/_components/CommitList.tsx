@@ -91,6 +91,34 @@ export function CommitList({ result }: { result: CommitResult }) {
               {c.sha}
             </a>
             <span className="flex-1 min-w-0 break-words">{c.message}</span>
+            {c.ai && (
+              <span
+                className="badge bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300 shrink-0"
+                title="This commit is signed by an AI tool (co-author trailer / bot author / generated-with footer). Check the AI-used disclosure."
+              >
+                AI commit
+              </span>
+            )}
+            {c.additions !== undefined && (
+              <span
+                className={`text-xs shrink-0 tabular-nums ${
+                  c.tracked !== undefined &&
+                  c.additions >= 200 &&
+                  c.additions / (Math.max(c.tracked, 60) / 3600) > 1500
+                    ? "text-rose-600 dark:text-rose-400 font-semibold"
+                    : "text-ink/45"
+                }`}
+                title={
+                  c.tracked !== undefined &&
+                  c.additions >= 200 &&
+                  c.additions / (Math.max(c.tracked, 60) / 3600) > 1500
+                    ? "Huge amount of code vs almost no tracked coding time — possible paste/AI dump."
+                    : "Lines added / removed"
+                }
+              >
+                +{c.additions} −{c.deletions ?? 0}
+              </span>
+            )}
             {gaps.has(c.sha) && (
               <span
                 className="text-xs text-ink/45 shrink-0 tabular-nums"
