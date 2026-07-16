@@ -4,6 +4,7 @@ import { listShippedProjects, listSecondReviewProjects } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
 import { ReviewTable } from "@/app/_components/ReviewTable";
+import { LiveReview } from "@/app/_components/LiveReview";
 
 export const dynamic = "force-dynamic";
 
@@ -83,8 +84,11 @@ export default async function ReviewListPage({
             </Link>
           ))}
         </div>
-        <div className="text-sm text-ink/50">
-          Showing <span className="font-semibold text-ink/70">{total}</span> of {total}
+        <div className="flex items-center gap-3">
+          <LiveReview />
+          <div className="text-sm text-ink/50">
+            Showing <span className="font-semibold text-ink/70">{total}</span> of {total}
+          </div>
         </div>
       </div>
 
