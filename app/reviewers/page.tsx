@@ -5,6 +5,7 @@ import {
   isSecondPassReviewer,
   ownerSlackIds,
   secondPassSlackIds,
+  NO_REVIEW,
 } from "@/lib/guard";
 import {
   listAdmins,
@@ -61,9 +62,12 @@ export default async function ReviewersPage({
   const [admins, stats] = await Promise.all([listAdmins(), reviewerStatsBySlackId()]);
   const tableReviewers = admins.filter((a) => a.permissions.includes("review"));
   const inTable = new Set(tableReviewers.map((r) => r.slack_id));
+  const blocked = new Set(
+    admins.filter((a) => a.permissions.includes(NO_REVIEW)).map((a) => a.slack_id),
+  );
   const owners = new Set(ownerSlackIds());
   const envOnly = [...new Set([...ownerSlackIds(), ...secondPassSlackIds()])].filter(
-    (id) => !inTable.has(id),
+    (id) => !inTable.has(id) && !blocked.has(id),
   );
   const allReviewers = [
     ...envOnly.map((id) => ({ slack_id: id, name: "" })),

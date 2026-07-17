@@ -8,6 +8,10 @@ export type Permission = (typeof ALL_PERMISSIONS)[number];
 // Sub-admins are managed with these; "review" is granted from the Reviewers tab.
 export const SUBADMIN_PERMISSIONS = ["warn", "ban", "notify"] as const;
 
+// Marker stored in an admins row to take reviewing away from an env admin,
+// whose review right would otherwise come from ADMIN_SLACK_IDS.
+export const NO_REVIEW = "no_review";
+
 export interface AdminAccess {
   session: AdminSession;
   isSuper: boolean;
@@ -40,16 +44,22 @@ export function isSecondPassReviewer(slackId: string): boolean {
 }
 
 // Owners come from the ADMIN_SLACK_IDS env allowlist and hold every
-// permission; sub-admins live in the admins table with an explicit set.
+// permission (minus review if blocked via NO_REVIEW); sub-admins live in the
+// admins table with an explicit set.
 export async function getAccess(): Promise<AdminAccess | null> {
   const session = await getSession();
   if (!session) return null;
-  const canSecondPass = isSecondPassReviewer(session.slackId);
-  if (isAllowed(session.slackId))
-    return { session, isSuper: true, perms: new Set(ALL_PERMISSIONS), canSecondPass };
   const row = await getAdmin(session.slackId);
+  const reviewBlocked = row?.permissions.includes(NO_REVIEW) ?? false;
+  const canSecondPass = isSecondPassReviewer(session.slackId) && !reviewBlocked;
+  if (isAllowed(session.slackId)) {
+    const perms = new Set<string>(ALL_PERMISSIONS);
+    if (reviewBlocked) perms.delete("review");
+    return { session, isSuper: true, perms, canSecondPass };
+  }
   if (!row) return null;
-  return { session, isSuper: false, perms: new Set(row.permissions), canSecondPass };
+  const perms = new Set(row.permissions.filter((p) => p !== NO_REVIEW));
+  return { session, isSuper: false, perms, canSecondPass };
 }
 
 // Signed-in users who lost their access land on /removed instead of the
@@ -61,8 +71,10 @@ export async function requireAdmin(): Promise<AdminAccess> {
   redirect(session ? "/removed" : "/login");
 }
 
+// perms carries the effective set for supers too (review may be blocked), so
+// checks go through it rather than short-circuiting on isSuper.
 export function canView(access: AdminAccess, perms: Permission[]): boolean {
-  return access.isSuper || perms.some((p) => access.perms.has(p));
+  return perms.some((p) => access.perms.has(p));
 }
 
 // Page-level gate: sub-admins only reach pages matching one of their
@@ -76,7 +88,7 @@ export async function requirePagePerm(perms: Permission[]): Promise<AdminAccess>
 export async function requirePerm(perm: Permission): Promise<AdminAccess> {
   const access = await getAccess();
   if (!access) throw new Error("Not signed in");
-  if (!access.isSuper && !access.perms.has(perm))
+  if (!access.perms.has(perm))
     throw new Error(`You don't have the "${perm}" permission.`);
   return access;
 }

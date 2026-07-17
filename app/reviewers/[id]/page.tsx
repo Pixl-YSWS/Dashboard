@@ -5,6 +5,7 @@ import {
   isSecondPassReviewer,
   ownerSlackIds,
   secondPassSlackIds,
+  NO_REVIEW,
 } from "@/lib/guard";
 import {
   getAdmin,
@@ -83,8 +84,9 @@ export default async function ReviewerPage({
 
   const admin = await getAdmin(slackId);
   const inTable = !!admin?.permissions.includes("review");
+  const blocked = !!admin?.permissions.includes(NO_REVIEW);
   const fromEnv =
-    ownerSlackIds().includes(slackId) || secondPassSlackIds().includes(slackId);
+    (ownerSlackIds().includes(slackId) || secondPassSlackIds().includes(slackId)) && !blocked;
   if (!inTable && !fromEnv) notFound();
 
   const [stats, audits, handle, playerNames] = await Promise.all([
@@ -140,18 +142,12 @@ export default async function ReviewerPage({
             </div>
           </div>
         </div>
-        {inTable ? (
-          <form action={removeReviewer} className="shrink-0">
-            <input type="hidden" name="slackId" value={slackId} />
-            <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
-              Remove reviewer
-            </button>
-          </form>
-        ) : (
-          <span className="text-xs text-ink/40 shrink-0" title="Managed via env vars">
-            managed via env vars
-          </span>
-        )}
+        <form action={removeReviewer} className="shrink-0">
+          <input type="hidden" name="slackId" value={slackId} />
+          <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
+            Remove reviewer
+          </button>
+        </form>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

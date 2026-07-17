@@ -12,7 +12,15 @@ import {
 } from "@/lib/db";
 import { slackHandle } from "@/lib/slack";
 import { dmOrEmail } from "@/lib/notify";
-import { requirePerm, requireSuper, SUBADMIN_PERMISSIONS, type AdminAccess } from "@/lib/guard";
+import {
+  requirePerm,
+  requireSuper,
+  ownerSlackIds,
+  secondPassSlackIds,
+  SUBADMIN_PERMISSIONS,
+  NO_REVIEW,
+  type AdminAccess,
+} from "@/lib/guard";
 
 const DEFAULT_WARNING =
   "Please keep chat messages and display names appropriate. Continued violations may result in a ban from Pixl.";
@@ -795,16 +803,23 @@ export async function removeAdmin(formData: FormData): Promise<void> {
   );
 }
 
+function isEnvReviewer(slackId: string): boolean {
+  return ownerSlackIds().includes(slackId) || secondPassSlackIds().includes(slackId);
+}
+
 export async function addReviewer(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
+  const kept = (existing?.permissions ?? []).filter((p) => p !== NO_REVIEW);
+  // Env admins review by default: lifting their block is enough, no row needed.
+  const permissions = isEnvReviewer(slackId) ? kept : [...new Set([...kept, "review"])];
   await setTeamPerms(
     slackId,
     name,
-    [...new Set([...(existing?.permissions ?? []), "review"])],
+    permissions,
     existing ? "updated" : "added",
     actorName(access),
     actorName(access),
@@ -816,12 +831,15 @@ export async function removeReviewer(formData: FormData): Promise<void> {
   const slackId = String(formData.get("slackId") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
-  if (!existing) return;
+  if (!existing && !isEnvReviewer(slackId)) return;
+  const permissions = (existing?.permissions ?? []).filter((p) => p !== "review");
+  if (isEnvReviewer(slackId) && !permissions.includes(NO_REVIEW)) permissions.push(NO_REVIEW);
   await setTeamPerms(
     slackId,
-    existing.name,
-    existing.permissions.filter((p) => p !== "review"),
+    existing?.name ?? "",
+    permissions,
     "removed",
+    actorName(access),
     actorName(access),
   );
   redirect("/reviewers");

@@ -4,7 +4,11 @@ import { undoTeamChange } from "@/app/actions";
 function describe(row: TeamLogRow): string {
   const before = row.before ?? [];
   const after = row.after ?? [];
-  const fmt = (p: string[]) => (p.length > 0 ? p.join(", ") : "nothing");
+  const fmt = (p: string[]) => {
+    const shown = p.filter((x) => x !== "no_review");
+    const base = shown.length > 0 ? shown.join(", ") : "nothing";
+    return p.includes("no_review") ? `${base} (review blocked)` : base;
+  };
   switch (row.action) {
     case "added":
       return `added to the team with ${fmt(after)}`;

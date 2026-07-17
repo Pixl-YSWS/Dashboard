@@ -56,7 +56,7 @@ export default async function AdminsPage({
   if (!access.isSuper) redirect("/");
   const { page } = await searchParams;
   const allAdmins = (await listAdmins()).filter((a) =>
-    a.permissions.some((p) => p !== "review"),
+    a.permissions.some((p) => (SUBADMIN_PERMISSIONS as readonly string[]).includes(p)),
   );
   const pages = Math.max(1, Math.ceil(allAdmins.length / PER));
   const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
