@@ -73,6 +73,7 @@ export interface ProjectRow {
   image_url: string;
   level: number;
   used_ai: boolean;
+  ai_notes: string;
   is_update: boolean;
   update_notes: string;
   other_ysws: boolean;
@@ -792,6 +793,7 @@ export async function listActivityFeed(opts: {
   mod: boolean;
   review: boolean;
   team: boolean;
+  pixels: boolean;
   limit?: number;
 }): Promise<FeedItem[]> {
   const limit = opts.limit ?? 25;
@@ -803,7 +805,7 @@ export async function listActivityFeed(opts: {
       ? db.from("team_log").select("*").order("created_at", { ascending: false }).limit(limit)
       : Promise.resolve({ data: [] }),
     opts.review ? listReviewAudits(limit) : Promise.resolve([]),
-    opts.review
+    opts.pixels
       ? db
           .from("pixel_transactions")
           .select("*")

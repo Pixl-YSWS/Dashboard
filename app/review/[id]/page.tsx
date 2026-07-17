@@ -50,7 +50,7 @@ export default async function ReviewDetail({
   const { project: p, journals, verdicts } = data;
 
   const isFinalStage = p.status === "second_review";
-  const isOwn = !!p.users?.slack_id && p.users.slack_id === viewer;
+  const isOwn = !!p.users?.slack_id && p.users.slack_id === viewer && !access.isSuper;
   const canReview =
     (p.status === "shipped" && !isOwn) || (isFinalStage && canSecondPass);
 
@@ -152,9 +152,23 @@ export default async function ReviewDetail({
             );
           })()}
           {p.is_update && p.update_notes && (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-sm">
-              <div className="font-semibold mb-1">What changed since last approval</div>
-              <div className="whitespace-pre-wrap break-words text-ink/80">{p.update_notes}</div>
+            <div className="rounded-xl border border-blue-300 dark:border-blue-500/40 bg-blue-50 dark:bg-blue-500/10 p-4 text-sm">
+              <div className="font-semibold mb-1 text-blue-700 dark:text-blue-300">
+                What changed since last approval
+              </div>
+              <div className="whitespace-pre-wrap break-words text-blue-900/90 dark:text-blue-200/90">
+                {p.update_notes}
+              </div>
+            </div>
+          )}
+          {p.used_ai && (
+            <div className="rounded-xl border border-violet-300 dark:border-violet-500/40 bg-violet-50 dark:bg-violet-500/10 p-4 text-sm">
+              <div className="font-semibold mb-1 text-violet-700 dark:text-violet-300">
+                AI declaration
+              </div>
+              <div className="whitespace-pre-wrap break-words text-violet-900/90 dark:text-violet-200/90">
+                {p.ai_notes || "Player ticked “AI used” but gave no details (pre-dates the details field)."}
+              </div>
             </div>
           )}
 

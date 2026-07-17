@@ -143,7 +143,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (!current) return;
   const stage = String(current.status);
   const back = `/review/${projectId}`;
-  if (stage === "shipped" && (await isOwnProject(access, current.user_id)))
+  if (stage === "shipped" && !access.isSuper && (await isOwnProject(access, current.user_id)))
     redirect(`${back}?error=${encodeURIComponent("You can't first-pass your own project — another reviewer has to take it.")}`);
   if (stage !== "shipped" && stage !== "second_review")
     redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
@@ -229,7 +229,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   // Final approval — credit pixels. Only final reviewers reach here.
   if (stage === "second_review" && !access.canSecondPass)
     redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can approve this stage.")}`);
-  if (stage === "second_review" && current.first_pass_by && current.first_pass_by === by)
+  if (stage === "second_review" && !access.isSuper && current.first_pass_by && current.first_pass_by === by)
     redirect(`${back}?error=${encodeURIComponent("A different reviewer must do the final pass.")}`);
 
   const creditHours = approvedHours ?? claimedHours;

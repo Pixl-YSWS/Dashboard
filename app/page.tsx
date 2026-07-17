@@ -32,6 +32,7 @@ export default async function Overview({
       mod: showModeration,
       review: canView(access, ["review"]),
       team: access.isSuper,
+      pixels: access.isSuper,
       limit: 20,
     }),
   ]);

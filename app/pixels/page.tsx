@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { listPixelTransactions } from "@/lib/db";
 import { PixelAdjustForm } from "@/app/_components/PixelAdjustForm";
@@ -30,6 +31,7 @@ export default async function PixelsPage({
   }>;
 }) {
   const access = await requirePagePerm(["review"]);
+  if (!access.isSuper) redirect("/");
   const { page, filter, user, error, adjusted } = await searchParams;
   const all = await listPixelTransactions(1000);
 
