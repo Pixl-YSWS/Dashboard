@@ -5,8 +5,8 @@ import { countPendingReviews } from "@/lib/db";
 import { Shell } from "@/app/_components/Shell";
 
 export const metadata: Metadata = {
-  title: "Pixl — internal",
-  description: "Pixl moderation dashboard",
+  title: "Pixl HQ",
+  description: "The Pixl team's home for reviews, players, and pixels",
   icons: { icon: "/favicon.png" },
 };
 

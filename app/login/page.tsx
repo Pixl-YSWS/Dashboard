@@ -19,7 +19,7 @@ export default async function LoginPage({
           </span>
           <div>
             <div className="font-semibold text-lg tracking-tight leading-none">Pixl</div>
-            <div className="text-xs text-ink/50 mt-1">Admin console</div>
+            <div className="text-xs text-ink/50 mt-1">Team HQ</div>
           </div>
         </div>
         <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
