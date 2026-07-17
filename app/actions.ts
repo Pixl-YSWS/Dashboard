@@ -694,52 +694,105 @@ function readSubadminPerms(formData: FormData, existing: string[]): string[] {
   return perms;
 }
 
+async function logTeamChange(
+  slackId: string,
+  name: string,
+  action: string,
+  before: string[],
+  after: string[],
+  actor: string,
+): Promise<void> {
+  const { error } = await db.from("team_log").insert({
+    slack_id: slackId,
+    name,
+    action,
+    before,
+    after,
+    actor,
+  });
+  if (error) console.error("team log insert failed", error.message);
+}
+
+// Set someone's team permissions: empty = off the team entirely. Every change
+// lands in team_log so it can be undone.
+async function setTeamPerms(
+  slackId: string,
+  name: string,
+  permissions: string[],
+  action: string,
+  actor: string,
+  addedBy?: string,
+): Promise<void> {
+  const existing = await getAdmin(slackId);
+  if (permissions.length === 0) {
+    if (!existing) return;
+    const { error } = await db.from("admins").delete().eq("slack_id", slackId);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await db.from("admins").upsert({
+      slack_id: slackId,
+      name: name || existing?.name || slackId,
+      permissions,
+      added_by: existing?.added_by || addedBy || "",
+    });
+    if (error) throw new Error(error.message);
+  }
+  await logTeamChange(
+    slackId,
+    name || existing?.name || slackId,
+    action,
+    existing?.permissions ?? [],
+    permissions,
+    actor,
+  );
+  revalidatePath("/admins");
+  revalidatePath("/reviewers");
+}
+
 export async function addAdmin(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
-  const { error } = await db.from("admins").upsert({
-    slack_id: slackId,
-    name: name || existing?.name || slackId,
-    permissions: readSubadminPerms(formData, existing?.permissions ?? []),
-    added_by: existing?.added_by || actorName(access),
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath("/admins");
+  await setTeamPerms(
+    slackId,
+    name,
+    readSubadminPerms(formData, existing?.permissions ?? []),
+    existing ? "updated" : "added",
+    actorName(access),
+    actorName(access),
+  );
 }
 
 export async function updateAdminPerms(formData: FormData): Promise<void> {
-  await requireSuper();
+  const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
   if (!existing) return;
-  const { error } = await db
-    .from("admins")
-    .update({ permissions: readSubadminPerms(formData, existing.permissions) })
-    .eq("slack_id", slackId);
-  if (error) throw new Error(error.message);
-  revalidatePath("/admins");
+  await setTeamPerms(
+    slackId,
+    existing.name,
+    readSubadminPerms(formData, existing.permissions),
+    "updated",
+    actorName(access),
+  );
 }
 
 export async function removeAdmin(formData: FormData): Promise<void> {
-  await requireSuper();
+  const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
-  if (existing?.permissions.includes("review")) {
-    const { error } = await db
-      .from("admins")
-      .update({ permissions: ["review"] })
-      .eq("slack_id", slackId);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await db.from("admins").delete().eq("slack_id", slackId);
-    if (error) throw new Error(error.message);
-  }
-  revalidatePath("/admins");
+  if (!existing) return;
+  await setTeamPerms(
+    slackId,
+    existing.name,
+    existing.permissions.includes("review") ? ["review"] : [],
+    "removed",
+    actorName(access),
+  );
 }
 
 export async function addReviewer(formData: FormData): Promise<void> {
@@ -748,33 +801,44 @@ export async function addReviewer(formData: FormData): Promise<void> {
   const name = String(formData.get("name") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
-  const permissions = [...new Set([...(existing?.permissions ?? []), "review"])];
-  const { error } = await db.from("admins").upsert({
-    slack_id: slackId,
-    name: name || existing?.name || slackId,
-    permissions,
-    added_by: existing?.added_by || actorName(access),
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath("/reviewers");
+  await setTeamPerms(
+    slackId,
+    name,
+    [...new Set([...(existing?.permissions ?? []), "review"])],
+    existing ? "updated" : "added",
+    actorName(access),
+    actorName(access),
+  );
 }
 
 export async function removeReviewer(formData: FormData): Promise<void> {
-  await requireSuper();
+  const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
   if (!existing) return;
-  const permissions = existing.permissions.filter((p) => p !== "review");
-  if (permissions.length === 0) {
-    const { error } = await db.from("admins").delete().eq("slack_id", slackId);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await db
-      .from("admins")
-      .update({ permissions })
-      .eq("slack_id", slackId);
-    if (error) throw new Error(error.message);
-  }
-  revalidatePath("/reviewers");
+  await setTeamPerms(
+    slackId,
+    existing.name,
+    existing.permissions.filter((p) => p !== "review"),
+    "removed",
+    actorName(access),
+  );
+  redirect("/reviewers");
+}
+
+export async function undoTeamChange(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { data } = await db.from("team_log").select("*").eq("id", id).single();
+  if (!data) return;
+  await setTeamPerms(
+    String(data.slack_id),
+    String(data.name),
+    (data.before ?? []) as string[],
+    "undo",
+    actorName(access),
+    actorName(access),
+  );
 }

@@ -1,18 +1,30 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireAdmin, isSecondPassReviewer } from "@/lib/guard";
+import {
+  requireAdmin,
+  isSecondPassReviewer,
+  ownerSlackIds,
+  secondPassSlackIds,
+} from "@/lib/guard";
 import { listAdmins, reviewerStatsBySlackId, type ReviewerStats } from "@/lib/db";
-import { addReviewer, removeReviewer } from "@/app/actions";
+import { addReviewer } from "@/app/actions";
 import { slackHandles } from "@/lib/slack";
+import { TeamLog } from "@/app/_components/TeamLog";
 
 export const dynamic = "force-dynamic";
 
-function fmtDuration(seconds: number): string {
-  if (seconds <= 0) return "—";
-  if (seconds < 60) return `${seconds}s`;
-  const m = Math.floor(seconds / 60);
-  if (m < 60) return `${m}m ${seconds % 60}s`;
-  return `${Math.floor(m / 60)}h ${m % 60}m`;
-}
+const PER = 15;
+
+const EMPTY_STATS: ReviewerStats = {
+  reviews: 0,
+  approved: 0,
+  firstPass: 0,
+  needsChanges: 0,
+  hoursApproved: 0,
+  avgSeconds: 0,
+  repoOpenRate: 0,
+  lastReview: null,
+};
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "never";
@@ -23,22 +35,56 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function StatCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-[var(--line)] p-2.5">
+    <div className="px-4 py-2 text-center">
       <div className="text-lg font-semibold tabular-nums leading-tight">{value}</div>
-      <div className="text-xs text-ink/50 mt-0.5">{label}</div>
+      <div className="text-[0.7rem] text-ink/50 mt-0.5 whitespace-nowrap">{label}</div>
     </div>
   );
 }
 
-export default async function ReviewersPage() {
+export default async function ReviewersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
   const access = await requireAdmin();
   if (!access.isSuper) redirect("/");
+  const { q, page } = await searchParams;
 
   const [admins, stats] = await Promise.all([listAdmins(), reviewerStatsBySlackId()]);
-  const reviewers = admins.filter((a) => a.permissions.includes("review"));
-  const handles = await slackHandles(reviewers.map((r) => r.slack_id));
+  const tableReviewers = admins.filter((a) => a.permissions.includes("review"));
+  const inTable = new Set(tableReviewers.map((r) => r.slack_id));
+  const owners = new Set(ownerSlackIds());
+  const envOnly = [...new Set([...ownerSlackIds(), ...secondPassSlackIds()])].filter(
+    (id) => !inTable.has(id),
+  );
+  const allReviewers = [
+    ...envOnly.map((id) => ({ slack_id: id, name: "" })),
+    ...tableReviewers.map((r) => ({ slack_id: r.slack_id, name: r.name })),
+  ];
+  const handles = await slackHandles(allReviewers.map((r) => r.slack_id));
+
+  const needle = (q ?? "").trim().toLowerCase();
+  const filtered = needle
+    ? allReviewers.filter((r) => {
+        const handle = handles.get(r.slack_id) ?? "";
+        return (
+          r.name.toLowerCase().includes(needle) ||
+          r.slack_id.toLowerCase().includes(needle) ||
+          handle.toLowerCase().includes(needle)
+        );
+      })
+    : allReviewers;
+
+  const total = filtered.length;
+  const pages = Math.max(1, Math.ceil(total / PER));
+  const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
+  const start = (cur - 1) * PER;
+  const reviewers = filtered.slice(start, start + PER);
+  const qp = (n: number) =>
+    `/reviewers?page=${n}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
 
   const totals = [...stats.values()].reduce(
     (acc, s) => {
@@ -52,19 +98,22 @@ export default async function ReviewersPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-ink tracking-tight">Reviewers</h1>
-        <p className="text-sm text-ink/55 mt-1 max-w-2xl">
-          Reviewers work the ship queue and do first passes. Final approval (and pixel payouts)
-          stays with the second-pass reviewers from SECOND_PASS_SLACK_IDS. Owners can always
-          review and are not listed here.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 max-w-xl">
-        <Stat label="reviews all-time" value={String(totals.reviews)} />
-        <Stat label="final approvals" value={String(totals.approved)} />
-        <Stat label="hours credited" value={String(Math.round(totals.hours * 10) / 10)} />
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold text-ink tracking-tight">Reviewers</h1>
+          <p className="text-sm text-ink/55 mt-1 max-w-2xl">
+            Everyone who can work the ship queue. Click a reviewer for their full stats and
+            review history.
+          </p>
+        </div>
+        <div className="pixl-card flex divide-x divide-[var(--line)]">
+          <StatCell label="reviews all-time" value={String(totals.reviews)} />
+          <StatCell label="final approvals" value={String(totals.approved)} />
+          <StatCell
+            label="hours credited"
+            value={String(Math.round(totals.hours * 10) / 10)}
+          />
+        </div>
       </div>
 
       <div className="pixl-card p-5 md:p-6">
@@ -92,79 +141,113 @@ export default async function ReviewersPage() {
       </div>
 
       <div>
-        <div className="text-sm font-medium text-ink/60 mb-3">
-          {reviewers.length} reviewer{reviewers.length === 1 ? "" : "s"}
-        </div>
-        {reviewers.length === 0 ? (
-          <div className="pixl-card p-8 text-center text-ink/55 text-sm">
-            No reviewers yet. Add someone above to start clearing the queue.
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div className="text-sm font-medium text-ink/60">
+            {total} reviewer{total === 1 ? "" : "s"}
+            {needle ? ` matching “${q}”` : ""}
           </div>
-        ) : (
-          <div className="space-y-4">
-            {reviewers.map((r) => {
-              const handle = (r.slack_id && handles.get(r.slack_id)) ?? r.slack_id;
-              const s: ReviewerStats = stats.get(r.slack_id) ?? {
-                reviews: 0,
-                approved: 0,
-                firstPass: 0,
-                needsChanges: 0,
-                hoursApproved: 0,
-                avgSeconds: 0,
-                repoOpenRate: 0,
-                lastReview: null,
-              };
-              const initials =
-                (r.name || handle || "?")
-                  .split(/\s+/)
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase() || "?";
-              return (
-                <div key={r.slack_id} className="pixl-card p-5">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="grid place-items-center w-10 h-10 rounded-full bg-brand/10 text-brand text-sm font-semibold shrink-0">
-                        {initials}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate flex items-center gap-2">
-                          {r.name || handle}
-                          {isSecondPassReviewer(r.slack_id) && (
-                            <span className="text-[0.65rem] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-mint/20 text-emerald-700 dark:text-emerald-400">
-                              second pass
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-ink/50 truncate font-mono">
-                          {handle}
-                          {r.added_by ? ` · added by ${r.added_by}` : ""} · last review{" "}
-                          {fmtDate(s.lastReview)}
-                        </div>
-                      </div>
-                    </div>
-                    <form action={removeReviewer}>
-                      <input type="hidden" name="slackId" value={r.slack_id} />
-                      <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
-                        Remove
-                      </button>
-                    </form>
-                  </div>
+          <form className="flex gap-2">
+            <input
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="Search reviewers…"
+              className="pixl-input text-sm w-56"
+            />
+            <button className="pixl-btn bg-ink dark:bg-gray-700 text-white text-sm">Search</button>
+          </form>
+        </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-4">
-                    <Stat label="reviews" value={String(s.reviews)} />
-                    <Stat label="approved" value={String(s.approved)} />
-                    <Stat label="first passes" value={String(s.firstPass)} />
-                    <Stat label="needs changes" value={String(s.needsChanges)} />
-                    <Stat label="hours credited" value={String(Math.round(s.hoursApproved * 10) / 10)} />
-                    <Stat label="avg review time" value={fmtDuration(s.avgSeconds)} />
-                  </div>
-                </div>
-              );
-            })}
+        <div className="pixl-card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left border-b border-[var(--line)] bg-parch">
+                <th className="p-3">Reviewer</th>
+                <th className="p-3">Reviews</th>
+                <th className="p-3">Approved</th>
+                <th className="p-3">Hours credited</th>
+                <th className="p-3">Last review</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--line)]">
+              {reviewers.map((r) => {
+                const handle = (r.slack_id && handles.get(r.slack_id)) ?? r.slack_id;
+                const s = stats.get(r.slack_id) ?? EMPTY_STATS;
+                return (
+                  <tr key={r.slack_id} className="hover:bg-cream">
+                    <td className="p-3">
+                      <Link
+                        href={`/reviewers/${r.slack_id}`}
+                        className="font-bold hover:text-brand"
+                      >
+                        {r.name || handle}
+                      </Link>
+                      <span className="inline-flex gap-1 ml-2 align-middle">
+                        {owners.has(r.slack_id) && (
+                          <span className="badge bg-brand/15 text-brand text-[0.65rem] uppercase tracking-wide">
+                            owner
+                          </span>
+                        )}
+                        {isSecondPassReviewer(r.slack_id) && (
+                          <span className="badge bg-mint/30 dark:bg-mint/20 text-[0.65rem] uppercase tracking-wide">
+                            second pass
+                          </span>
+                        )}
+                      </span>
+                      <div className="text-xs text-ink/50 font-mono">{handle}</div>
+                    </td>
+                    <td className="p-3 tabular-nums">{s.reviews}</td>
+                    <td className="p-3 tabular-nums">{s.approved}</td>
+                    <td className="p-3 tabular-nums">
+                      {Math.round(s.hoursApproved * 10) / 10}
+                    </td>
+                    <td className="p-3 text-ink/60">{fmtDate(s.lastReview)}</td>
+                  </tr>
+                );
+              })}
+              {reviewers.length === 0 && (
+                <tr>
+                  <td className="p-5 text-ink/50" colSpan={5}>
+                    {needle
+                      ? "No reviewers match that search."
+                      : "No reviewers yet. Add someone above to start clearing the queue."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {total > 0 && (
+          <div className="flex items-center justify-between gap-3 mt-4 text-sm">
+            <span className="text-ink/50">
+              Showing {start + 1}–{Math.min(start + PER, total)} of {total}
+            </span>
+            <div className="flex items-center gap-2">
+              <Link
+                href={qp(cur - 1)}
+                className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
+                  cur <= 1 ? "pointer-events-none opacity-40" : ""
+                }`}
+              >
+                ←
+              </Link>
+              <span className="text-ink/60 tabular-nums px-1">
+                {cur} / {pages}
+              </span>
+              <Link
+                href={qp(cur + 1)}
+                className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
+                  cur >= pages ? "pointer-events-none opacity-40" : ""
+                }`}
+              >
+                →
+              </Link>
+            </div>
           </div>
         )}
       </div>
+
+      <TeamLog />
     </div>
   );
 }

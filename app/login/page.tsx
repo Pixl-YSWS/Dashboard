@@ -6,7 +6,7 @@ export default async function LoginPage({
   const { error } = await searchParams;
   const message =
     error === "denied"
-      ? "That Slack account isn't on the admin list."
+      ? "That Slack account isn't on the Pixl team (or was removed). If you think that's a mistake, contact the Pixl team."
       : error
         ? "Sign-in failed — try again."
         : null;

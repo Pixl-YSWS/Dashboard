@@ -131,6 +131,30 @@ export async function listAdmins(): Promise<AdminRow[]> {
   return (data ?? []) as AdminRow[];
 }
 
+export interface TeamLogRow {
+  id: number;
+  slack_id: string;
+  name: string;
+  action: string;
+  before: string[];
+  after: string[];
+  actor: string;
+  created_at: string;
+}
+
+export async function listTeamLog(limit = 20): Promise<TeamLogRow[]> {
+  const { data, error } = await db
+    .from("team_log")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listTeamLog", error.message);
+    return [];
+  }
+  return (data ?? []) as TeamLogRow[];
+}
+
 export function banIsActive(b: BanRow): boolean {
   if (b.lifted_at) return false;
   if (!b.expires_at) return true;
@@ -512,12 +536,17 @@ export interface ReviewAuditRow {
   project_name: string;
 }
 
-export async function listReviewAudits(limit = 50): Promise<ReviewAuditRow[]> {
-  const { data, error } = await db
+export async function listReviewAudits(
+  limit = 50,
+  reviewerSlackId?: string,
+): Promise<ReviewAuditRow[]> {
+  let q = db
     .from("review_audits")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (reviewerSlackId) q = q.ilike("reviewer", `%(${reviewerSlackId})%`);
+  const { data, error } = await q;
   if (error) {
     console.error("listReviewAudits", error.message);
     return [];

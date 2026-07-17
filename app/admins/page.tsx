@@ -4,6 +4,7 @@ import { requireAdmin, SUBADMIN_PERMISSIONS } from "@/lib/guard";
 import { listAdmins } from "@/lib/db";
 import { addAdmin, removeAdmin, updateAdminPerms } from "@/app/actions";
 import { slackHandles } from "@/lib/slack";
+import { TeamLog } from "@/app/_components/TeamLog";
 
 export const dynamic = "force-dynamic";
 
@@ -201,6 +202,8 @@ export default async function AdminsPage({
           </div>
         )}
       </div>
+
+      <TeamLog />
     </div>
   );
 }

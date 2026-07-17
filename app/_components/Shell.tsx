@@ -65,7 +65,7 @@ export function Shell({
   }, []);
 
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
 
   const tabs: { href: string; label: string; icon: IconKey; show: boolean; count?: number }[] = [
     { href: "/", label: "Overview", icon: "overview", show: true },
