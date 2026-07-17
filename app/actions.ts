@@ -810,17 +810,21 @@ export async function removeAdmin(formData: FormData): Promise<void> {
   await dmRemoved(slackId, "You've been removed from the Pixl mod team.", reason);
 }
 
-async function dmRemoved(slackId: string, headline: string, reason: string): Promise<void> {
+async function dmTeam(slackId: string, text: string): Promise<void> {
   try {
-    await dmUser(
-      slackId,
-      [headline, `Reason: ${reason}`, "If you think this is a mistake, reach out to the Pixl team."].join(
-        "\n\n",
-      ),
-    );
+    await dmUser(slackId, text);
   } catch (e) {
-    console.error("removal DM failed", (e as Error).message);
+    console.error("team DM failed", (e as Error).message);
   }
+}
+
+async function dmRemoved(slackId: string, headline: string, reason: string): Promise<void> {
+  await dmTeam(
+    slackId,
+    [headline, `Reason: ${reason}`, "If you think this is a mistake, reach out to the Pixl team."].join(
+      "\n\n",
+    ),
+  );
 }
 
 function isEnvReviewer(slackId: string): boolean {
@@ -836,6 +840,9 @@ export async function addReviewer(formData: FormData): Promise<void> {
   const kept = (existing?.permissions ?? []).filter((p) => p !== NO_REVIEW);
   // Env admins review by default: lifting their block is enough, no row needed.
   const permissions = isEnvReviewer(slackId) ? kept : [...new Set([...kept, "review"])];
+  const wasReviewer =
+    !existing?.permissions.includes(NO_REVIEW) &&
+    (existing?.permissions.includes("review") || isEnvReviewer(slackId));
   await setTeamPerms(
     slackId,
     name,
@@ -844,6 +851,15 @@ export async function addReviewer(formData: FormData): Promise<void> {
     actorName(access),
     actorName(access),
   );
+  if (!wasReviewer)
+    await dmTeam(
+      slackId,
+      [
+        "Welcome to the Pixl review team! 🎉",
+        "You now have access to the review queue on the Pixl dashboard — projects shipped by players are waiting for your verdict.",
+        "Happy reviewing!",
+      ].join("\n\n"),
+    );
 }
 
 export async function removeReviewer(formData: FormData): Promise<void> {
