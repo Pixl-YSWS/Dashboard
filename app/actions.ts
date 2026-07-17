@@ -11,6 +11,7 @@ import {
   projectPixelTotal,
 } from "@/lib/db";
 import { slackHandle, dmUser } from "@/lib/slack";
+import { kickOnlinePlayer } from "@/lib/gameServer";
 import { dmOrEmail } from "@/lib/notify";
 import {
   requirePerm,
@@ -892,6 +893,17 @@ export async function removeReviewer(formData: FormData): Promise<void> {
   );
   await dmRemoved(slackId, "You've been removed from the Pixl review team.", reason);
   redirect("/reviewers");
+}
+
+export async function kickPlayer(formData: FormData): Promise<void> {
+  const access = await requirePerm("ban");
+  const by = actorName(access);
+  const userId = String(formData.get("userId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 100);
+  if (!userId) return;
+  const kicked = await kickOnlinePlayer(userId, reason);
+  if (kicked) await logModAction(userId, "kick", reason || "(no reason)", by);
+  revalidatePath("/online");
 }
 
 export async function undoTeamChange(formData: FormData): Promise<void> {
