@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireAdmin, ALL_PERMISSIONS } from "@/lib/guard";
+import { requireAdmin, SUBADMIN_PERMISSIONS } from "@/lib/guard";
 import { listAdmins } from "@/lib/db";
 import { addAdmin, removeAdmin, updateAdminPerms } from "@/app/actions";
 import { slackHandles } from "@/lib/slack";
@@ -11,7 +11,6 @@ const PERM_INFO: Record<string, { label: string; desc: string }> = {
   warn: { label: "Warn", desc: "Send warnings to players" },
   ban: { label: "Ban", desc: "Ban and unban players" },
   notify: { label: "Notify", desc: "Send broadcast notifications" },
-  review: { label: "Review", desc: "Review the ship queue, credit hours" },
 };
 
 function PermToggles({
@@ -23,7 +22,7 @@ function PermToggles({
 }) {
   return (
     <div className="grid sm:grid-cols-2 gap-2">
-      {ALL_PERMISSIONS.map((p) => (
+      {SUBADMIN_PERMISSIONS.map((p) => (
         <label
           key={p}
           className="flex items-start gap-2.5 rounded-lg border border-[var(--line)] p-2.5 cursor-pointer transition-colors has-[:checked]:border-brand/40 has-[:checked]:bg-brand/5 hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
@@ -55,7 +54,9 @@ export default async function AdminsPage({
   const access = await requireAdmin();
   if (!access.isSuper) redirect("/");
   const { page } = await searchParams;
-  const allAdmins = await listAdmins();
+  const allAdmins = (await listAdmins()).filter((a) =>
+    a.permissions.some((p) => p !== "review"),
+  );
   const pages = Math.max(1, Math.ceil(allAdmins.length / PER));
   const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
   const start = (cur - 1) * PER;
@@ -68,7 +69,11 @@ export default async function AdminsPage({
         <h1 className="text-2xl font-semibold text-ink tracking-tight">Sub-admins</h1>
         <p className="text-sm text-ink/55 mt-1 max-w-2xl">
           Owners always have every permission. Sub-admins sign in with Slack and only get the
-          permissions you grant here.
+          permissions you grant here. Reviewers are managed on the{" "}
+          <Link href="/reviewers" className="text-brand underline">
+            Reviewers
+          </Link>{" "}
+          tab.
         </p>
       </div>
 
@@ -100,7 +105,7 @@ export default async function AdminsPage({
 
           <div>
             <div className="text-sm font-medium mb-2">Permissions</div>
-            <PermToggles name="perms" checked={(p) => p === "review"} />
+            <PermToggles name="perms" checked={() => false} />
           </div>
 
           <div className="flex justify-end">

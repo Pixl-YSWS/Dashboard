@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   db,
+  getAdmin,
   logModAction,
   creditProjectPixels,
   revokeProjectPixels,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/db";
 import { slackHandle } from "@/lib/slack";
 import { dmOrEmail } from "@/lib/notify";
-import { requirePerm, requireSuper, ALL_PERMISSIONS, type AdminAccess } from "@/lib/guard";
+import { requirePerm, requireSuper, SUBADMIN_PERMISSIONS, type AdminAccess } from "@/lib/guard";
 
 const DEFAULT_WARNING =
   "Please keep chat messages and display names appropriate. Continued violations may result in a ban from Pixl.";
@@ -536,9 +537,9 @@ export async function banPlayer(formData: FormData): Promise<void> {
   const access = await requirePerm("ban");
   const by = actorName(access);
   const userId = String(formData.get("userId") ?? "");
-  const reason = String(formData.get("reason") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 1000);
   const hours = Number(formData.get("hours") ?? 0);
-  if (!userId) return;
+  if (!userId || !reason) return;
 
   const expiresAt =
     hours > 0 ? new Date(Date.now() + hours * 3600_000).toISOString() : null;
@@ -684,20 +685,26 @@ export async function searchPlayers(query: string): Promise<PlayerHit[]> {
   }));
 }
 
+function readSubadminPerms(formData: FormData, existing: string[]): string[] {
+  const perms = formData
+    .getAll("perms")
+    .map(String)
+    .filter((p) => (SUBADMIN_PERMISSIONS as readonly string[]).includes(p));
+  if (existing.includes("review")) perms.push("review");
+  return perms;
+}
+
 export async function addAdmin(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
-  const perms = formData
-    .getAll("perms")
-    .map(String)
-    .filter((p) => (ALL_PERMISSIONS as readonly string[]).includes(p));
   if (!slackId) return;
+  const existing = await getAdmin(slackId);
   const { error } = await db.from("admins").upsert({
     slack_id: slackId,
-    name: name || slackId,
-    permissions: perms,
-    added_by: actorName(access),
+    name: name || existing?.name || slackId,
+    permissions: readSubadminPerms(formData, existing?.permissions ?? []),
+    added_by: existing?.added_by || actorName(access),
   });
   if (error) throw new Error(error.message);
   revalidatePath("/admins");
@@ -706,14 +713,12 @@ export async function addAdmin(formData: FormData): Promise<void> {
 export async function updateAdminPerms(formData: FormData): Promise<void> {
   await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
-  const perms = formData
-    .getAll("perms")
-    .map(String)
-    .filter((p) => (ALL_PERMISSIONS as readonly string[]).includes(p));
   if (!slackId) return;
+  const existing = await getAdmin(slackId);
+  if (!existing) return;
   const { error } = await db
     .from("admins")
-    .update({ permissions: perms })
+    .update({ permissions: readSubadminPerms(formData, existing.permissions) })
     .eq("slack_id", slackId);
   if (error) throw new Error(error.message);
   revalidatePath("/admins");
@@ -723,7 +728,53 @@ export async function removeAdmin(formData: FormData): Promise<void> {
   await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
   if (!slackId) return;
-  const { error } = await db.from("admins").delete().eq("slack_id", slackId);
-  if (error) throw new Error(error.message);
+  const existing = await getAdmin(slackId);
+  if (existing?.permissions.includes("review")) {
+    const { error } = await db
+      .from("admins")
+      .update({ permissions: ["review"] })
+      .eq("slack_id", slackId);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await db.from("admins").delete().eq("slack_id", slackId);
+    if (error) throw new Error(error.message);
+  }
   revalidatePath("/admins");
+}
+
+export async function addReviewer(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!slackId) return;
+  const existing = await getAdmin(slackId);
+  const permissions = [...new Set([...(existing?.permissions ?? []), "review"])];
+  const { error } = await db.from("admins").upsert({
+    slack_id: slackId,
+    name: name || existing?.name || slackId,
+    permissions,
+    added_by: existing?.added_by || actorName(access),
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/reviewers");
+}
+
+export async function removeReviewer(formData: FormData): Promise<void> {
+  await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (!slackId) return;
+  const existing = await getAdmin(slackId);
+  if (!existing) return;
+  const permissions = existing.permissions.filter((p) => p !== "review");
+  if (permissions.length === 0) {
+    const { error } = await db.from("admins").delete().eq("slack_id", slackId);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await db
+      .from("admins")
+      .update({ permissions })
+      .eq("slack_id", slackId);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath("/reviewers");
 }

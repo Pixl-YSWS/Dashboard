@@ -5,6 +5,9 @@ import { getAdmin } from "./db";
 export const ALL_PERMISSIONS = ["warn", "ban", "notify", "review"] as const;
 export type Permission = (typeof ALL_PERMISSIONS)[number];
 
+// Sub-admins are managed with these; "review" is granted from the Reviewers tab.
+export const SUBADMIN_PERMISSIONS = ["warn", "ban", "notify"] as const;
+
 export interface AdminAccess {
   session: AdminSession;
   isSuper: boolean;

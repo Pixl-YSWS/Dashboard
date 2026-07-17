@@ -48,13 +48,14 @@ export function BanForm({
   return (
     <form action={banPlayer} className="flex gap-2 items-center flex-wrap">
       <input type="hidden" name="userId" value={userId} />
-      {!compact && (
-        <input
-          name="reason"
-          placeholder="Reason"
-          className="pixl-input text-sm flex-1 min-w-32"
-        />
-      )}
+      <input
+        name="reason"
+        placeholder="Reason"
+        maxLength={1000}
+        className={compact ? "pixl-input text-sm w-32" : "pixl-input text-sm flex-1 min-w-32"}
+        required
+        disabled={isBanned}
+      />
       <select
         name="hours"
         className="pixl-input text-sm"

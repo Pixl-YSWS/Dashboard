@@ -31,6 +31,7 @@ export default async function RootLayout({
         moderation: canView(access, ["warn", "ban"]),
         notify: access.isSuper || access.perms.has("notify"),
         admins: access.isSuper,
+        reviewers: access.isSuper,
       }
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;

@@ -542,6 +542,84 @@ export async function listReviewAudits(limit = 50): Promise<ReviewAuditRow[]> {
   return rows;
 }
 
+export interface ReviewerStats {
+  reviews: number;
+  approved: number;
+  firstPass: number;
+  needsChanges: number;
+  hoursApproved: number;
+  avgSeconds: number;
+  repoOpenRate: number;
+  lastReview: string | null;
+}
+
+function emptyReviewerStats(): ReviewerStats {
+  return {
+    reviews: 0,
+    approved: 0,
+    firstPass: 0,
+    needsChanges: 0,
+    hoursApproved: 0,
+    avgSeconds: 0,
+    repoOpenRate: 0,
+    lastReview: null,
+  };
+}
+
+// Audits store the reviewer as "Name (SLACKID)" — aggregate per slack id.
+export async function reviewerStatsBySlackId(): Promise<Map<string, ReviewerStats>> {
+  const rows: {
+    reviewer: string;
+    verdict: string;
+    approved_hours: number | null;
+    total_seconds: number;
+    repo_opened: boolean;
+    created_at: string;
+  }[] = [];
+  const page = 1000;
+  for (let from = 0; ; from += page) {
+    const { data, error } = await db
+      .from("review_audits")
+      .select("reviewer, verdict, approved_hours, total_seconds, repo_opened, created_at")
+      .order("created_at", { ascending: true })
+      .range(from, from + page - 1);
+    if (error) {
+      console.error("reviewerStatsBySlackId", error.message);
+      break;
+    }
+    rows.push(...((data ?? []) as typeof rows));
+    if ((data ?? []).length < page) break;
+  }
+
+  const out = new Map<string, ReviewerStats>();
+  const timed = new Map<string, { total: number; n: number; repoOpened: number }>();
+  for (const r of rows) {
+    const key = /\(([^)]+)\)\s*$/.exec(r.reviewer)?.[1] ?? r.reviewer;
+    const s = out.get(key) ?? emptyReviewerStats();
+    const t = timed.get(key) ?? { total: 0, n: 0, repoOpened: 0 };
+    s.reviews++;
+    if (r.verdict === "approved") {
+      s.approved++;
+      s.hoursApproved += Number(r.approved_hours) || 0;
+    } else if (r.verdict === "first_pass_approved") s.firstPass++;
+    else if (r.verdict === "needs_changes") s.needsChanges++;
+    if (r.total_seconds > 0) {
+      t.total += r.total_seconds;
+      t.n++;
+    }
+    if (r.repo_opened) t.repoOpened++;
+    if (!s.lastReview || r.created_at > s.lastReview) s.lastReview = r.created_at;
+    out.set(key, s);
+    timed.set(key, t);
+  }
+  for (const [key, s] of out) {
+    const t = timed.get(key)!;
+    s.avgSeconds = t.n > 0 ? Math.round(t.total / t.n) : 0;
+    s.repoOpenRate = s.reviews > 0 ? t.repoOpened / s.reviews : 0;
+  }
+  return out;
+}
+
 export interface PixelTxRow {
   id: number;
   user_id: string;
