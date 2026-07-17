@@ -134,6 +134,14 @@ export function ReviewForm({
           />
         </label>
       </div>
+      <textarea
+        name="auditNote"
+        required
+        minLength={200}
+        placeholder="Internal audit note — never shown to the player, admins only. What did you check, what did the commits look like, anything sus? Min 200 characters."
+        className="pixl-input w-full text-sm"
+        rows={3}
+      />
       <div className="flex flex-wrap gap-2 items-start">
         <textarea
           name="note"

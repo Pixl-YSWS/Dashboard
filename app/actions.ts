@@ -100,6 +100,7 @@ async function insertReviewAudit(
     reviewer,
     verdict,
     note,
+    audit_note: String(formData.get("auditNote") ?? "").trim().slice(0, 5000),
     claimed_hours: claimedHours,
     approved_hours: approvedHours,
     repo_opened: formData.get("repoOpened") === "1",
@@ -148,6 +149,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
     redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
   if (!note)
     redirect(`${back}?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
+  const auditNote = String(formData.get("auditNote") ?? "").trim();
+  if (auditNote.length < 200)
+    redirect(`${back}?error=${encodeURIComponent("The internal audit note needs at least 200 characters.")}`);
 
   const claimedHours = await claimedHoursFor(projectId);
   const hoursRaw = String(formData.get("approvedHours") ?? "").trim();
@@ -319,6 +323,7 @@ export async function reReviewProject(formData: FormData): Promise<void> {
     reviewer: by,
     verdict: "reverted",
     note: "Previous verdict reverted — project returned to the review queue.",
+    audit_note: "",
     claimed_hours: claimedHours,
   });
   if (auditError) console.error("re-review audit insert failed", auditError.message);
@@ -349,6 +354,9 @@ export async function adjustPixels(formData: FormData): Promise<void> {
     redirect(`/pixels?error=${encodeURIComponent("Pick a player and a whole number of pixels.")}`);
   if (!reason)
     redirect(`/pixels?error=${encodeURIComponent("A reason is required for manual pixel changes.")}`);
+  const { data: target } = await db.from("users").select("slack_id").eq("id", userId).single();
+  if (!deduct && target?.slack_id && target.slack_id === access.session.slackId)
+    redirect(`/pixels?error=${encodeURIComponent("You can't grant pixels to yourself.")}`);
 
   const delta = deduct ? -amount : amount;
   const { error } = await db.rpc("adjust_user_pixels", {

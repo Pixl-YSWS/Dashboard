@@ -16,7 +16,10 @@ export function ReviewTabs({
     { href: "/review/reviewed", label: "Reviewed" },
     { href: "/review/stats", label: "Stats" },
   ];
-  if (isSuper) tabs.push({ href: "/review/log", label: "Reviewer log" });
+  if (isSuper) {
+    tabs.push({ href: "/review/log", label: "Reviewer log" });
+    tabs.push({ href: "/review/audit", label: "Audit notes" });
+  }
 
   return (
     <div className="flex gap-6 mb-6 border-b border-[var(--line)]">

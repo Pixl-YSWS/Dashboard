@@ -559,6 +559,7 @@ export interface ReviewAuditRow {
   reviewer: string;
   verdict: string;
   note: string;
+  audit_note: string;
   claimed_hours: number;
   approved_hours: number | null;
   repo_opened: boolean;
