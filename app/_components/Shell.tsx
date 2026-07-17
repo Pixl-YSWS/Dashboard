@@ -58,15 +58,20 @@ export function Shell({
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) setMoreOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  useEffect(() => setMoreOpen(false), [pathname]);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
@@ -157,37 +162,72 @@ export function Shell({
             </div>
           </div>
 
-          {/* row 2 — tabs */}
-          <nav className="flex items-center gap-1 overflow-x-auto -mb-px">
-            {tabs
-              .filter((t) => t.show)
-              .map((t) => {
-                const active = isActive(t.href);
-                return (
-                  <Link
-                    key={t.href}
-                    href={t.href}
-                    className={`flex items-center gap-2 px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                      active
-                        ? "border-brand text-brand"
-                        : "border-transparent text-ink/60 hover:text-ink"
-                    }`}
-                  >
-                    <Icon name={t.icon} />
-                    {t.label}
-                    {t.count ? (
-                      <span
-                        className={`ml-0.5 text-[0.7rem] font-semibold px-1.5 py-0.5 rounded-full ${
-                          active ? "bg-brand text-white" : "bg-black/[0.06] dark:bg-white/10 text-ink/60"
-                        }`}
-                      >
-                        {t.count}
-                      </span>
-                    ) : null}
-                  </Link>
-                );
-              })}
-          </nav>
+          {/* row 2 — tabs, overflow into a "More" dropdown */}
+          {(() => {
+            const visible = tabs.filter((t) => t.show);
+            const MAX_INLINE = 8;
+            const inline = visible.length > MAX_INLINE ? visible.slice(0, MAX_INLINE) : visible;
+            const overflow = visible.length > MAX_INLINE ? visible.slice(MAX_INLINE) : [];
+            const overflowActive = overflow.some((t) => isActive(t.href));
+            const tabLink = (t: (typeof tabs)[number], inMenu = false) => {
+              const active = isActive(t.href);
+              return (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  className={
+                    inMenu
+                      ? `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                          active
+                            ? "text-brand bg-brand/10"
+                            : "text-ink/70 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
+                        }`
+                      : `flex items-center gap-2 px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                          active
+                            ? "border-brand text-brand"
+                            : "border-transparent text-ink/60 hover:text-ink"
+                        }`
+                  }
+                >
+                  <Icon name={t.icon} />
+                  {t.label}
+                  {t.count ? (
+                    <span
+                      className={`ml-0.5 text-[0.7rem] font-semibold px-1.5 py-0.5 rounded-full ${
+                        active ? "bg-brand text-white" : "bg-black/[0.06] dark:bg-white/10 text-ink/60"
+                      }`}
+                    >
+                      {t.count}
+                    </span>
+                  ) : null}
+                </Link>
+              );
+            };
+            return (
+              <nav className="flex items-center gap-1 overflow-x-auto -mb-px">
+                {inline.map((t) => tabLink(t))}
+                {overflow.length > 0 && (
+                  <div className="relative" ref={moreRef}>
+                    <button
+                      onClick={() => setMoreOpen((v) => !v)}
+                      className={`flex items-center gap-2 px-3 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                        overflowActive
+                          ? "border-brand text-brand"
+                          : "border-transparent text-ink/60 hover:text-ink"
+                      }`}
+                    >
+                      ⋯ More
+                    </button>
+                    {moreOpen && (
+                      <div className="absolute right-0 mt-1 w-52 pixl-card p-1.5 shadow-lg z-40">
+                        {overflow.map((t) => tabLink(t, true))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </nav>
+            );
+          })()}
         </div>
       </header>
 
