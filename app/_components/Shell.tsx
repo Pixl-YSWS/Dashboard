@@ -204,7 +204,7 @@ export function Shell({
               );
             };
             return (
-              <nav className="flex items-center gap-1 overflow-x-auto -mb-px">
+              <nav className="flex items-center gap-1 flex-wrap -mb-px">
                 {inline.map((t) => tabLink(t))}
                 {overflow.length > 0 && (
                   <div className="relative" ref={moreRef}>
