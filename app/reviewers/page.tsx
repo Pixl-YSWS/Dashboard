@@ -6,7 +6,12 @@ import {
   ownerSlackIds,
   secondPassSlackIds,
 } from "@/lib/guard";
-import { listAdmins, reviewerStatsBySlackId, type ReviewerStats } from "@/lib/db";
+import {
+  listAdmins,
+  reviewerStatsBySlackId,
+  displayNamesBySlackId,
+  type ReviewerStats,
+} from "@/lib/db";
 import { addReviewer } from "@/app/actions";
 import { slackHandles } from "@/lib/slack";
 import { TeamLog } from "@/app/_components/TeamLog";
@@ -64,14 +69,20 @@ export default async function ReviewersPage({
     ...envOnly.map((id) => ({ slack_id: id, name: "" })),
     ...tableReviewers.map((r) => ({ slack_id: r.slack_id, name: r.name })),
   ];
-  const handles = await slackHandles(allReviewers.map((r) => r.slack_id));
+  const ids = allReviewers.map((r) => r.slack_id);
+  const [handles, playerNames] = await Promise.all([
+    slackHandles(ids),
+    displayNamesBySlackId(ids),
+  ]);
+  const displayFor = (r: { slack_id: string; name: string }) =>
+    r.name || handles.get(r.slack_id) || playerNames.get(r.slack_id) || r.slack_id;
 
   const needle = (q ?? "").trim().toLowerCase();
   const filtered = needle
     ? allReviewers.filter((r) => {
         const handle = handles.get(r.slack_id) ?? "";
         return (
-          r.name.toLowerCase().includes(needle) ||
+          displayFor(r).toLowerCase().includes(needle) ||
           r.slack_id.toLowerCase().includes(needle) ||
           handle.toLowerCase().includes(needle)
         );
@@ -179,12 +190,12 @@ export default async function ReviewersPage({
                         href={`/reviewers/${r.slack_id}`}
                         className="font-bold hover:text-brand"
                       >
-                        {r.name || handle}
+                        {displayFor(r)}
                       </Link>
                       <span className="inline-flex gap-1 ml-2 align-middle">
                         {owners.has(r.slack_id) && (
                           <span className="badge bg-brand/15 text-brand text-[0.65rem] uppercase tracking-wide">
-                            owner
+                            admin
                           </span>
                         )}
                         {isSecondPassReviewer(r.slack_id) && (

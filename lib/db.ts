@@ -131,6 +131,25 @@ export async function listAdmins(): Promise<AdminRow[]> {
   return (data ?? []) as AdminRow[];
 }
 
+// Player display names keyed by linked Slack id — used as a fallback when the
+// Slack handle lookup is unavailable (e.g. missing app keys).
+export async function displayNamesBySlackId(ids: string[]): Promise<Map<string, string>> {
+  const clean = [...new Set(ids.filter(Boolean))];
+  if (clean.length === 0) return new Map();
+  const { data, error } = await db
+    .from("users")
+    .select("slack_id, display_name")
+    .in("slack_id", clean);
+  if (error) {
+    console.error("displayNamesBySlackId", error.message);
+    return new Map();
+  }
+  const out = new Map<string, string>();
+  for (const u of data ?? [])
+    if (u.slack_id && u.display_name) out.set(u.slack_id as string, u.display_name as string);
+  return out;
+}
+
 export interface TeamLogRow {
   id: number;
   slack_id: string;

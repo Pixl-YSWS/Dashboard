@@ -10,6 +10,7 @@ import {
   getAdmin,
   listReviewAudits,
   reviewerStatsBySlackId,
+  displayNamesBySlackId,
   type ReviewerStats,
 } from "@/lib/db";
 import { removeReviewer } from "@/app/actions";
@@ -86,13 +87,14 @@ export default async function ReviewerPage({
     ownerSlackIds().includes(slackId) || secondPassSlackIds().includes(slackId);
   if (!inTable && !fromEnv) notFound();
 
-  const [stats, audits, handle] = await Promise.all([
+  const [stats, audits, handle, playerNames] = await Promise.all([
     reviewerStatsBySlackId(),
     listReviewAudits(100, slackId),
     slackHandle(slackId),
+    displayNamesBySlackId([slackId]),
   ]);
   const s = stats.get(slackId) ?? EMPTY_STATS;
-  const display = admin?.name || handle || slackId;
+  const display = admin?.name || handle || playerNames.get(slackId) || slackId;
   const isOwner = ownerSlackIds().includes(slackId);
   const initials =
     display
@@ -120,7 +122,7 @@ export default async function ReviewerPage({
               {display}
               {isOwner && (
                 <span className="badge bg-brand/15 text-brand text-[0.65rem] uppercase tracking-wide">
-                  owner
+                  admin
                 </span>
               )}
               {isSecondPassReviewer(slackId) && (
