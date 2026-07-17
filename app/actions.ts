@@ -757,8 +757,7 @@ async function setTeamPerms(
     actor,
     reason,
   );
-  revalidatePath("/admins");
-  revalidatePath("/reviewers");
+  revalidatePath("/", "layout");
 }
 
 export async function addAdmin(formData: FormData): Promise<void> {
