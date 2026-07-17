@@ -158,6 +158,7 @@ export interface TeamLogRow {
   before: string[];
   after: string[];
   actor: string;
+  reason: string;
   created_at: string;
 }
 
@@ -305,6 +306,7 @@ export interface ShippedProject extends ProjectWithUser {
   hackatimeHours: number;
   journalHours: number;
   entries: number;
+  own?: boolean;
 }
 
 async function hydrateHours(projects: ShippedProject[]): Promise<ShippedProject[]> {
@@ -339,7 +341,8 @@ function claimedByOther(p: ShippedProject, viewer?: string): boolean {
   return Date.now() - new Date(p.reviewing_at).getTime() < REVIEW_LOCK_MS;
 }
 
-// A reviewer must never see or grade their own submission.
+// A reviewer may see their own submission in the queue (flagged) but the
+// detail page and actions never let them grade it.
 function ownedByViewer(p: ShippedProject, viewer?: string): boolean {
   return !!viewer && !!p.users?.slack_id && p.users.slack_id === viewer;
 }
@@ -361,11 +364,10 @@ export async function listShippedProjects(viewer?: string): Promise<ShippedProje
     return [];
   }
   const visible = (data ?? []).filter(
-    (p) =>
-      !claimedByOther(p as ShippedProject, viewer) &&
-      !ownedByViewer(p as ShippedProject, viewer),
-  );
-  return hydrateHours(visible as ShippedProject[]);
+    (p) => !claimedByOther(p as ShippedProject, viewer),
+  ) as ShippedProject[];
+  for (const p of visible) if (ownedByViewer(p, viewer)) p.own = true;
+  return hydrateHours(visible);
 }
 
 // Claim a submission for a reviewer. Returns { ok:false, by } if someone else

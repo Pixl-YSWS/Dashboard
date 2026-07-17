@@ -10,7 +10,7 @@ import {
   revokeProjectPixels,
   projectPixelTotal,
 } from "@/lib/db";
-import { slackHandle } from "@/lib/slack";
+import { slackHandle, dmUser } from "@/lib/slack";
 import { dmOrEmail } from "@/lib/notify";
 import {
   requirePerm,
@@ -709,6 +709,7 @@ async function logTeamChange(
   before: string[],
   after: string[],
   actor: string,
+  reason: string,
 ): Promise<void> {
   const { error } = await db.from("team_log").insert({
     slack_id: slackId,
@@ -717,6 +718,7 @@ async function logTeamChange(
     before,
     after,
     actor,
+    reason,
   });
   if (error) console.error("team log insert failed", error.message);
 }
@@ -730,6 +732,7 @@ async function setTeamPerms(
   action: string,
   actor: string,
   addedBy?: string,
+  reason = "",
 ): Promise<void> {
   const existing = await getAdmin(slackId);
   if (permissions.length === 0) {
@@ -752,6 +755,7 @@ async function setTeamPerms(
     existing?.permissions ?? [],
     permissions,
     actor,
+    reason,
   );
   revalidatePath("/admins");
   revalidatePath("/reviewers");
@@ -791,7 +795,8 @@ export async function updateAdminPerms(formData: FormData): Promise<void> {
 export async function removeAdmin(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
-  if (!slackId) return;
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 500);
+  if (!slackId || !reason) return;
   const existing = await getAdmin(slackId);
   if (!existing) return;
   await setTeamPerms(
@@ -800,7 +805,23 @@ export async function removeAdmin(formData: FormData): Promise<void> {
     existing.permissions.includes("review") ? ["review"] : [],
     "removed",
     actorName(access),
+    undefined,
+    reason,
   );
+  await dmRemoved(slackId, "You've been removed from the Pixl mod team.", reason);
+}
+
+async function dmRemoved(slackId: string, headline: string, reason: string): Promise<void> {
+  try {
+    await dmUser(
+      slackId,
+      [headline, `Reason: ${reason}`, "If you think this is a mistake, reach out to the Pixl team."].join(
+        "\n\n",
+      ),
+    );
+  } catch (e) {
+    console.error("removal DM failed", (e as Error).message);
+  }
 }
 
 function isEnvReviewer(slackId: string): boolean {
@@ -829,7 +850,8 @@ export async function addReviewer(formData: FormData): Promise<void> {
 export async function removeReviewer(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const slackId = String(formData.get("slackId") ?? "").trim();
-  if (!slackId) return;
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 500);
+  if (!slackId || !reason) return;
   const existing = await getAdmin(slackId);
   if (!existing && !isEnvReviewer(slackId)) return;
   const permissions = (existing?.permissions ?? []).filter((p) => p !== "review");
@@ -841,7 +863,9 @@ export async function removeReviewer(formData: FormData): Promise<void> {
     "removed",
     actorName(access),
     actorName(access),
+    reason,
   );
+  await dmRemoved(slackId, "You've been removed from the Pixl review team.", reason);
   redirect("/reviewers");
 }
 

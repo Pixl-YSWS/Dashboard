@@ -49,6 +49,9 @@ export async function TeamLog() {
                 </span>
                 <span className="text-ink/70">{describe(row)}</span>
               </div>
+              {row.reason && (
+                <div className="text-xs text-ink/60 mt-0.5">Reason: {row.reason}</div>
+              )}
               <div className="text-xs text-ink/45 mt-0.5 truncate">
                 by {row.actor || "unknown"} ·{" "}
                 {new Date(row.created_at).toLocaleString("en-GB", {

@@ -91,8 +91,13 @@ export function ReviewTable({
                 <span className="text-sm truncate text-ink/80">{maker}</span>
               </div>
 
-              <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <StatusBadge status={p.status} />
+                {p.own && (
+                  <span className="badge bg-tang/20 text-tang text-[0.65rem] uppercase tracking-wide">
+                    yours
+                  </span>
+                )}
               </div>
 
               <div className="md:text-right text-sm">

@@ -142,8 +142,15 @@ export default async function ReviewerPage({
             </div>
           </div>
         </div>
-        <form action={removeReviewer} className="shrink-0">
+        <form action={removeReviewer} className="shrink-0 flex items-center gap-2 flex-wrap">
           <input type="hidden" name="slackId" value={slackId} />
+          <input
+            name="reason"
+            required
+            maxLength={500}
+            placeholder="Reason (sent to them)"
+            className="pixl-input text-sm w-52"
+          />
           <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
             Remove reviewer
           </button>

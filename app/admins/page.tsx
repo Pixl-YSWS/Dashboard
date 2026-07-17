@@ -151,8 +151,15 @@ export default async function AdminsPage({
                         </div>
                       </div>
                     </div>
-                    <form action={removeAdmin}>
+                    <form action={removeAdmin} className="flex items-center gap-2 flex-wrap">
                       <input type="hidden" name="slackId" value={a.slack_id} />
+                      <input
+                        name="reason"
+                        required
+                        maxLength={500}
+                        placeholder="Reason (sent to them)"
+                        className="pixl-input text-sm w-44"
+                      />
                       <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
                         Remove
                       </button>
