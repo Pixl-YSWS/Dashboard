@@ -856,7 +856,7 @@ export async function addReviewer(formData: FormData): Promise<void> {
       slackId,
       [
         "Welcome to the Pixl review team! 🎉",
-        "You now have access to the review queue on the Pixl dashboard — projects shipped by players are waiting for your verdict.",
+        `You now have access to the review queue on the Pixl dashboard — projects shipped by players are waiting for your verdict: ${process.env.BASE_URL ?? ""}/review`,
         "Happy reviewing!",
       ].join("\n\n"),
     );
