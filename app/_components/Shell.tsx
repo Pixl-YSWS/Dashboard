@@ -16,6 +16,7 @@ export interface NavFlags {
   admins: boolean;
   reviewers: boolean;
   online: boolean;
+  shop: boolean;
 }
 
 // Hack Club icon glyphs (icons.hackclub.com) mapped to each nav item.
@@ -31,6 +32,7 @@ const GLYPHS = {
   admins: "person-badge",
   reviewers: "checkmark",
   online: "welcome",
+  shop: "bag-fill",
 } as const;
 
 type IconKey = keyof typeof GLYPHS;
@@ -76,6 +78,7 @@ export function Shell({
     { href: "/players", label: "Players", icon: "players", show: nav.players },
     { href: "/online", label: "Online", icon: "online", show: nav.online },
     { href: "/pixels", label: "Pixels", icon: "pixels", show: nav.pixels },
+    { href: "/shop", label: "Shop", icon: "shop", show: nav.shop },
     { href: "/violations", label: "Violations", icon: "violations", show: nav.moderation },
     { href: "/bans", label: "Bans", icon: "bans", show: nav.moderation },
     { href: "/notify", label: "Notify", icon: "notify", show: nav.notify },

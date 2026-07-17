@@ -33,6 +33,7 @@ export default async function RootLayout({
         admins: access.isSuper,
         reviewers: access.isSuper,
         online: canView(access, ["warn", "ban"]),
+        shop: access.isSuper,
       }
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;

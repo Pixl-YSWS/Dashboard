@@ -906,6 +906,94 @@ export async function kickPlayer(formData: FormData): Promise<void> {
   revalidatePath("/online");
 }
 
+// Upload a shop image to Supabase Storage (public "shop" bucket, created on
+// first use) and return its public URL.
+async function uploadShopImage(file: File): Promise<string> {
+  const base = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!base || !key) throw new Error("Supabase is not configured");
+  const ext = (file.name.split(".").pop() || "png").toLowerCase().replace(/[^a-z0-9]/g, "") || "png";
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const body = Buffer.from(await file.arrayBuffer());
+  const upload = () =>
+    fetch(`${base}/storage/v1/object/shop/${name}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        apikey: key,
+        "Content-Type": file.type || "image/png",
+      },
+      body,
+    });
+  let res = await upload();
+  if (res.status === 400 || res.status === 404) {
+    await fetch(`${base}/storage/v1/bucket`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        apikey: key,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: "shop", name: "shop", public: true }),
+    });
+    res = await upload();
+  }
+  if (!res.ok) throw new Error(`image upload failed (${res.status})`);
+  return `${base}/storage/v1/object/public/shop/${name}`;
+}
+
+function readOptions(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+}
+
+export async function addShopItem(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 60);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 300);
+  const price = Math.max(0, Math.round(Number(formData.get("price") ?? 0)));
+  const options = readOptions(String(formData.get("options") ?? ""));
+  if (!name) return;
+  let imageUrl = "";
+  const image = formData.get("image");
+  if (image instanceof File && image.size > 0) {
+    if (image.size > 4 * 1024 * 1024) throw new Error("Image too big (max 4 MB).");
+    imageUrl = await uploadShopImage(image);
+  }
+  const { error } = await db.from("shop_items").insert({
+    name,
+    description,
+    price,
+    image_url: imageUrl,
+    options,
+    created_by: actorName(access),
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/shop");
+}
+
+export async function toggleShopItem(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  const active = String(formData.get("active") ?? "") === "1";
+  if (!id) return;
+  const { error } = await db.from("shop_items").update({ active }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/shop");
+}
+
+export async function deleteShopItem(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db.from("shop_items").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/shop");
+}
+
 export async function undoTeamChange(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const id = Number(formData.get("id") ?? 0);

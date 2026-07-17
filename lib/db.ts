@@ -751,6 +751,32 @@ export async function listPixelTransactions(limit = 1000): Promise<PixelTxRow[]>
   return rows;
 }
 
+export interface ShopItemRow {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  options: string[];
+  active: boolean;
+  position: number;
+  created_by: string;
+  created_at: string;
+}
+
+export async function listShopItems(): Promise<ShopItemRow[]> {
+  const { data, error } = await db
+    .from("shop_items")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) {
+    console.error("listShopItems", error.message);
+    return [];
+  }
+  return (data ?? []) as ShopItemRow[];
+}
+
 export interface FeedItem {
   kind: "mod" | "team" | "review" | "pixels";
   text: string;
