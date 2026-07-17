@@ -12,6 +12,7 @@ import {
   listReviewAudits,
   reviewerStatsBySlackId,
   displayNamesBySlackId,
+  auditFlags,
   type ReviewerStats,
 } from "@/lib/db";
 import { removeReviewer } from "@/app/actions";
@@ -27,6 +28,7 @@ const EMPTY_STATS: ReviewerStats = {
   hoursApproved: 0,
   avgSeconds: 0,
   repoOpenRate: 0,
+  flagged: 0,
   lastReview: null,
 };
 
@@ -165,7 +167,16 @@ export default async function ReviewerPage({
         <Stat label="hours credited" value={String(Math.round(s.hoursApproved * 10) / 10)} />
         <Stat label="avg review time" value={fmtDuration(s.avgSeconds)} />
         <Stat label="repo opened" value={`${Math.round(s.repoOpenRate * 100)}%`} />
-        <Stat label="last review" value={fmtDate(s.lastReview)} />
+        <div className={`pixl-card p-4 ${s.flagged > 0 ? "border-rose-300 dark:border-rose-500/40" : ""}`}>
+          <div
+            className={`text-xl font-semibold tabular-nums leading-tight ${
+              s.flagged > 0 ? "text-rose-600 dark:text-rose-400" : ""
+            }`}
+          >
+            {s.flagged}
+          </div>
+          <div className="text-xs text-ink/50 mt-1">flagged reviews</div>
+        </div>
       </div>
 
       <div>
@@ -191,8 +202,16 @@ export default async function ReviewerPage({
                   label: a.verdict,
                   className: "bg-parch",
                 };
+                const flags = auditFlags(a);
                 return (
-                  <tr key={a.id} className="hover:bg-cream align-top">
+                  <tr
+                    key={a.id}
+                    className={`align-top ${
+                      flags.length > 0
+                        ? "bg-rose-50/60 dark:bg-rose-500/[0.06] hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                        : "hover:bg-cream"
+                    }`}
+                  >
                     <td className="p-3">
                       <Link
                         href={`/projects/${a.project_id}`}
@@ -213,6 +232,14 @@ export default async function ReviewerPage({
                     </td>
                     <td className="p-3">
                       <span className={`badge ${badge.className}`}>{badge.label}</span>
+                      {flags.map((f) => (
+                        <div
+                          key={f}
+                          className="text-[0.7rem] text-rose-600 dark:text-rose-400 mt-1 whitespace-nowrap"
+                        >
+                          ⚠ {f}
+                        </div>
+                      ))}
                     </td>
                     <td className="p-3 tabular-nums whitespace-nowrap">
                       {a.claimed_hours}

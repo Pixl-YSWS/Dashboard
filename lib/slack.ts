@@ -80,6 +80,11 @@ export async function slackHandles(
   return out;
 }
 
+// Post to a channel as the dashboard bot (bot must be invited to the channel).
+export async function postToChannel(channel: string, text: string): Promise<void> {
+  await slackCall("chat.postMessage", { channel, text, unfurl_links: false });
+}
+
 // Opens (or reuses) a DM with the user and sends the message.
 const EXTERNAL_DM_URL =
   process.env.EXTERNAL_DM_URL ?? "https://dashboard.gabintavernier.com/api/external/dm";

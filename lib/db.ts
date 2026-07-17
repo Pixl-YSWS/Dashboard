@@ -614,6 +614,7 @@ export interface ReviewerStats {
   hoursApproved: number;
   avgSeconds: number;
   repoOpenRate: number;
+  flagged: number;
   lastReview: string | null;
 }
 
@@ -626,8 +627,26 @@ function emptyReviewerStats(): ReviewerStats {
     hoursApproved: 0,
     avgSeconds: 0,
     repoOpenRate: 0,
+    flagged: 0,
     lastReview: null,
   };
+}
+
+// A verdict looks rushed if it took under a minute, or if it passed the
+// project without the repo ever being opened.
+export function auditFlags(a: {
+  verdict: string;
+  total_seconds: number;
+  repo_opened: boolean;
+}): string[] {
+  const flags: string[] = [];
+  if (a.total_seconds > 0 && a.total_seconds < 60) flags.push("under a minute");
+  if (
+    (a.verdict === "approved" || a.verdict === "first_pass_approved") &&
+    !a.repo_opened
+  )
+    flags.push("repo never opened");
+  return flags;
 }
 
 // Audits store the reviewer as "Name (SLACKID)" — aggregate per slack id.
@@ -672,6 +691,7 @@ export async function reviewerStatsBySlackId(): Promise<Map<string, ReviewerStat
       t.n++;
     }
     if (r.repo_opened) t.repoOpened++;
+    if (auditFlags(r).length > 0) s.flagged++;
     if (!s.lastReview || r.created_at > s.lastReview) s.lastReview = r.created_at;
     out.set(key, s);
     timed.set(key, t);
@@ -729,6 +749,90 @@ export async function listPixelTransactions(limit = 1000): Promise<PixelTxRow[]>
     r.project_name = r.project_id != null ? (pnames.get(r.project_id) ?? `#${r.project_id}`) : null;
   }
   return rows;
+}
+
+export interface FeedItem {
+  kind: "mod" | "team" | "review" | "pixels";
+  text: string;
+  detail: string;
+  href: string | null;
+  when: string;
+}
+
+// One merged "what happened lately" stream for the overview, drawn from the
+// sources the viewer is allowed to see.
+export async function listActivityFeed(opts: {
+  mod: boolean;
+  review: boolean;
+  team: boolean;
+  limit?: number;
+}): Promise<FeedItem[]> {
+  const limit = opts.limit ?? 25;
+  const [mods, team, audits, txs] = await Promise.all([
+    opts.mod
+      ? db.from("mod_actions").select("*").order("created_at", { ascending: false }).limit(limit)
+      : Promise.resolve({ data: [] }),
+    opts.team
+      ? db.from("team_log").select("*").order("created_at", { ascending: false }).limit(limit)
+      : Promise.resolve({ data: [] }),
+    opts.review ? listReviewAudits(limit) : Promise.resolve([]),
+    opts.review
+      ? db
+          .from("pixel_transactions")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(limit)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const modRows = (mods.data ?? []) as ModActionRow[];
+  const txRows = ((txs as { data: unknown[] }).data ?? []) as PixelTxRow[];
+  const userIds = [
+    ...new Set([...modRows.map((m) => m.user_id), ...txRows.map((t) => t.user_id)]),
+  ];
+  const names = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: users } = await db.from("users").select("id, display_name").in("id", userIds);
+    for (const u of users ?? []) names.set(u.id as string, u.display_name as string);
+  }
+  const stripId = (s: string) => s.replace(/\s*\([^)]*\)\s*$/, "");
+
+  const items: FeedItem[] = [];
+  for (const m of modRows)
+    items.push({
+      kind: "mod",
+      text: `${stripId(m.actor)} · ${m.action.replaceAll("_", " ")} · ${names.get(m.user_id) ?? m.user_id}`,
+      detail: m.detail,
+      href: `/players/${m.user_id}`,
+      when: m.created_at,
+    });
+  for (const t of (team.data ?? []) as TeamLogRow[])
+    items.push({
+      kind: "team",
+      text: `${stripId(t.actor)} · ${t.action} · ${t.name || t.slack_id}`,
+      detail: t.reason || `${(t.before ?? []).join(", ") || "nothing"} → ${(t.after ?? []).join(", ") || "nothing"}`,
+      href: "/reviewers",
+      when: t.created_at,
+    });
+  for (const a of audits as ReviewAuditRow[])
+    items.push({
+      kind: "review",
+      text: `${stripId(a.reviewer)} · ${a.verdict.replaceAll("_", " ")} · ${a.project_name}`,
+      detail: a.note,
+      href: `/projects/${a.project_id}`,
+      when: a.created_at,
+    });
+  for (const t of txRows)
+    items.push({
+      kind: "pixels",
+      text: `${names.get(t.user_id) ?? t.user_id} ${Number(t.amount) >= 0 ? "earned" : "lost"} ${Math.abs(Number(t.amount))} pixels`,
+      detail: t.reason.replaceAll("_", " "),
+      href: `/players/${t.user_id}`,
+      when: t.created_at,
+    });
+
+  items.sort((a, b) => (a.when < b.when ? 1 : -1));
+  return items.slice(0, limit);
 }
 
 export interface BanLogRow extends ModActionRow {

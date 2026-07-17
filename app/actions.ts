@@ -766,14 +766,24 @@ export async function addAdmin(formData: FormData): Promise<void> {
   const name = String(formData.get("name") ?? "").trim();
   if (!slackId) return;
   const existing = await getAdmin(slackId);
+  const perms = readSubadminPerms(formData, existing?.permissions ?? []);
   await setTeamPerms(
     slackId,
     name,
-    readSubadminPerms(formData, existing?.permissions ?? []),
+    perms,
     existing ? "updated" : "added",
     actorName(access),
     actorName(access),
   );
+  if (!existing && perms.length > 0)
+    await dmTeam(
+      slackId,
+      [
+        "Welcome to the Pixl mod team! 🎉",
+        `You now have access to the Pixl dashboard with these permissions: ${perms.filter((p) => p !== "review").join(", ")}.`,
+        `Sign in with Slack here: ${process.env.BASE_URL ?? ""}`,
+      ].join("\n\n"),
+    );
 }
 
 export async function updateAdminPerms(formData: FormData): Promise<void> {

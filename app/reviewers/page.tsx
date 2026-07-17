@@ -29,6 +29,7 @@ const EMPTY_STATS: ReviewerStats = {
   hoursApproved: 0,
   avgSeconds: 0,
   repoOpenRate: 0,
+  flagged: 0,
   lastReview: null,
 };
 
@@ -180,6 +181,7 @@ export default async function ReviewersPage({
                 <th className="p-3">Reviews</th>
                 <th className="p-3">Approved</th>
                 <th className="p-3">Hours credited</th>
+                <th className="p-3">Flags</th>
                 <th className="p-3">Last review</th>
               </tr>
             </thead>
@@ -215,13 +217,20 @@ export default async function ReviewersPage({
                     <td className="p-3 tabular-nums">
                       {Math.round(s.hoursApproved * 10) / 10}
                     </td>
+                    <td
+                      className={`p-3 tabular-nums ${
+                        s.flagged > 0 ? "text-rose-600 dark:text-rose-400 font-bold" : ""
+                      }`}
+                    >
+                      {s.flagged}
+                    </td>
                     <td className="p-3 text-ink/60">{fmtDate(s.lastReview)}</td>
                   </tr>
                 );
               })}
               {reviewers.length === 0 && (
                 <tr>
-                  <td className="p-5 text-ink/50" colSpan={5}>
+                  <td className="p-5 text-ink/50" colSpan={6}>
                     {needle
                       ? "No reviewers match that search."
                       : "No reviewers yet. Add someone above to start clearing the queue."}

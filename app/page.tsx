@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { requireAdmin, canView } from "@/lib/guard";
-import { getStats, getGrowthSeries, listViolations } from "@/lib/db";
+import { getStats, getGrowthSeries, listViolations, listActivityFeed } from "@/lib/db";
 import { GrowthChart } from "@/app/_components/GrowthChart";
 import { Badge } from "@/app/_components/ProjectBadges";
+
+const FEED_BADGE: Record<string, { label: string; tone: "amber" | "rose" | "green" | "blue" }> = {
+  mod: { label: "mod", tone: "amber" },
+  team: { label: "team", tone: "rose" },
+  review: { label: "review", tone: "green" },
+  pixels: { label: "pixels", tone: "blue" },
+};
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +24,16 @@ export default async function Overview({
   const showModeration = canView(access, ["warn", "ban"]);
   const { range } = await searchParams;
   const days = RANGES.includes(Number(range)) ? Number(range) : 30;
-  const [stats, growth, recent] = await Promise.all([
+  const [stats, growth, recent, feed] = await Promise.all([
     getStats(),
     getGrowthSeries(days),
     showModeration ? listViolations(8) : Promise.resolve([]),
+    listActivityFeed({
+      mod: showModeration,
+      review: canView(access, ["review"]),
+      team: access.isSuper,
+      limit: 20,
+    }),
   ]);
 
   const cards = [
@@ -109,6 +122,37 @@ export default async function Overview({
           )}
         </div>
       </div>
+
+      {feed.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-ink tracking-tight mb-3">Activity</h3>
+          <div className="pixl-card divide-y divide-[var(--line)]">
+            {feed.map((f, i) => {
+              const badge = FEED_BADGE[f.kind] ?? FEED_BADGE.mod;
+              return (
+                <div key={i} className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <Badge tone={badge.tone}>{badge.label}</Badge>
+                  <div className="flex-1 min-w-0">
+                    {f.href ? (
+                      <Link href={f.href} className="font-medium text-sm hover:text-brand">
+                        {f.text}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-sm">{f.text}</span>
+                    )}
+                    {f.detail && (
+                      <div className="text-xs text-ink/55 truncate">{f.detail}</div>
+                    )}
+                  </div>
+                  <div className="text-xs text-ink/45 shrink-0">
+                    {new Date(f.when).toLocaleString()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {showModeration && (
         <div>

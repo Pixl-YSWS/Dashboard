@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
-import { listShippedProjects, listSecondReviewProjects } from "@/lib/db";
+import { listShippedProjects, listSecondReviewProjects, listReviewAudits } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
 import { ReviewTable } from "@/app/_components/ReviewTable";
@@ -29,6 +29,7 @@ export default async function ReviewListPage({
     ? await slackHandles(finalRows.map((p) => p.users?.slack_id))
     : new Map<string, string>();
 
+  const myRecent = await listReviewAudits(5, viewer);
   let rows = await listShippedProjects(viewer);
   if (sort === "hours") rows = [...rows].sort((a, b) => b.hours - a.hours);
   else if (sort === "status") rows = [...rows].sort((a, b) => a.status.localeCompare(b.status));
@@ -123,6 +124,29 @@ export default async function ReviewListPage({
             >
               →
             </Link>
+          </div>
+        </div>
+      )}
+
+      {myRecent.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-semibold text-ink/60 mb-3">Recently reviewed by you</h3>
+          <div className="pixl-card divide-y divide-[var(--line)]">
+            {myRecent.map((a) => (
+              <Link
+                key={a.id}
+                href={`/projects/${a.project_id}`}
+                className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+              >
+                <span className="font-medium text-sm">{a.project_name}</span>
+                <span className="text-xs text-ink/55">
+                  {a.verdict.replaceAll("_", " ")} · {a.player_name}
+                </span>
+                <span className="text-xs text-ink/45 ml-auto shrink-0">
+                  {new Date(a.created_at).toLocaleString()}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       )}
