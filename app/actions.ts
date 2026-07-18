@@ -39,8 +39,49 @@ function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
 }
 
-// 1 hour = 5 pixels, whole pixels only. 10 pixels = $1.
-const PIXELS_PER_HOUR = 5;
+// XP system: 1 XP per lifetime approved hour. The $/hr rate steps up with XP
+// ($4.00 at level 0 to $7.00 at 100 XP); 10 px = $1, so px/hr = $/hr x 10.
+// A player's rate for a ship comes from their XP before that ship.
+const RATE_STEPS: [number, number][] = [
+  [0, 40],
+  [10, 45],
+  [20, 45],
+  [30, 50],
+  [40, 50],
+  [50, 55],
+  [60, 60],
+  [70, 60],
+  [80, 65],
+  [90, 65],
+  [100, 70],
+];
+
+function pxPerHourFor(xp: number): number {
+  let rate = RATE_STEPS[0][1];
+  for (const [threshold, r] of RATE_STEPS) if (xp >= threshold) rate = r;
+  return rate;
+}
+
+async function lifetimeApprovedHours(userId: string, excludeProjectId: number): Promise<number> {
+  const { data } = await db
+    .from("projects")
+    .select("id, approved_hours, hackatime_seconds")
+    .eq("user_id", userId)
+    .eq("status", "approved")
+    .is("banned_at", null)
+    .neq("id", excludeProjectId);
+  return (
+    Math.round(
+      (data ?? []).reduce((s, p) => {
+        const h =
+          p.approved_hours != null
+            ? Number(p.approved_hours)
+            : (Number(p.hackatime_seconds) || 0) / 3600;
+        return s + (Number.isFinite(h) ? h : 0);
+      }, 0) * 10,
+    ) / 10
+  );
+}
 
 // A reviewer may never act on their own submission (self-review = cheating).
 async function isOwnProject(access: AdminAccess, userId: string): Promise<boolean> {
@@ -418,9 +459,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 
-  // Lifetime credit for the project = round(hours * 5 * any community-goal
-  // bonus); the DB function only adds the delta vs what earlier approvals
-  // already paid out.
+  // Lifetime credit for the project = round(hours * the player's level rate *
+  // any community-goal bonus); the DB function only adds the delta vs what
+  // earlier approvals already paid out.
   let goalMult = 1;
   let goalNote = "";
   if (current.shipped_at) {
@@ -440,7 +481,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
       }
     }
   }
-  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR * goalMult);
+  const xpBefore = await lifetimeApprovedHours(project.user_id, projectId);
+  const pxRate = pxPerHourFor(xpBefore);
+  const totalPx = Math.round(creditHours * pxRate * goalMult);
   const alreadyPx = await projectPixelTotal(project.id);
   const deltaPx = totalPx - alreadyPx;
   await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
@@ -456,6 +499,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
         ? `\n\n${totalPx} pixels credited (${approvedHours}h approved of ${claimedHours}h logged).`
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
+  if (deltaPx > 0)
+    credited += ` Your rate: ${pxRate} px/h ($${(pxRate / 10).toFixed(2)}/hr at level ${Math.min(10, Math.floor(xpBefore / 10))}).`;
   if (goalNote && deltaPx > 0) credited += goalNote;
 
   // Bounties the final reviewer ticked: fixed prize each, once per project,
