@@ -22,6 +22,7 @@ import {
   SUBADMIN_PERMISSIONS,
   NO_REVIEW,
   type AdminAccess,
+  type Permission,
 } from "@/lib/guard";
 
 const DEFAULT_WARNING =
@@ -758,6 +759,121 @@ export async function liftBan(formData: FormData): Promise<void> {
     );
   }
   revalidatePath("/", "layout");
+}
+
+// Mass moderation from the Players page: one action applied to every selected
+// player, with the same guards, mod log entries and DMs as the single-player
+// versions. Capped so a stray select-all can't nuke the whole playerbase.
+export async function massPlayerAction(formData: FormData): Promise<void> {
+  const action = String(formData.get("massAction") ?? "");
+  const permFor: Record<string, Permission> = {
+    warn: "warn",
+    notify: "notify",
+    ban: "ban",
+    unban: "ban",
+  };
+  const perm = permFor[action];
+  if (!perm) return;
+  const access = await requirePerm(perm);
+  const by = actorName(access);
+
+  const back = String(formData.get("back") ?? "/players") || "/players";
+  const fail = (msg: string) => redirect(`${back}${back.includes("?") ? "&" : "?"}error=${encodeURIComponent(msg)}`);
+  const ids = [...new Set(formData.getAll("userIds").map(String).filter(Boolean))];
+  const message = String(formData.get("message") ?? "").trim().slice(0, 1000);
+  const title = String(formData.get("title") ?? "").trim().slice(0, 100);
+  const hours = Number(formData.get("hours") ?? 0);
+
+  if (ids.length === 0) fail("Select at least one player first.");
+  if (ids.length > 100) fail("Mass actions are capped at 100 players at a time.");
+  if (action === "ban" && !message) fail("A ban reason is required.");
+  if (action === "notify" && !message) fail("A message is required to notify players.");
+
+  if (action === "warn") {
+    const text = message || DEFAULT_WARNING;
+    for (const userId of ids) {
+      await db.from("notifications").insert({
+        user_id: userId,
+        title: "Moderation warning",
+        body: text,
+      });
+      await dmOrEmail(
+        userId,
+        "Moderation warning",
+        [
+          "You've received a moderation warning from Pixl.",
+          text,
+          "If you believe this is a mistake, reach out to the Pixl team.",
+        ].join("\n\n"),
+      );
+      await logModAction(userId, "warn", `${text} (mass action, ${ids.length} players)`, by);
+    }
+  } else if (action === "notify") {
+    const heading = title || "Message from the Pixl team";
+    const { error } = await db
+      .from("notifications")
+      .insert(ids.map((userId) => ({ user_id: userId, title: heading, body: message })));
+    if (error) throw new Error(error.message);
+    for (const userId of ids)
+      await logModAction(userId, "notify", `${heading} (mass action, ${ids.length} players)`, by);
+  } else if (action === "ban") {
+    const expiresAt =
+      hours > 0 ? new Date(Date.now() + hours * 3600_000).toISOString() : null;
+    for (const userId of ids) {
+      const { error } = await db.from("bans").insert({
+        user_id: userId,
+        reason: message,
+        banned_by: by,
+        expires_at: expiresAt,
+      });
+      if (error) throw new Error(error.message);
+      await logModAction(
+        userId,
+        "ban",
+        `${expiresAt ? `${hours}h` : "permanent"} — ${message} (mass action, ${ids.length} players)`,
+        by,
+      );
+      await dmOrEmail(
+        userId,
+        "Banned from Pixl",
+        [
+          expiresAt
+            ? `You've been temporarily banned from Pixl until ${new Date(expiresAt).toUTCString()}.`
+            : "You've been permanently banned from Pixl.",
+          `Reason: ${message}`,
+          "If you believe this is a mistake, reach out to the Pixl team.",
+        ].join("\n\n"),
+      );
+    }
+  } else if (action === "unban") {
+    for (const userId of ids) {
+      const { data: lifted, error } = await db
+        .from("bans")
+        .update({ lifted_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .is("lifted_at", null)
+        .select("id");
+      if (error) throw new Error(error.message);
+      if ((lifted ?? []).length === 0) continue;
+      await logModAction(userId, "unban", `${(lifted ?? []).length} active ban(s) lifted (mass action)`, by);
+      await dmOrEmail(
+        userId,
+        "Ban lifted",
+        [
+          "Your ban from Pixl has been lifted. You're welcome to rejoin the game.",
+          "Please keep the community guidelines in mind going forward.",
+        ].join("\n\n"),
+      );
+    }
+  }
+
+  revalidatePath("/", "layout");
+  const verb = { warn: "Warned", notify: "Notified", ban: "Banned", unban: "Lifted bans for" }[action];
+  redirect(
+    `${back}${back.includes("?") ? "&" : "?"}done=${encodeURIComponent(
+      `${verb} ${ids.length} player${ids.length === 1 ? "" : "s"}.`,
+    )}`,
+  );
 }
 
 export async function sendNotification(formData: FormData): Promise<void> {
