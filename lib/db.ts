@@ -813,6 +813,122 @@ export async function payoutTotalsBySlackId(): Promise<Map<string, PayoutTotals>
   return out;
 }
 
+export interface PublicStats {
+  players: number;
+  approvedProjects: number;
+  inReview: number;
+  totalHours: number;
+  pixelsCirculating: number;
+  reviews: number;
+  shipsSeries: GrowthPoint[];
+}
+
+// Aggregates safe to show on the public stats page — nothing personal.
+export async function publicStats(days = 30): Promise<PublicStats> {
+  const pagedAll = async <T>(build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> => {
+    const out: T[] = [];
+    const page = 1000;
+    for (let from = 0; ; from += page) {
+      const { data, error } = await build(from, from + page - 1);
+      if (error) {
+        console.error("publicStats paged", error.message);
+        break;
+      }
+      out.push(...((data ?? []) as T[]));
+      if ((data ?? []).length < page) break;
+    }
+    return out;
+  };
+
+  const [players, approvedProjects, inReview, reviews, hoursRows, pixelRows, shippedRows] =
+    await Promise.all([
+      count("users"),
+      count("projects", (q) => q.eq("status", "approved").is("banned_at", null)),
+      count("projects", (q) =>
+        q
+          .in("status", ["shipped", "second_review"])
+          .is("archived_at", null)
+          .is("rejected_at", null)
+          .is("banned_at", null),
+      ),
+      count("review_audits"),
+      pagedAll<{ approved_hours: number | null; hackatime_seconds: number | null }>((a, b) =>
+        db
+          .from("projects")
+          .select("approved_hours, hackatime_seconds")
+          .eq("status", "approved")
+          .is("banned_at", null)
+          .range(a, b),
+      ),
+      pagedAll<{ pixels: number }>((a, b) => db.from("users").select("pixels").range(a, b)),
+      pagedAll<{ shipped_at: string }>((a, b) =>
+        db
+          .from("projects")
+          .select("shipped_at")
+          .not("shipped_at", "is", null)
+          .order("shipped_at", { ascending: true })
+          .range(a, b),
+      ),
+    ]);
+
+  const totalHours =
+    Math.round(
+      hoursRows.reduce((s, p) => {
+        const h =
+          p.approved_hours != null
+            ? Number(p.approved_hours)
+            : (Number(p.hackatime_seconds) || 0) / 3600;
+        return s + (Number.isFinite(h) ? h : 0);
+      }, 0) * 10,
+    ) / 10;
+  const pixelsCirculating = Math.round(
+    pixelRows.reduce((s, u) => s + (Number(u.pixels) || 0), 0),
+  );
+  return {
+    players,
+    approvedProjects,
+    inReview,
+    totalHours,
+    pixelsCirculating,
+    reviews,
+    shipsSeries: bucketDaily(shippedRows.map((r) => r.shipped_at), days),
+  };
+}
+
+export interface GalleryProject {
+  id: number;
+  name: string;
+  description: string;
+  image_url: string;
+  demo_url: string;
+  approved_hours: number | null;
+  owner: string;
+}
+
+export async function publicGallery(limit = 12): Promise<GalleryProject[]> {
+  const { data, error } = await db
+    .from("projects")
+    .select("id, name, description, image_url, demo_url, approved_hours, users(display_name)")
+    .eq("status", "approved")
+    .is("banned_at", null)
+    .order("shipped_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("publicGallery", error.message);
+    return [];
+  }
+  return (data ?? []).map((p) => ({
+    id: p.id as number,
+    name: p.name as string,
+    description: (p.description as string) ?? "",
+    image_url: (p.image_url as string) ?? "",
+    demo_url: (p.demo_url as string) ?? "",
+    approved_hours: p.approved_hours as number | null,
+    owner:
+      ((p.users as unknown as { display_name?: string } | null)?.display_name as string) ?? "?",
+  }));
+}
+
 export interface DashEventRow {
   id: number;
   type: string;
