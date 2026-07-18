@@ -32,6 +32,13 @@ function VerdictButtons({ secondPass }: { secondPass: boolean }) {
   );
 }
 
+export interface BountyOption {
+  id: number;
+  name: string;
+  reward: number;
+  description: string;
+}
+
 export function ReviewForm({
   projectId,
   repoUrl,
@@ -39,6 +46,7 @@ export function ReviewForm({
   claimedHours,
   defaultHours,
   secondPass = false,
+  bounties = [],
 }: {
   projectId: number;
   repoUrl: string | null;
@@ -46,6 +54,7 @@ export function ReviewForm({
   claimedHours: number;
   defaultHours?: number;
   secondPass?: boolean;
+  bounties?: BountyOption[];
 }) {
   const repoOpened = useRef<HTMLInputElement>(null);
   const demoOpened = useRef<HTMLInputElement>(null);
@@ -134,6 +143,22 @@ export function ReviewForm({
           />
         </label>
       </div>
+      {bounties.length > 0 && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/[0.06] p-3">
+          <div className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1.5">
+            Bounty board — tick what this project meets (paid on final approval)
+          </div>
+          {bounties.map((b) => (
+            <label key={b.id} className="flex items-start gap-2 text-sm py-0.5">
+              <input type="checkbox" name="bountyIds" value={b.id} className="w-4 h-4 mt-0.5" />
+              <span>
+                {b.name} <span className="font-semibold">+{b.reward} px</span>
+                {b.description && <span className="text-ink/55"> — {b.description}</span>}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
       <textarea
         name="auditNote"
         required

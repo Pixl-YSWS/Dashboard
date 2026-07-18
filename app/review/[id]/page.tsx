@@ -6,7 +6,7 @@ import { fetchCommits, attachCommitStats } from "@/lib/github";
 import { fetchUserSpans, attachTrackedTime, fetchTrustFactor } from "@/lib/hackatime";
 import { yswsShipsFor } from "@/lib/ysws";
 import { db } from "@/lib/db";
-import { ReviewForm } from "@/app/_components/ReviewForm";
+import { ReviewForm, type BountyOption } from "@/app/_components/ReviewForm";
 import { banProject } from "@/app/actions";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
@@ -80,6 +80,28 @@ export default async function ReviewDetail({
     if (streakRun > bestStreak) bestStreak = streakRun;
   }
   const streakBonus = Math.min(bestStreak, 50);
+
+  const shippedAt = (p as { shipped_at?: string | null }).shipped_at ?? null;
+  let bounties: BountyOption[] = [];
+  if (shippedAt) {
+    const { data: bountyEvents } = await db
+      .from("events")
+      .select("*")
+      .eq("type", "bounty")
+      .is("stopped_at", null)
+      .lte("starts_at", shippedAt)
+      .gt("ends_at", shippedAt);
+    bounties = ((bountyEvents ?? []) as {
+      id: number;
+      name: string;
+      config: Record<string, unknown>;
+    }[]).map((ev) => ({
+      id: ev.id,
+      name: ev.name,
+      reward: Number(ev.config.reward) || 0,
+      description: String(ev.config.description ?? ""),
+    }));
+  }
 
   const commits = await fetchCommits(p.repo_url);
   const [trust] = await Promise.all([
@@ -341,6 +363,7 @@ export default async function ReviewDetail({
                     claimedHours={hours}
                     defaultHours={formDefaultHours}
                     secondPass={canSecondPass}
+                    bounties={bounties}
                   />
                 </div>
 

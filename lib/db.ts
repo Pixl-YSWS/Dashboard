@@ -813,6 +813,84 @@ export async function payoutTotalsBySlackId(): Promise<Map<string, PayoutTotals>
   return out;
 }
 
+export interface DashEventRow {
+  id: number;
+  type: string;
+  name: string;
+  config: Record<string, unknown>;
+  starts_at: string;
+  ends_at: string;
+  created_by: string;
+  stopped_at: string | null;
+  created_at: string;
+}
+
+export const EVENT_TYPES: Record<string, string> = {
+  double_streak: "Double Streak Weekend",
+  bounty: "Bounty",
+  community_goal: "Community Goal",
+  mystery_merchant: "Mystery Merchant",
+  review_blitz: "Review Blitz",
+  leaderboard_sprint: "Leaderboard Sprint",
+};
+
+export async function listEvents(limit = 100): Promise<DashEventRow[]> {
+  const { data, error } = await db
+    .from("events")
+    .select("*")
+    .order("starts_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listEvents", error.message);
+    return [];
+  }
+  return (data ?? []) as DashEventRow[];
+}
+
+export async function activeDashEvents(types?: string[]): Promise<DashEventRow[]> {
+  const now = new Date().toISOString();
+  let q = db
+    .from("events")
+    .select("*")
+    .lte("starts_at", now)
+    .gt("ends_at", now)
+    .is("stopped_at", null);
+  if (types && types.length > 0) q = q.in("type", types);
+  const { data, error } = await q;
+  if (error) {
+    console.error("activeDashEvents", error.message);
+    return [];
+  }
+  return (data ?? []) as DashEventRow[];
+}
+
+export async function communityGoalShipCount(ev: DashEventRow): Promise<number> {
+  const { count, error } = await db
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .gte("shipped_at", ev.starts_at)
+    .lt("shipped_at", ev.ends_at)
+    .is("archived_at", null)
+    .is("banned_at", null);
+  if (error) {
+    console.error("communityGoalShipCount", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
+export async function bountyClaimCount(eventId: number): Promise<number> {
+  const { count, error } = await db
+    .from("bounty_claims")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId);
+  if (error) {
+    console.error("bountyClaimCount", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export interface InvoiceRow {
   slackId: string;
   reviewer: string;

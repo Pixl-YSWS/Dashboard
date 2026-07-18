@@ -10,6 +10,10 @@ import {
   revokeProjectPixels,
   projectPixelTotal,
   creditReviewerPixels,
+  activeDashEvents,
+  communityGoalShipCount,
+  EVENT_TYPES,
+  type DashEventRow,
 } from "@/lib/db";
 import { slackHandle, dmUser } from "@/lib/slack";
 import { kickOnlinePlayer } from "@/lib/gameServer";
@@ -90,10 +94,10 @@ async function claimedHoursFor(projectId: number): Promise<number> {
 // Daily-journal streak bonus: a project's best run of consecutive journal
 // days boosts its approval payout by 1% per day (10-day streak = base ×1.10),
 // capped at ×1.50. Streaks are per project — journaling on one project never
-// boosts another.
+// boosts another. Days inside a Double Streak event window count extra.
 const STREAK_CAP = 50;
 
-async function bestJournalStreak(projectId: number): Promise<number> {
+async function journalStreakBonusPct(projectId: number): Promise<number> {
   const { data } = await db
     .from("project_journals")
     .select("created_at")
@@ -103,13 +107,26 @@ async function bestJournalStreak(projectId: number): Promise<number> {
       (data ?? []).map((j) => Math.floor(new Date(j.created_at as string).getTime() / 86400_000)),
     ),
   ].sort((a, b) => a - b);
+  if (days.length === 0) return 0;
+  const { data: doubles } = await db
+    .from("events")
+    .select("starts_at, ends_at, config")
+    .eq("type", "double_streak")
+    .is("stopped_at", null);
+  const windows = (doubles ?? []).map((e) => ({
+    from: Math.floor(new Date(e.starts_at as string).getTime() / 86400_000),
+    to: Math.floor(new Date(e.ends_at as string).getTime() / 86400_000),
+    perDay: Math.max(1, Math.round(Number((e.config as Record<string, unknown>)?.perDay) || 2)),
+  }));
+  const weight = (day: number) =>
+    windows.reduce((w, ev) => (day >= ev.from && day <= ev.to ? Math.max(w, ev.perDay) : w), 1);
   let best = 0;
   let run = 0;
   for (let i = 0; i < days.length; i++) {
-    run = i > 0 && days[i] === days[i - 1] + 1 ? run + 1 : 1;
+    run = i > 0 && days[i] === days[i - 1] + 1 ? run + weight(days[i]) : weight(days[i]);
     if (run > best) best = run;
   }
-  return best;
+  return Math.min(best, STREAK_CAP);
 }
 
 async function insertReviewAudit(
@@ -159,18 +176,29 @@ function payoutFlagCut(formData: FormData, verdict: string): { pct: number; reas
   };
 }
 
+// During a Review Blitz event every review's base payout is multiplied, so
+// full_pixels is locked in at review time and settlement math uses the row.
+async function payoutBasePixels(): Promise<number> {
+  const [blitz] = await activeDashEvents(["review_blitz"]);
+  const mult = blitz ? Math.min(Math.max(Number(blitz.config.mult) || 1, 1), 3) : 1;
+  return Math.round(PAYOUT_PIXELS * mult);
+}
+
 async function dmPayout(
   slackId: string,
   projectName: string,
   paid: number,
+  full: number,
   pct: number,
   reason: string,
   credited: boolean,
 ): Promise<void> {
+  const dollars = `$${(full / 10).toFixed(2)}`;
   let text =
     pct === 0
-      ? `You earned ${paid} pixels ($1) for reviewing "${projectName}". Thanks for keeping the queue moving!`
-      : `You earned ${paid} pixels for reviewing "${projectName}" — the $1 payout was cut ${pct}%: ${reason}.`;
+      ? `You earned ${paid} pixels (${dollars}) for reviewing "${projectName}". Thanks for keeping the queue moving!`
+      : `You earned ${paid} pixels for reviewing "${projectName}" — the ${dollars} payout was cut ${pct}%: ${reason}.`;
+  if (full > PAYOUT_PIXELS) text += `\n\n⚡ Review Blitz bonus included!`;
   if (!credited)
     text += `\n\nHeads up: there's no Pixl game account linked to your Slack, so the pixels couldn't be credited yet. Contact the team to get it sorted.`;
   await dmUser(slackId, text);
@@ -184,7 +212,8 @@ async function recordSettledPayout(
   projectName: string,
 ): Promise<void> {
   const { pct, reason } = payoutFlagCut(formData, verdict);
-  const paid = Math.round((PAYOUT_PIXELS * (100 - pct)) / 100);
+  const full = await payoutBasePixels();
+  const paid = Math.round((full * (100 - pct)) / 100);
   const credited = await creditReviewerPixels(access.session.slackId, paid);
   const { error } = await db.from("review_payouts").insert({
     project_id: projectId,
@@ -192,7 +221,7 @@ async function recordSettledPayout(
     reviewer_slack_id: access.session.slackId,
     verdict,
     status: "paid",
-    full_pixels: PAYOUT_PIXELS,
+    full_pixels: full,
     paid_pixels: paid,
     cut_pct: pct,
     cut_reason: reason,
@@ -203,7 +232,7 @@ async function recordSettledPayout(
     console.error("review payout insert failed", error.message);
     return;
   }
-  await dmPayout(access.session.slackId, projectName, paid, pct, reason, credited);
+  await dmPayout(access.session.slackId, projectName, paid, full, pct, reason, credited);
 }
 
 async function recordPendingPayout(
@@ -218,7 +247,7 @@ async function recordPendingPayout(
     reviewer_slack_id: access.session.slackId,
     verdict: "first_pass_approved",
     status: "pending",
-    full_pixels: PAYOUT_PIXELS,
+    full_pixels: await payoutBasePixels(),
     cut_pct: pct,
     cut_reason: reason,
   });
@@ -236,7 +265,7 @@ async function settleFirstPassPayouts(
 ): Promise<void> {
   const { data: pending } = await db
     .from("review_payouts")
-    .select("id, reviewer_slack_id, cut_pct, cut_reason")
+    .select("id, reviewer_slack_id, cut_pct, cut_reason, full_pixels")
     .eq("project_id", projectId)
     .eq("status", "pending");
   for (const p of pending ?? []) {
@@ -250,7 +279,8 @@ async function settleFirstPassPayouts(
       reasons.push("credited hours cut sharply by the final reviewer");
     }
     const reason = reasons.join("; ");
-    const paid = Math.round((PAYOUT_PIXELS * (100 - pct)) / 100);
+    const full = Number(p.full_pixels) || PAYOUT_PIXELS;
+    const paid = Math.round((full * (100 - pct)) / 100);
     const { data: claimed } = await db
       .from("review_payouts")
       .update({
@@ -267,7 +297,7 @@ async function settleFirstPassPayouts(
     const credited = await creditReviewerPixels(p.reviewer_slack_id, paid);
     if (credited)
       await db.from("review_payouts").update({ credited: true }).eq("id", p.id);
-    await dmPayout(p.reviewer_slack_id, projectName, paid, pct, reason, credited);
+    await dmPayout(p.reviewer_slack_id, projectName, paid, full, pct, reason, credited);
   }
 }
 
@@ -296,7 +326,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
 
   const { data: current } = await db
     .from("projects")
-    .select("status, user_id, name, first_pass_by, first_pass_hours")
+    .select("status, user_id, name, first_pass_by, first_pass_hours, shipped_at")
     .eq("id", projectId)
     .single();
   if (!current) return;
@@ -424,11 +454,31 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 
-  // Lifetime credit for the project = round(hours * 5 * streak bonus); the DB
-  // function only adds the delta vs what earlier approvals already paid out.
-  const streak = Math.min(await bestJournalStreak(projectId), STREAK_CAP);
+  // Lifetime credit for the project = round(hours * 5 * streak bonus * any
+  // community-goal bonus); the DB function only adds the delta vs what earlier
+  // approvals already paid out.
+  const streak = await journalStreakBonusPct(projectId);
   const streakMult = 1 + streak / 100;
-  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR * streakMult);
+  let goalMult = 1;
+  let goalNote = "";
+  if (current.shipped_at) {
+    const { data: goals } = await db
+      .from("events")
+      .select("*")
+      .eq("type", "community_goal")
+      .is("stopped_at", null)
+      .lte("starts_at", current.shipped_at)
+      .gt("ends_at", current.shipped_at);
+    for (const g of (goals ?? []) as DashEventRow[]) {
+      const target = Number(g.config.target) || 0;
+      const bonusPct = Number(g.config.bonusPct) || 0;
+      if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
+        goalMult *= 1 + bonusPct / 100;
+        goalNote += ` The "${g.name}" community goal was hit — +${bonusPct}% on this project!`;
+      }
+    }
+  }
+  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR * streakMult * goalMult);
   const alreadyPx = await projectPixelTotal(project.id);
   const deltaPx = totalPx - alreadyPx;
   await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
@@ -445,7 +495,49 @@ export async function reviewProject(formData: FormData): Promise<void> {
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
   if (streak > 0 && deltaPx > 0)
-    credited += ` Includes your ${streak}-day journal streak bonus (×${streakMult.toFixed(2)}).`;
+    credited += ` Includes your journal streak bonus (×${streakMult.toFixed(2)}).`;
+  if (goalNote && deltaPx > 0) credited += goalNote;
+
+  // Bounties the final reviewer ticked: fixed prize each, once per project,
+  // only for projects shipped inside the bounty window.
+  const bountyIds = [...new Set(formData.getAll("bountyIds").map(Number))].filter(
+    (n) => Number.isFinite(n) && n > 0,
+  );
+  for (const bid of bountyIds) {
+    const { data: ev } = await db
+      .from("events")
+      .select("*")
+      .eq("id", bid)
+      .eq("type", "bounty")
+      .is("stopped_at", null)
+      .maybeSingle();
+    if (!ev) continue;
+    const bounty = ev as DashEventRow;
+    const reward = Math.min(Math.max(Math.round(Number(bounty.config.reward) || 0), 0), 500);
+    if (reward === 0) continue;
+    if (
+      !current.shipped_at ||
+      current.shipped_at < bounty.starts_at ||
+      current.shipped_at >= bounty.ends_at
+    )
+      continue;
+    const { error: claimError } = await db.from("bounty_claims").insert({
+      event_id: bid,
+      project_id: projectId,
+      user_id: project.user_id,
+      pixels: reward,
+      awarded_by: by,
+    });
+    if (claimError) continue;
+    await db.rpc("adjust_user_pixels", {
+      p_user_id: project.user_id,
+      p_amount: reward,
+      p_reason: "bounty",
+      p_created_by: by,
+    });
+    credited += ` Bounty "${bounty.name}" met — +${reward} pixels!`;
+    await logModAction(project.user_id, "bounty_awarded", `${bounty.name}: +${reward} pixels (${project.name})`, by);
+  }
   await notifyOwner(
     project.user_id,
     "Project approved!",
@@ -1330,6 +1422,85 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
   const { error } = await db.from("shop_items").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/shop");
+}
+
+export async function createEvent(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const type = String(formData.get("type") ?? "");
+  const fail = (msg: string) => redirect(`/events?error=${encodeURIComponent(msg)}`);
+  if (!(type in EVENT_TYPES)) fail("Pick an event type.");
+  const name = String(formData.get("name") ?? "").trim().slice(0, 100);
+  if (!name) fail("Give the event a name players will see.");
+  const startsRaw = String(formData.get("startsAt") ?? "").trim();
+  const endsRaw = String(formData.get("endsAt") ?? "").trim();
+  const starts = startsRaw ? new Date(startsRaw + "Z") : new Date();
+  const ends = new Date(endsRaw + "Z");
+  if (!endsRaw || isNaN(ends.getTime())) fail("An end time is required.");
+  if (isNaN(starts.getTime()) || ends <= starts) fail("The event must end after it starts.");
+
+  const config: Record<string, unknown> = {};
+  if (type === "double_streak") {
+    const perDay = Math.round(Number(formData.get("perDay") ?? 2));
+    config.perDay = Math.min(Math.max(perDay || 2, 2), 5);
+  } else if (type === "bounty") {
+    const reward = Math.round(Number(formData.get("reward") ?? 0));
+    if (reward <= 0) fail("A bounty needs a pixel reward.");
+    config.reward = Math.min(reward, 500);
+    config.description = String(formData.get("description") ?? "").trim().slice(0, 500);
+  } else if (type === "community_goal") {
+    const target = Math.round(Number(formData.get("target") ?? 0));
+    const bonusPct = Math.round(Number(formData.get("bonusPct") ?? 0));
+    if (target <= 0 || bonusPct <= 0) fail("A community goal needs a ship target and a bonus %.");
+    config.target = target;
+    config.bonusPct = Math.min(bonusPct, 50);
+  } else if (type === "review_blitz") {
+    const mult = Number(formData.get("mult") ?? 1.5);
+    if (!(mult > 1)) fail("The blitz multiplier must be above 1.");
+    config.mult = Math.min(mult, 3);
+  } else if (type === "mystery_merchant") {
+    const itemIds = [...new Set(formData.getAll("itemIds").map(Number))].filter(
+      (n) => Number.isFinite(n) && n > 0,
+    );
+    if (itemIds.length === 0) fail("Pick at least one shop item for the merchant.");
+    config.itemIds = itemIds;
+  }
+
+  const { error } = await db.from("events").insert({
+    type,
+    name,
+    config,
+    starts_at: starts.toISOString(),
+    ends_at: ends.toISOString(),
+    created_by: actorName(access),
+  });
+  if (error) {
+    console.error("createEvent", error.message);
+    fail("Couldn't create the event — is the events migration applied?");
+  }
+  revalidatePath("/", "layout");
+  redirect("/events?created=1");
+}
+
+export async function stopEvent(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("events")
+    .update({ stopped_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("stopped_at", null);
+  if (error) console.error("stopEvent", error.message);
+  revalidatePath("/", "layout");
+}
+
+export async function deleteEvent(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db.from("events").delete().eq("id", id);
+  if (error) console.error("deleteEvent", error.message);
+  revalidatePath("/", "layout");
 }
 
 export async function undoTeamChange(formData: FormData): Promise<void> {
