@@ -887,7 +887,7 @@ export async function listShopItems(): Promise<ShopItemRow[]> {
 }
 
 export interface FeedItem {
-  kind: "mod" | "team" | "review" | "pixels";
+  kind: "mod" | "team" | "review" | "pixels" | "payout";
   text: string;
   detail: string;
   href: string | null;
@@ -901,10 +901,11 @@ export async function listActivityFeed(opts: {
   review: boolean;
   team: boolean;
   pixels: boolean;
+  payouts?: boolean;
   limit?: number;
 }): Promise<FeedItem[]> {
   const limit = opts.limit ?? 25;
-  const [mods, team, audits, txs] = await Promise.all([
+  const [mods, team, audits, txs, payouts] = await Promise.all([
     opts.mod
       ? db.from("mod_actions").select("*").order("created_at", { ascending: false }).limit(limit)
       : Promise.resolve({ data: [] }),
@@ -919,6 +920,7 @@ export async function listActivityFeed(opts: {
           .order("created_at", { ascending: false })
           .limit(limit)
       : Promise.resolve({ data: [] }),
+    opts.payouts ? listReviewPayouts(undefined, limit) : Promise.resolve([]),
   ]);
 
   const modRows = (mods.data ?? []) as ModActionRow[];
@@ -958,6 +960,26 @@ export async function listActivityFeed(opts: {
       href: `/projects/${a.project_id}`,
       when: a.created_at,
     });
+  for (const p of payouts as ReviewPayoutRow[]) {
+    const slack = /\(([^)]+)\)\s*$/.exec(p.reviewer)?.[1] ?? p.reviewer_slack_id;
+    items.push({
+      kind: "payout",
+      text:
+        p.status === "pending"
+          ? `${stripId(p.reviewer)} · payout pending · ${p.project_name}`
+          : `${stripId(p.reviewer)} · paid ${p.paid_pixels}/${p.full_pixels} px · ${p.project_name}`,
+      detail:
+        p.status === "pending"
+          ? "awaiting the final pass"
+          : p.cut_pct > 0
+            ? `cut ${p.cut_pct}% — ${p.cut_reason}`
+            : p.credited
+              ? "full payout"
+              : "full payout — no game account linked",
+      href: `/reviewers/${slack}`,
+      when: p.settled_at ?? p.created_at,
+    });
+  }
   for (const t of txRows)
     items.push({
       kind: "pixels",

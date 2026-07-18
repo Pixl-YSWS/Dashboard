@@ -9,6 +9,7 @@ const FEED_BADGE: Record<string, { label: string; tone: "amber" | "rose" | "gree
   team: { label: "team", tone: "rose" },
   review: { label: "review", tone: "green" },
   pixels: { label: "pixels", tone: "blue" },
+  payout: { label: "payout", tone: "blue" },
 };
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function Overview({
       review: canView(access, ["review"]),
       team: access.isSuper,
       pixels: access.isSuper,
+      payouts: access.isSuper,
       limit: 20,
     }),
   ]);
