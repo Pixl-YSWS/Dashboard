@@ -33,6 +33,8 @@ import {
 const DEFAULT_WARNING =
   "Please keep chat messages and display names appropriate. Continued violations may result in a ban from Pixl.";
 
+const DASH_URL = "https://dash.pixl.rsvp";
+
 function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
 }
@@ -1133,7 +1135,7 @@ export async function addAdmin(formData: FormData): Promise<void> {
       [
         "Welcome to the Pixl mod team! 🎉",
         `You now have access to the Pixl dashboard with these permissions: ${perms.filter((p) => p !== "review").join(", ")}.`,
-        `Sign in with Slack here: ${process.env.BASE_URL ?? ""}`,
+        `Sign in with Slack here: ${DASH_URL}`,
       ].join("\n\n"),
     );
 }
@@ -1220,7 +1222,7 @@ export async function setSecondPass(formData: FormData): Promise<void> {
       slackId,
       [
         "You've been promoted to final reviewer on Pixl! 🎉",
-        `You now handle the second pass: your approvals are the ones that credit pixels. The second-review queue is waiting for you: ${process.env.BASE_URL ?? ""}/review`,
+        `You now handle the second pass: your approvals are the ones that credit pixels. The second-review queue is waiting for you: ${DASH_URL}/review`,
       ].join("\n\n"),
     );
   else
@@ -1255,7 +1257,7 @@ export async function addReviewer(formData: FormData): Promise<void> {
       slackId,
       [
         "Welcome to the Pixl review team! 🎉",
-        `You now have access to the review queue on the Pixl dashboard — projects shipped by players are waiting for your verdict: ${process.env.BASE_URL ?? ""}/review`,
+        `You now have access to the review queue on the Pixl dashboard — projects shipped by players are waiting for your verdict: ${DASH_URL}/review`,
         "Happy reviewing!",
       ].join("\n\n"),
     );
