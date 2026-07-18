@@ -813,6 +813,65 @@ export async function payoutTotalsBySlackId(): Promise<Map<string, PayoutTotals>
   return out;
 }
 
+export interface InvoiceRow {
+  slackId: string;
+  reviewer: string;
+  payouts: number;
+  fullPixels: number;
+  paidPixels: number;
+  cuts: number;
+  uncredited: number;
+}
+
+// Per-reviewer payout totals for one calendar month — the numbers whoever
+// settles real money needs. Only settled ('paid') payouts count; dollars are
+// paidPixels / 10.
+export async function payoutInvoice(monthStart: Date, monthEnd: Date): Promise<InvoiceRow[]> {
+  const rows: {
+    reviewer: string;
+    reviewer_slack_id: string;
+    full_pixels: number;
+    paid_pixels: number;
+    cut_pct: number;
+    credited: boolean;
+  }[] = [];
+  const page = 1000;
+  for (let from = 0; ; from += page) {
+    const { data, error } = await db
+      .from("review_payouts")
+      .select("reviewer, reviewer_slack_id, full_pixels, paid_pixels, cut_pct, credited")
+      .eq("status", "paid")
+      .gte("settled_at", monthStart.toISOString())
+      .lt("settled_at", monthEnd.toISOString())
+      .range(from, from + page - 1);
+    if (error) {
+      console.error("payoutInvoice", error.message);
+      break;
+    }
+    rows.push(...((data ?? []) as typeof rows));
+    if ((data ?? []).length < page) break;
+  }
+  const out = new Map<string, InvoiceRow>();
+  for (const r of rows) {
+    const inv = out.get(r.reviewer_slack_id) ?? {
+      slackId: r.reviewer_slack_id,
+      reviewer: r.reviewer.replace(/\s*\([^)]*\)\s*$/, "") || r.reviewer_slack_id,
+      payouts: 0,
+      fullPixels: 0,
+      paidPixels: 0,
+      cuts: 0,
+      uncredited: 0,
+    };
+    inv.payouts++;
+    inv.fullPixels += Number(r.full_pixels) || 0;
+    inv.paidPixels += Number(r.paid_pixels) || 0;
+    if ((Number(r.cut_pct) || 0) > 0) inv.cuts++;
+    if (!r.credited) inv.uncredited++;
+    out.set(r.reviewer_slack_id, inv);
+  }
+  return [...out.values()].sort((a, b) => b.paidPixels - a.paidPixels);
+}
+
 export interface PixelTxRow {
   id: number;
   user_id: string;

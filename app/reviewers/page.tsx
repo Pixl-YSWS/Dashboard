@@ -127,13 +127,18 @@ export default async function ReviewersPage({
             review history.
           </p>
         </div>
-        <div className="pixl-card flex divide-x divide-[var(--line)]">
-          <StatCell label="reviews all-time" value={String(totals.reviews)} />
-          <StatCell label="final approvals" value={String(totals.approved)} />
-          <StatCell
-            label="hours credited"
-            value={String(Math.round(totals.hours * 10) / 10)}
-          />
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="pixl-card flex divide-x divide-[var(--line)]">
+            <StatCell label="reviews all-time" value={String(totals.reviews)} />
+            <StatCell label="final approvals" value={String(totals.approved)} />
+            <StatCell
+              label="hours credited"
+              value={String(Math.round(totals.hours * 10) / 10)}
+            />
+          </div>
+          <Link href="/reviewers/invoices" className="pixl-btn bg-[var(--surface)] text-ink text-sm">
+            Payout invoices →
+          </Link>
         </div>
       </div>
 

@@ -68,6 +68,19 @@ export default async function ReviewDetail({
   const formDefaultHours =
     isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
 
+  const journalDays = [
+    ...new Set(
+      journals.map((j) => Math.floor(new Date(j.created_at).getTime() / 86400_000)),
+    ),
+  ].sort((a, b) => a - b);
+  let bestStreak = 0;
+  let streakRun = 0;
+  for (let i = 0; i < journalDays.length; i++) {
+    streakRun = i > 0 && journalDays[i] === journalDays[i - 1] + 1 ? streakRun + 1 : 1;
+    if (streakRun > bestStreak) bestStreak = streakRun;
+  }
+  const streakBonus = Math.min(bestStreak, 50);
+
   const commits = await fetchCommits(p.repo_url);
   const [trust] = await Promise.all([
     fetchTrustFactor(p.users?.slack_id),
@@ -242,6 +255,15 @@ export default async function ReviewDetail({
                   <span className="text-ink/70">Journals</span>
                   <span className="ml-auto tabular-nums font-medium">{fmtHM(journalHours)}</span>
                 </div>
+                {streakBonus > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                    <span className="text-ink/70">Journal streak</span>
+                    <span className="ml-auto tabular-nums font-medium">
+                      {streakBonus}d · payout ×{(1 + streakBonus / 100).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

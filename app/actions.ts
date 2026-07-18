@@ -86,6 +86,31 @@ async function claimedHoursFor(projectId: number): Promise<number> {
   return hackatimeHours > 0 ? hackatimeHours : journalHours;
 }
 
+// Daily-journal streak bonus: a project's best run of consecutive journal
+// days boosts its approval payout by 1% per day (10-day streak = base ×1.10),
+// capped at ×1.50. Streaks are per project — journaling on one project never
+// boosts another.
+const STREAK_CAP = 50;
+
+async function bestJournalStreak(projectId: number): Promise<number> {
+  const { data } = await db
+    .from("project_journals")
+    .select("created_at")
+    .eq("project_id", projectId);
+  const days = [
+    ...new Set(
+      (data ?? []).map((j) => Math.floor(new Date(j.created_at as string).getTime() / 86400_000)),
+    ),
+  ].sort((a, b) => a - b);
+  let best = 0;
+  let run = 0;
+  for (let i = 0; i < days.length; i++) {
+    run = i > 0 && days[i] === days[i - 1] + 1 ? run + 1 : 1;
+    if (run > best) best = run;
+  }
+  return best;
+}
+
 async function insertReviewAudit(
   formData: FormData,
   projectId: number,
@@ -398,9 +423,11 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 
-  // Lifetime credit for the project = round(hours * 5); the DB function only
-  // adds the delta vs what earlier approvals already paid out.
-  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR);
+  // Lifetime credit for the project = round(hours * 5 * streak bonus); the DB
+  // function only adds the delta vs what earlier approvals already paid out.
+  const streak = Math.min(await bestJournalStreak(projectId), STREAK_CAP);
+  const streakMult = 1 + streak / 100;
+  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR * streakMult);
   const alreadyPx = await projectPixelTotal(project.id);
   const deltaPx = totalPx - alreadyPx;
   await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
@@ -416,6 +443,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
         ? `\n\n${totalPx} pixels credited (${approvedHours}h approved of ${claimedHours}h logged).`
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
+  if (streak > 0 && deltaPx > 0)
+    credited += ` Includes your ${streak}-day journal streak bonus (×${streakMult.toFixed(2)}).`;
   await notifyOwner(
     project.user_id,
     "Project approved!",
