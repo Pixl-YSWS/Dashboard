@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/guard";
 import { listShopItems } from "@/lib/db";
-import { addShopItem, toggleShopItem, deleteShopItem } from "@/app/actions";
+import { addShopItem, toggleShopItem, deleteShopItem, updateShopItem } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 
 export const dynamic = "force-dynamic";
@@ -149,6 +149,72 @@ export default async function ShopPage() {
                       </button>
                     </form>
                   </div>
+                  <details className="mt-3">
+                    <summary className="text-sm text-ink/60 cursor-pointer select-none hover:text-brand">
+                      Edit item
+                    </summary>
+                    <form action={updateShopItem} className="mt-3 space-y-3">
+                      <input type="hidden" name="id" value={item.id} />
+                      <div className="grid grid-cols-[1fr_6.5rem] gap-3">
+                        <label className="block">
+                          <span className="block text-xs font-medium text-ink/60 mb-1">Name</span>
+                          <input
+                            name="name"
+                            required
+                            maxLength={60}
+                            defaultValue={item.name}
+                            className="pixl-input w-full text-sm"
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="block text-xs font-medium text-ink/60 mb-1">Price (px)</span>
+                          <input
+                            name="price"
+                            type="number"
+                            min={0}
+                            required
+                            defaultValue={item.price}
+                            className="pixl-input w-full text-sm"
+                          />
+                        </label>
+                      </div>
+                      <label className="block">
+                        <span className="block text-xs font-medium text-ink/60 mb-1">Description</span>
+                        <input
+                          name="description"
+                          maxLength={300}
+                          defaultValue={item.description}
+                          className="pixl-input w-full text-sm"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="block text-xs font-medium text-ink/60 mb-1">Options</span>
+                        <input
+                          name="options"
+                          defaultValue={item.options.join(", ")}
+                          placeholder="red, blue, green"
+                          className="pixl-input w-full text-sm"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="block text-xs font-medium text-ink/60 mb-1">
+                          Replace image (optional — leave empty to keep the current one)
+                        </span>
+                        <input
+                          name="image"
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="block w-full text-sm text-ink/70 file:pixl-btn file:bg-[var(--surface)] file:text-ink file:text-sm file:mr-3 file:border-[var(--line)]"
+                        />
+                      </label>
+                      <PendingButton
+                        className="pixl-btn bg-brand text-white border-transparent text-sm"
+                        pendingText="Saving…"
+                      >
+                        Save changes
+                      </PendingButton>
+                    </form>
+                  </details>
                 </div>
               </div>
             ))}

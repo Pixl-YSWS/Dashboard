@@ -1422,6 +1422,25 @@ export async function addShopItem(formData: FormData): Promise<void> {
   revalidatePath("/shop");
 }
 
+export async function updateShopItem(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  const name = String(formData.get("name") ?? "").trim().slice(0, 60);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 300);
+  const price = Math.max(0, Math.round(Number(formData.get("price") ?? 0)));
+  const options = readOptions(String(formData.get("options") ?? ""));
+  if (!id || !name) return;
+  const patch: Record<string, unknown> = { name, description, price, options };
+  const image = formData.get("image");
+  if (image instanceof File && image.size > 0) {
+    if (image.size > 4 * 1024 * 1024) throw new Error("Image too big (max 4 MB).");
+    patch.image_url = await uploadShopImage(image);
+  }
+  const { error } = await db.from("shop_items").update(patch).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/shop");
+}
+
 export async function toggleShopItem(formData: FormData): Promise<void> {
   await requireSuper();
   const id = Number(formData.get("id") ?? 0);
