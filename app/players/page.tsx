@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
 import { listPlayers } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
-import { massPlayerAction } from "@/app/actions";
+import { massPlayerAction, syncSlackAvatars } from "@/app/actions";
 import { SelectAllBox } from "@/app/_components/MassSelect";
 
 export const dynamic = "force-dynamic";
@@ -46,15 +46,24 @@ export default async function PlayersPage({
         </div>
       )}
 
-      <form className="mb-5 flex gap-2">
-        <input
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Search display names…"
-          className="pixl-input flex-1 min-w-0 max-w-72"
-        />
-        <button className="pixl-btn bg-ink dark:bg-gray-700 text-white">Search</button>
-      </form>
+      <div className="mb-5 flex gap-2 items-center flex-wrap">
+        <form className="flex gap-2 flex-1 min-w-64">
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search display names…"
+            className="pixl-input flex-1 min-w-0 max-w-72"
+          />
+          <button className="pixl-btn bg-ink dark:bg-gray-700 text-white">Search</button>
+        </form>
+        {access.isSuper && (
+          <form action={syncSlackAvatars}>
+            <button className="pixl-btn bg-[var(--surface)] text-ink text-sm">
+              Sync Slack photos
+            </button>
+          </form>
+        )}
+      </div>
 
       <form action={massPlayerAction}>
         <input type="hidden" name="back" value={qp(cur)} />

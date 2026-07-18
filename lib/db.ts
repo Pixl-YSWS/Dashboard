@@ -826,7 +826,6 @@ export interface DashEventRow {
 }
 
 export const EVENT_TYPES: Record<string, string> = {
-  double_streak: "Double Streak Weekend",
   bounty: "Bounty",
   community_goal: "Community Goal",
   mystery_merchant: "Mystery Merchant",

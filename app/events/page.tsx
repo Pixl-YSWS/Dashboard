@@ -40,8 +40,6 @@ function fmt(iso: string): string {
 function configSummary(ev: DashEventRow): string {
   const c = ev.config;
   switch (ev.type) {
-    case "double_streak":
-      return `streak days count ×${Number(c.perDay) || 2}`;
     case "bounty":
       return `+${Number(c.reward) || 0} px per project${c.description ? ` — ${c.description}` : ""}`;
     case "community_goal":
@@ -152,11 +150,8 @@ export default async function EventsPage({
               </div>
             </label>
             <label className="block">
-              <span className="block text-sm font-medium mb-1.5">Blitz multiplier / streak ×per-day</span>
-              <div className="flex gap-2">
-                <input name="mult" type="number" step="0.1" min={1} max={3} placeholder="1.5" className="pixl-input w-full text-sm" />
-                <input name="perDay" type="number" min={2} max={5} placeholder="2" className="pixl-input w-full text-sm" />
-              </div>
+              <span className="block text-sm font-medium mb-1.5">Blitz multiplier</span>
+              <input name="mult" type="number" step="0.1" min={1} max={3} placeholder="1.5" className="pixl-input w-full text-sm" />
             </label>
           </div>
           {shopItems.length > 0 && (

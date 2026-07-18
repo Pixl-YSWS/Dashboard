@@ -15,7 +15,7 @@ import {
   EVENT_TYPES,
   type DashEventRow,
 } from "@/lib/db";
-import { slackHandle, dmUser } from "@/lib/slack";
+import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
 import { kickOnlinePlayer } from "@/lib/gameServer";
 import { dmOrEmail } from "@/lib/notify";
 import {
@@ -89,44 +89,6 @@ async function claimedHoursFor(projectId: number): Promise<number> {
   const hackatimeHours =
     Math.round(((Number(proj?.hackatime_seconds) || 0) / 3600) * 10) / 10;
   return hackatimeHours > 0 ? hackatimeHours : journalHours;
-}
-
-// Daily-journal streak bonus: a project's best run of consecutive journal
-// days boosts its approval payout by 1% per day (10-day streak = base ×1.10),
-// capped at ×1.50. Streaks are per project — journaling on one project never
-// boosts another. Days inside a Double Streak event window count extra.
-const STREAK_CAP = 50;
-
-async function journalStreakBonusPct(projectId: number): Promise<number> {
-  const { data } = await db
-    .from("project_journals")
-    .select("created_at")
-    .eq("project_id", projectId);
-  const days = [
-    ...new Set(
-      (data ?? []).map((j) => Math.floor(new Date(j.created_at as string).getTime() / 86400_000)),
-    ),
-  ].sort((a, b) => a - b);
-  if (days.length === 0) return 0;
-  const { data: doubles } = await db
-    .from("events")
-    .select("starts_at, ends_at, config")
-    .eq("type", "double_streak")
-    .is("stopped_at", null);
-  const windows = (doubles ?? []).map((e) => ({
-    from: Math.floor(new Date(e.starts_at as string).getTime() / 86400_000),
-    to: Math.floor(new Date(e.ends_at as string).getTime() / 86400_000),
-    perDay: Math.max(1, Math.round(Number((e.config as Record<string, unknown>)?.perDay) || 2)),
-  }));
-  const weight = (day: number) =>
-    windows.reduce((w, ev) => (day >= ev.from && day <= ev.to ? Math.max(w, ev.perDay) : w), 1);
-  let best = 0;
-  let run = 0;
-  for (let i = 0; i < days.length; i++) {
-    run = i > 0 && days[i] === days[i - 1] + 1 ? run + weight(days[i]) : weight(days[i]);
-    if (run > best) best = run;
-  }
-  return Math.min(best, STREAK_CAP);
 }
 
 async function insertReviewAudit(
@@ -454,11 +416,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   if (!own) await recordSettledPayout(projectId, access, "approved", formData, project.name);
 
-  // Lifetime credit for the project = round(hours * 5 * streak bonus * any
-  // community-goal bonus); the DB function only adds the delta vs what earlier
-  // approvals already paid out.
-  const streak = await journalStreakBonusPct(projectId);
-  const streakMult = 1 + streak / 100;
+  // Lifetime credit for the project = round(hours * 5 * any community-goal
+  // bonus); the DB function only adds the delta vs what earlier approvals
+  // already paid out.
   let goalMult = 1;
   let goalNote = "";
   if (current.shipped_at) {
@@ -478,7 +438,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
       }
     }
   }
-  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR * streakMult * goalMult);
+  const totalPx = Math.round(creditHours * PIXELS_PER_HOUR * goalMult);
   const alreadyPx = await projectPixelTotal(project.id);
   const deltaPx = totalPx - alreadyPx;
   await creditProjectPixels(project.user_id, project.id, totalPx, creditHours, by);
@@ -494,8 +454,6 @@ export async function reviewProject(formData: FormData): Promise<void> {
         ? `\n\n${totalPx} pixels credited (${approvedHours}h approved of ${claimedHours}h logged).`
         : `\n\n${totalPx} pixels credited for ${creditHours}h approved.`;
   }
-  if (streak > 0 && deltaPx > 0)
-    credited += ` Includes your journal streak bonus (×${streakMult.toFixed(2)}).`;
   if (goalNote && deltaPx > 0) credited += goalNote;
 
   // Bounties the final reviewer ticked: fixed prize each, once per project,
@@ -1424,6 +1382,35 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
   revalidatePath("/shop");
 }
 
+// Backfill player-card photos from Slack for everyone who has a slack_id but
+// no photo yet. New sign-ups get theirs automatically from the game server.
+export async function syncSlackAvatars(): Promise<void> {
+  await requireSuper();
+  const avatars = await slackAvatars();
+  if (avatars.size === 0)
+    redirect(`/players?error=${encodeURIComponent("Slack returned no profile photos — check SLACK_BOT_TOKEN.")}`);
+  const { data: users, error } = await db
+    .from("users")
+    .select("id, slack_id, avatar_url")
+    .not("slack_id", "is", null);
+  if (error) {
+    console.error("syncSlackAvatars", error.message);
+    redirect(`/players?error=${encodeURIComponent("Couldn't load players.")}`);
+  }
+  let updated = 0;
+  for (const u of users ?? []) {
+    if (u.avatar_url) continue;
+    const img = avatars.get(u.slack_id as string);
+    if (!img) continue;
+    const { error: upErr } = await db.from("users").update({ avatar_url: img }).eq("id", u.id);
+    if (!upErr) updated++;
+  }
+  revalidatePath("/", "layout");
+  redirect(
+    `/players?done=${encodeURIComponent(`Filled ${updated} player card photo${updated === 1 ? "" : "s"} from Slack.`)}`,
+  );
+}
+
 export async function createEvent(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const type = String(formData.get("type") ?? "");
@@ -1439,10 +1426,7 @@ export async function createEvent(formData: FormData): Promise<void> {
   if (isNaN(starts.getTime()) || ends <= starts) fail("The event must end after it starts.");
 
   const config: Record<string, unknown> = {};
-  if (type === "double_streak") {
-    const perDay = Math.round(Number(formData.get("perDay") ?? 2));
-    config.perDay = Math.min(Math.max(perDay || 2, 2), 5);
-  } else if (type === "bounty") {
+  if (type === "bounty") {
     const reward = Math.round(Number(formData.get("reward") ?? 0));
     if (reward <= 0) fail("A bounty needs a pixel reward.");
     config.reward = Math.min(reward, 500);

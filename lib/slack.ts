@@ -62,6 +62,30 @@ async function loadHandleMap(): Promise<Map<string, string>> {
   return map;
 }
 
+// Workspace-wide id -> profile photo map, for filling player cards.
+export async function slackAvatars(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!process.env.SLACK_BOT_TOKEN) return map;
+  try {
+    let cursor = "";
+    for (let page = 0; page < 20; page++) {
+      const res = (await slackCall("users.list", { limit: 200, cursor })) as {
+        members?: { id?: string; profile?: { image_512?: string; image_192?: string } }[];
+        response_metadata?: { next_cursor?: string };
+      };
+      for (const u of res.members ?? []) {
+        const img = u.profile?.image_512 || u.profile?.image_192;
+        if (u.id && img) map.set(u.id, img);
+      }
+      cursor = res.response_metadata?.next_cursor ?? "";
+      if (!cursor) break;
+    }
+  } catch (e) {
+    console.error("slack avatars failed", (e as Error).message);
+  }
+  return map;
+}
+
 export async function slackHandle(id: string | null | undefined): Promise<string | null> {
   if (!id) return null;
   return (await loadHandleMap()).get(id) ?? null;
