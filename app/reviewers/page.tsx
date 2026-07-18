@@ -76,8 +76,12 @@ export default async function ReviewersPage({
     (id) => !inTable.has(id) && !blocked.has(id),
   );
   const allReviewers = [
-    ...envOnly.map((id) => ({ slack_id: id, name: "" })),
-    ...tableReviewers.map((r) => ({ slack_id: r.slack_id, name: r.name })),
+    ...envOnly.map((id) => ({ slack_id: id, name: "", permissions: [] as string[] })),
+    ...tableReviewers.map((r) => ({
+      slack_id: r.slack_id,
+      name: r.name,
+      permissions: r.permissions,
+    })),
   ];
   const ids = allReviewers.map((r) => r.slack_id);
   const [handles, playerNames] = await Promise.all([
@@ -215,7 +219,7 @@ export default async function ReviewersPage({
                             admin
                           </span>
                         )}
-                        {isSecondPassReviewer(r.slack_id) && (
+                        {isSecondPassReviewer(r.slack_id, r.permissions) && (
                           <span className="badge bg-mint/30 dark:bg-mint/20 text-[0.65rem] uppercase tracking-wide">
                             second pass
                           </span>

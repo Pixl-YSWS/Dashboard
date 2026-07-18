@@ -12,6 +12,10 @@ export const SUBADMIN_PERMISSIONS = ["warn", "ban", "notify"] as const;
 // whose review right would otherwise come from ADMIN_SLACK_IDS.
 export const NO_REVIEW = "no_review";
 
+// Marker stored in an admins row to promote a reviewer to final (second-pass)
+// reviewer, on top of whoever SECOND_PASS_SLACK_IDS grants.
+export const SECOND_PASS = "second_pass";
+
 export interface AdminAccess {
   session: AdminSession;
   isSuper: boolean;
@@ -35,9 +39,10 @@ export function secondPassSlackIds(): string[] {
 }
 
 // Final reviewers do the mandatory second pass and are the only ones who can
-// approve (and credit pixels). Configured via SECOND_PASS_SLACK_IDS; if unset,
-// only owners (ADMIN_SLACK_IDS) qualify.
-export function isSecondPassReviewer(slackId: string): boolean {
+// approve (and credit pixels). Comes from SECOND_PASS_SLACK_IDS (if unset,
+// owners qualify) or a SECOND_PASS marker granted from the dashboard.
+export function isSecondPassReviewer(slackId: string, tablePerms?: string[]): boolean {
+  if (tablePerms?.includes(SECOND_PASS)) return true;
   const ids = secondPassSlackIds();
   if (ids.length === 0) return isAllowed(slackId);
   return ids.includes(slackId);
@@ -51,14 +56,15 @@ export async function getAccess(): Promise<AdminAccess | null> {
   if (!session) return null;
   const row = await getAdmin(session.slackId);
   const reviewBlocked = row?.permissions.includes(NO_REVIEW) ?? false;
-  const canSecondPass = isSecondPassReviewer(session.slackId) && !reviewBlocked;
+  const canSecondPass =
+    isSecondPassReviewer(session.slackId, row?.permissions) && !reviewBlocked;
   if (isAllowed(session.slackId)) {
     const perms = new Set<string>(ALL_PERMISSIONS);
     if (reviewBlocked) perms.delete("review");
     return { session, isSuper: true, perms, canSecondPass };
   }
   if (!row) return null;
-  const perms = new Set(row.permissions.filter((p) => p !== NO_REVIEW));
+  const perms = new Set(row.permissions.filter((p) => p !== NO_REVIEW && p !== SECOND_PASS));
   return { session, isSuper: false, perms, canSecondPass };
 }
 

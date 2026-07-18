@@ -6,6 +6,7 @@ import {
   ownerSlackIds,
   secondPassSlackIds,
   NO_REVIEW,
+  SECOND_PASS,
 } from "@/lib/guard";
 import {
   getAdmin,
@@ -18,7 +19,7 @@ import {
   type ReviewerStats,
   type PayoutTotals,
 } from "@/lib/db";
-import { removeReviewer } from "@/app/actions";
+import { removeReviewer, setSecondPass } from "@/app/actions";
 import { slackHandle } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
@@ -136,7 +137,7 @@ export default async function ReviewerPage({
                   admin
                 </span>
               )}
-              {isSecondPassReviewer(slackId) && (
+              {isSecondPassReviewer(slackId, admin?.permissions) && (
                 <span className="badge bg-mint/30 dark:bg-mint/20 text-[0.65rem] uppercase tracking-wide">
                   second pass
                 </span>
@@ -151,19 +152,45 @@ export default async function ReviewerPage({
             </div>
           </div>
         </div>
-        <form action={removeReviewer} className="shrink-0 flex items-center gap-2 flex-wrap">
-          <input type="hidden" name="slackId" value={slackId} />
-          <input
-            name="reason"
-            required
-            maxLength={500}
-            placeholder="Reason (sent to them)"
-            className="pixl-input text-sm w-52"
-          />
-          <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
-            Remove reviewer
-          </button>
-        </form>
+        <div className="shrink-0 flex flex-col items-end gap-2">
+          <form action={removeReviewer} className="flex items-center gap-2 flex-wrap">
+            <input type="hidden" name="slackId" value={slackId} />
+            <input
+              name="reason"
+              required
+              maxLength={500}
+              placeholder="Reason (sent to them)"
+              className="pixl-input text-sm w-52"
+            />
+            <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
+              Remove reviewer
+            </button>
+          </form>
+          {secondPassSlackIds().includes(slackId) ? (
+            <span className="text-xs text-ink/45">
+              Final reviewer via SECOND_PASS_SLACK_IDS — change it in the env.
+            </span>
+          ) : (
+            <form action={setSecondPass}>
+              <input type="hidden" name="slackId" value={slackId} />
+              <input type="hidden" name="name" value={display} />
+              <input
+                type="hidden"
+                name="enable"
+                value={admin?.permissions.includes(SECOND_PASS) ? "0" : "1"}
+              />
+              {admin?.permissions.includes(SECOND_PASS) ? (
+                <button className="pixl-btn bg-transparent text-ink/70 text-sm">
+                  Remove final reviewer
+                </button>
+              ) : (
+                <button className="pixl-btn bg-mint/30 dark:bg-mint/20 text-ink text-sm border-transparent">
+                  Make final reviewer
+                </button>
+              )}
+            </form>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

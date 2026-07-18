@@ -21,6 +21,7 @@ import {
   secondPassSlackIds,
   SUBADMIN_PERMISSIONS,
   NO_REVIEW,
+  SECOND_PASS,
   type AdminAccess,
   type Permission,
 } from "@/lib/guard";
@@ -998,6 +999,8 @@ function readSubadminPerms(formData: FormData, existing: string[]): string[] {
     .map(String)
     .filter((p) => (SUBADMIN_PERMISSIONS as readonly string[]).includes(p));
   if (existing.includes("review")) perms.push("review");
+  if (existing.includes(NO_REVIEW)) perms.push(NO_REVIEW);
+  if (existing.includes(SECOND_PASS)) perms.push(SECOND_PASS);
   return perms;
 }
 
@@ -1138,6 +1141,43 @@ async function dmRemoved(slackId: string, headline: string, reason: string): Pro
 
 function isEnvReviewer(slackId: string): boolean {
   return ownerSlackIds().includes(slackId) || secondPassSlackIds().includes(slackId);
+}
+
+// Promote a reviewer to final (second-pass) reviewer, or take it back. The
+// grant lives as a SECOND_PASS marker in their admins row, alongside whatever
+// SECOND_PASS_SLACK_IDS says (env grants can only be changed in the env).
+export async function setSecondPass(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const enable = formData.get("enable") === "1";
+  if (!slackId) return;
+  const existing = await getAdmin(slackId);
+  const kept = (existing?.permissions ?? []).filter((p) => p !== SECOND_PASS);
+  const permissions = enable ? [...kept, SECOND_PASS] : kept;
+  const already = existing?.permissions.includes(SECOND_PASS) ?? false;
+  if (enable === already) return;
+  await setTeamPerms(
+    slackId,
+    name,
+    permissions,
+    enable ? "promoted to final reviewer" : "final reviewer removed",
+    actorName(access),
+    actorName(access),
+  );
+  if (enable)
+    await dmTeam(
+      slackId,
+      [
+        "You've been promoted to final reviewer on Pixl! 🎉",
+        `You now handle the second pass: your approvals are the ones that credit pixels. The second-review queue is waiting for you: ${process.env.BASE_URL ?? ""}/review`,
+      ].join("\n\n"),
+    );
+  else
+    await dmTeam(
+      slackId,
+      "Your final-reviewer role on Pixl has been removed — you can still review first passes as usual. Contact the team if you think this is a mistake.",
+    );
 }
 
 export async function addReviewer(formData: FormData): Promise<void> {
