@@ -813,6 +813,32 @@ export async function payoutTotalsBySlackId(): Promise<Map<string, PayoutTotals>
   return out;
 }
 
+export interface SidequestRow {
+  id: number;
+  name: string;
+  region: string;
+  npc: string;
+  description: string;
+  reward: string;
+  active: boolean;
+  position: number;
+  created_by: string;
+  created_at: string;
+}
+
+export async function listSidequests(): Promise<SidequestRow[]> {
+  const { data, error } = await db
+    .from("sidequests")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) {
+    console.error("listSidequests", error.message);
+    return [];
+  }
+  return (data ?? []) as SidequestRow[];
+}
+
 export interface PublicStats {
   players: number;
   approvedProjects: number;

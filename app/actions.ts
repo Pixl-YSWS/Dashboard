@@ -1489,6 +1489,52 @@ export async function syncSlackAvatars(): Promise<void> {
   );
 }
 
+export async function addSidequest(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const name = String(formData.get("name") ?? "").trim().slice(0, 80);
+  const region = String(formData.get("region") ?? "").trim().slice(0, 40);
+  const npc = String(formData.get("npc") ?? "").trim().slice(0, 40);
+  const description = String(formData.get("description") ?? "").trim().slice(0, 500);
+  const reward = String(formData.get("reward") ?? "").trim().slice(0, 120);
+  if (!name)
+    redirect(`/sidequests?error=${encodeURIComponent("A sidequest needs a name.")}`);
+  const { error } = await db.from("sidequests").insert({
+    name,
+    region,
+    npc,
+    description,
+    reward,
+    created_by: actorName(access),
+  });
+  if (error) {
+    console.error("addSidequest", error.message);
+    redirect(`/sidequests?error=${encodeURIComponent("Couldn't save — is the sidequests migration applied?")}`);
+  }
+  revalidatePath("/sidequests");
+  redirect("/sidequests?created=1");
+}
+
+export async function toggleSidequest(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("sidequests")
+    .update({ active: formData.get("active") === "1" })
+    .eq("id", id);
+  if (error) console.error("toggleSidequest", error.message);
+  revalidatePath("/sidequests");
+}
+
+export async function deleteSidequest(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db.from("sidequests").delete().eq("id", id);
+  if (error) console.error("deleteSidequest", error.message);
+  revalidatePath("/sidequests");
+}
+
 export async function createEvent(formData: FormData): Promise<void> {
   const access = await requireSuper();
   const type = String(formData.get("type") ?? "");
