@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/guard";
 import { listShopItems } from "@/lib/db";
 import { addShopItem, toggleShopItem, deleteShopItem } from "@/app/actions";
+import { PendingButton } from "@/app/_components/PendingButton";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +80,12 @@ export default async function ShopPage() {
             </label>
           </div>
           <div className="flex justify-end">
-            <button className="pixl-btn bg-brand text-white border-transparent">Add item</button>
+            <PendingButton
+              className="pixl-btn bg-brand text-white border-transparent"
+              pendingText="Adding… (uploading the image can take a few seconds)"
+            >
+              Add item
+            </PendingButton>
           </div>
         </form>
       </div>

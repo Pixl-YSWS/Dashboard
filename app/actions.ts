@@ -1345,6 +1345,18 @@ export async function addShopItem(formData: FormData): Promise<void> {
   const price = Math.max(0, Math.round(Number(formData.get("price") ?? 0)));
   const options = readOptions(String(formData.get("options") ?? ""));
   if (!name) return;
+  // Double-submit guard: an identical name created in the last minute is the
+  // same click arriving twice, not a new item.
+  const { data: recent } = await db
+    .from("shop_items")
+    .select("id")
+    .eq("name", name)
+    .gte("created_at", new Date(Date.now() - 60_000).toISOString())
+    .limit(1);
+  if (recent && recent.length > 0) {
+    revalidatePath("/shop");
+    return;
+  }
   let imageUrl = "";
   const image = formData.get("image");
   if (image instanceof File && image.size > 0) {
