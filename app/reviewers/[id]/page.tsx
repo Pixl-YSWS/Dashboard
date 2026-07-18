@@ -13,7 +13,10 @@ import {
   reviewerStatsBySlackId,
   displayNamesBySlackId,
   auditFlags,
+  listReviewPayouts,
+  payoutTotalsBySlackId,
   type ReviewerStats,
+  type PayoutTotals,
 } from "@/lib/db";
 import { removeReviewer } from "@/app/actions";
 import { slackHandle } from "@/lib/slack";
@@ -91,13 +94,17 @@ export default async function ReviewerPage({
     (ownerSlackIds().includes(slackId) || secondPassSlackIds().includes(slackId)) && !blocked;
   if (!inTable && !fromEnv) notFound();
 
-  const [stats, audits, handle, playerNames] = await Promise.all([
+  const [stats, audits, handle, playerNames, payouts, payoutTotals] = await Promise.all([
     reviewerStatsBySlackId(),
     listReviewAudits(100, slackId),
     slackHandle(slackId),
     displayNamesBySlackId([slackId]),
+    listReviewPayouts(slackId, 50),
+    payoutTotalsBySlackId(),
   ]);
   const s = stats.get(slackId) ?? EMPTY_STATS;
+  const pay: PayoutTotals =
+    payoutTotals.get(slackId) ?? { earnedPixels: 0, paid: 0, pending: 0, cut: 0 };
   const display = admin?.name || handle || playerNames.get(slackId) || slackId;
   const isOwner = ownerSlackIds().includes(slackId);
   const initials =
@@ -178,6 +185,105 @@ export default async function ReviewerPage({
           <div className="text-xs text-ink/50 mt-1">flagged reviews</div>
         </div>
       </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat
+          label="pixels earned reviewing"
+          value={`${pay.earnedPixels} ($${(pay.earnedPixels / 10).toFixed(2)})`}
+        />
+        <Stat label="payouts settled" value={String(pay.paid)} />
+        <Stat label="payouts pending" value={String(pay.pending)} />
+        <div className={`pixl-card p-4 ${pay.cut > 0 ? "border-rose-300 dark:border-rose-500/40" : ""}`}>
+          <div
+            className={`text-xl font-semibold tabular-nums leading-tight ${
+              pay.cut > 0 ? "text-rose-600 dark:text-rose-400" : ""
+            }`}
+          >
+            {pay.cut}
+          </div>
+          <div className="text-xs text-ink/50 mt-1">payouts cut</div>
+        </div>
+      </div>
+
+      {payouts.length > 0 && (
+        <div>
+          <div className="text-sm font-medium text-ink/60 mb-3">
+            Payouts{payouts.length === 50 ? " (last 50)" : ""}
+          </div>
+          <div className="pixl-card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left border-b border-[var(--line)] bg-parch">
+                  <th className="p-3">Project</th>
+                  <th className="p-3">For</th>
+                  <th className="p-3">Payout</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">When</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--line)]">
+                {payouts.map((p) => {
+                  const badge = VERDICT_BADGE[p.verdict] ?? {
+                    label: p.verdict,
+                    className: "bg-parch",
+                  };
+                  return (
+                    <tr
+                      key={p.id}
+                      className={`align-top ${
+                        p.cut_pct > 0 && p.status === "paid"
+                          ? "bg-rose-50/60 dark:bg-rose-500/[0.06] hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                          : "hover:bg-cream"
+                      }`}
+                    >
+                      <td className="p-3">
+                        <Link
+                          href={`/projects/${p.project_id}`}
+                          className="font-bold hover:text-brand"
+                        >
+                          {p.project_name}
+                        </Link>
+                      </td>
+                      <td className="p-3">
+                        <span className={`badge ${badge.className}`}>{badge.label}</span>
+                      </td>
+                      <td className="p-3 tabular-nums whitespace-nowrap">
+                        {p.status === "paid" ? (
+                          <>
+                            {p.paid_pixels}/{p.full_pixels} px
+                            {p.cut_pct > 0 && (
+                              <div
+                                className="text-[0.7rem] text-rose-600 dark:text-rose-400 mt-1 max-w-64 whitespace-normal"
+                                title={p.cut_reason}
+                              >
+                                −{p.cut_pct}% — {p.cut_reason}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          `${p.full_pixels} px`
+                        )}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        {p.status === "pending" ? (
+                          <span className="badge bg-parch">awaiting final pass</span>
+                        ) : p.credited ? (
+                          <span className="badge bg-mint/30 dark:bg-mint/20">paid</span>
+                        ) : (
+                          <span className="badge bg-tang/20 text-tang">no game account</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-ink/60 whitespace-nowrap">
+                        {fmtDateTime(p.settled_at ?? p.created_at)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="text-sm font-medium text-ink/60 mb-3">

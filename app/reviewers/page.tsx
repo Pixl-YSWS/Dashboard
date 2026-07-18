@@ -11,6 +11,7 @@ import {
   listAdmins,
   reviewerStatsBySlackId,
   displayNamesBySlackId,
+  payoutTotalsBySlackId,
   type ReviewerStats,
 } from "@/lib/db";
 import { addReviewer } from "@/app/actions";
@@ -60,7 +61,11 @@ export default async function ReviewersPage({
   if (!access.isSuper) redirect("/");
   const { q, page } = await searchParams;
 
-  const [admins, stats] = await Promise.all([listAdmins(), reviewerStatsBySlackId()]);
+  const [admins, stats, payoutTotals] = await Promise.all([
+    listAdmins(),
+    reviewerStatsBySlackId(),
+    payoutTotalsBySlackId(),
+  ]);
   const tableReviewers = admins.filter((a) => a.permissions.includes("review"));
   const inTable = new Set(tableReviewers.map((r) => r.slack_id));
   const blocked = new Set(
@@ -181,6 +186,7 @@ export default async function ReviewersPage({
                 <th className="p-3">Reviews</th>
                 <th className="p-3">Approved</th>
                 <th className="p-3">Hours credited</th>
+                <th className="p-3">Earned</th>
                 <th className="p-3">Flags</th>
                 <th className="p-3">Last review</th>
               </tr>
@@ -217,6 +223,20 @@ export default async function ReviewersPage({
                     <td className="p-3 tabular-nums">
                       {Math.round(s.hoursApproved * 10) / 10}
                     </td>
+                    <td className="p-3 tabular-nums whitespace-nowrap">
+                      {(() => {
+                        const t = payoutTotals.get(r.slack_id);
+                        if (!t) return "—";
+                        return (
+                          <>
+                            {t.earnedPixels} px
+                            {t.pending > 0 && (
+                              <span className="text-xs text-ink/50"> · {t.pending} pending</span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </td>
                     <td
                       className={`p-3 tabular-nums ${
                         s.flagged > 0 ? "text-rose-600 dark:text-rose-400 font-bold" : ""
@@ -230,7 +250,7 @@ export default async function ReviewersPage({
               })}
               {reviewers.length === 0 && (
                 <tr>
-                  <td className="p-5 text-ink/50" colSpan={6}>
+                  <td className="p-5 text-ink/50" colSpan={7}>
                     {needle
                       ? "No reviewers match that search."
                       : "No reviewers yet. Add someone above to start clearing the queue."}

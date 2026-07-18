@@ -706,6 +706,113 @@ export async function reviewerStatsBySlackId(): Promise<Map<string, ReviewerStat
   return out;
 }
 
+export interface ReviewPayoutRow {
+  id: number;
+  project_id: number;
+  reviewer: string;
+  reviewer_slack_id: string;
+  verdict: string;
+  status: string;
+  full_pixels: number;
+  paid_pixels: number;
+  cut_pct: number;
+  cut_reason: string;
+  credited: boolean;
+  created_at: string;
+  settled_at: string | null;
+  project_name?: string;
+}
+
+// Pay a reviewer into their linked game account. Returns false when no game
+// account matches the slack id — the payout row still records what's owed.
+export async function creditReviewerPixels(
+  slackId: string,
+  amount: number,
+): Promise<boolean> {
+  if (!slackId || amount <= 0) return false;
+  const { data: user } = await db
+    .from("users")
+    .select("id")
+    .eq("slack_id", slackId)
+    .limit(1)
+    .maybeSingle();
+  if (!user?.id) return false;
+  const { error } = await db.rpc("adjust_user_pixels", {
+    p_user_id: user.id,
+    p_amount: amount,
+    p_reason: "review_payout",
+    p_created_by: "payout system",
+  });
+  if (error) {
+    console.error("creditReviewerPixels", error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function listReviewPayouts(
+  reviewerSlackId?: string,
+  limit = 200,
+): Promise<ReviewPayoutRow[]> {
+  let q = db
+    .from("review_payouts")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (reviewerSlackId) q = q.eq("reviewer_slack_id", reviewerSlackId);
+  const { data, error } = await q;
+  if (error) {
+    console.error("listReviewPayouts", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as ReviewPayoutRow[];
+  const projectIds = [...new Set(rows.map((r) => r.project_id))];
+  if (projectIds.length > 0) {
+    const { data: projects } = await db
+      .from("projects")
+      .select("id, name")
+      .in("id", projectIds);
+    const names = new Map((projects ?? []).map((p) => [p.id as number, p.name as string]));
+    for (const r of rows) r.project_name = names.get(r.project_id) ?? `#${r.project_id}`;
+  }
+  return rows;
+}
+
+export interface PayoutTotals {
+  earnedPixels: number;
+  paid: number;
+  pending: number;
+  cut: number;
+}
+
+export async function payoutTotalsBySlackId(): Promise<Map<string, PayoutTotals>> {
+  const rows: { reviewer_slack_id: string; status: string; paid_pixels: number; cut_pct: number }[] = [];
+  const page = 1000;
+  for (let from = 0; ; from += page) {
+    const { data, error } = await db
+      .from("review_payouts")
+      .select("reviewer_slack_id, status, paid_pixels, cut_pct")
+      .range(from, from + page - 1);
+    if (error) {
+      console.error("payoutTotalsBySlackId", error.message);
+      break;
+    }
+    rows.push(...((data ?? []) as typeof rows));
+    if ((data ?? []).length < page) break;
+  }
+  const out = new Map<string, PayoutTotals>();
+  for (const r of rows) {
+    const t = out.get(r.reviewer_slack_id) ?? { earnedPixels: 0, paid: 0, pending: 0, cut: 0 };
+    if (r.status === "paid") {
+      t.paid++;
+      t.earnedPixels += Number(r.paid_pixels) || 0;
+      if ((Number(r.cut_pct) || 0) > 0) t.cut++;
+    } else if (r.status === "pending") t.pending++;
+    out.set(r.reviewer_slack_id, t);
+  }
+  return out;
+}
+
 export interface PixelTxRow {
   id: number;
   user_id: string;
