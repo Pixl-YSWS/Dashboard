@@ -16,6 +16,7 @@ import {
   type DashEventRow,
 } from "@/lib/db";
 import { slackHandle, dmUser, slackAvatars } from "@/lib/slack";
+import { serializeGroups } from "@/lib/shopOptions";
 import { kickOnlinePlayer } from "@/lib/gameServer";
 import { dmOrEmail } from "@/lib/notify";
 import {
@@ -1378,11 +1379,26 @@ async function uploadShopImage(file: File): Promise<string> {
 }
 
 function readOptions(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 20);
+  const s = raw.trim();
+  if (!s) return [];
+  // The options editor submits JSON groups: [{ name, choices: [] }].
+  if (s.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) {
+        return serializeGroups(
+          parsed.map((g) => ({
+            name: String(g?.name ?? ""),
+            choices: Array.isArray(g?.choices) ? g.choices.map(String) : [],
+          })),
+        );
+      }
+    } catch {
+      /* fall through to the comma-list fallback */
+    }
+  }
+  // Fallback: a plain comma list becomes a single unnamed group.
+  return serializeGroups([{ name: "", choices: s.split(",") }]);
 }
 
 export async function addShopItem(formData: FormData): Promise<void> {

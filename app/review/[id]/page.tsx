@@ -77,7 +77,7 @@ export default async function ReviewDetail({
   const journalHours =
     Math.round(journals.reduce((s, j) => s + (Number(j.hours) || 0), 0) * 10) / 10;
   const hackatimeHours = Math.round(((p.hackatime_seconds ?? 0) / 3600) * 10) / 10;
-  const hours = hackatimeHours > 0 ? hackatimeHours : journalHours;
+  const hours = Math.round((hackatimeHours + journalHours) * 10) / 10;
   const htPct = hours > 0 ? Math.round((hackatimeHours / hours) * 100) : 0;
 
   const formDefaultHours =

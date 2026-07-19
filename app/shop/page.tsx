@@ -3,21 +3,41 @@ import { requireAdmin } from "@/lib/guard";
 import { listShopItems } from "@/lib/db";
 import { addShopItem, toggleShopItem, deleteShopItem, updateShopItem } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
+import { Disclosure } from "@/app/_components/Disclosure";
+import { OptionsEditor } from "@/app/_components/OptionsEditor";
+import { parseOptionGroups } from "@/lib/shopOptions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
 
 export const dynamic = "force-dynamic";
+
+const PER = 8;
 
 const FILE_INPUT =
   "block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80";
 
-export default async function ShopPage() {
+export default async function ShopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const access = await requireAdmin();
   if (!access.isSuper) redirect("/");
-  const items = await listShopItems();
+  const allItems = await listShopItems();
+  const { page } = await searchParams;
+  const pages = Math.max(1, Math.ceil(allItems.length / PER));
+  const cur = Math.min(Math.max(parseInt(page ?? "1", 10) || 1, 1), pages);
+  const start = (cur - 1) * PER;
+  const items = allItems.slice(start, start + PER);
 
   return (
     <div className="space-y-8">
@@ -64,29 +84,23 @@ export default async function ShopPage() {
               className="w-full text-sm"
             />
           </Label>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Options (optional)</span>
-              <Input
-                name="options"
-                placeholder="red, blue, green"
-                className="w-full text-sm"
-              />
-              <span className="block text-xs text-muted-foreground mt-1">
-                Comma-separated variants, if the item has any.
-              </span>
-            </Label>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Image (optional)</span>
-              <input
-                name="image"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className={FILE_INPUT}
-              />
-              <span className="block text-xs text-muted-foreground mt-1">PNG/JPG/WebP, max 4 MB.</span>
-            </Label>
+          <div className="block">
+            <span className="block text-sm font-medium mb-1.5">Options (optional)</span>
+            <OptionsEditor name="options" />
+            <span className="block text-xs text-muted-foreground mt-1">
+              Add groups like Color, Storage or RAM — each with its own comma-separated choices.
+            </span>
           </div>
+          <Label className="block font-normal">
+            <span className="block text-sm font-medium mb-1.5">Image (optional)</span>
+            <input
+              name="image"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className={FILE_INPUT}
+            />
+            <span className="block text-xs text-muted-foreground mt-1">PNG/JPG/WebP, max 4 MB.</span>
+          </Label>
           <div className="flex justify-end">
             <PendingButton
               className="bg-brand text-white border-transparent"
@@ -100,16 +114,16 @@ export default async function ShopPage() {
 
       <div>
         <div className="text-sm font-medium text-muted-foreground mb-3">
-          {items.length} item{items.length === 1 ? "" : "s"} · only active ones show in game
+          {allItems.length} item{allItems.length === 1 ? "" : "s"} · only active ones show in game
         </div>
-        {items.length === 0 ? (
+        {allItems.length === 0 ? (
           <Card className="p-8 text-center text-muted-foreground text-sm">
             Empty shelves. Add the first item above.
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid gap-4">
             {items.map((item) => (
-              <Card key={item.id} className={`p-4 gap-0 flex-row ${item.active ? "" : "opacity-60"}`}>
+              <Card key={item.id} className={`p-4 gap-4 flex-row ${item.active ? "" : "opacity-60"}`}>
                 {item.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -134,11 +148,18 @@ export default async function ShopPage() {
                     <div className="text-sm text-muted-foreground mt-1">{item.description}</div>
                   )}
                   {item.options.length > 0 && (
-                    <div className="flex gap-1.5 flex-wrap mt-2">
-                      {item.options.map((o) => (
-                        <Badge key={o} variant="secondary">
-                          {o}
-                        </Badge>
+                    <div className="mt-2 space-y-1.5">
+                      {parseOptionGroups(item.options).map((g, gi) => (
+                        <div key={gi} className="flex items-center gap-1.5 flex-wrap">
+                          {g.name && (
+                            <span className="text-xs font-medium text-muted-foreground">{g.name}:</span>
+                          )}
+                          {g.choices.map((c) => (
+                            <Badge key={c} variant="secondary">
+                              {c}
+                            </Badge>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -161,11 +182,8 @@ export default async function ShopPage() {
                       </Button>
                     </form>
                   </div>
-                  <details className="mt-3">
-                    <summary className="text-sm text-muted-foreground cursor-pointer select-none hover:text-brand">
-                      Edit item
-                    </summary>
-                    <form action={updateShopItem} className="mt-3 space-y-3">
+                  <Disclosure summary="Edit item" className="mt-3">
+                    <form action={updateShopItem} className="space-y-3">
                       <input type="hidden" name="id" value={item.id} />
                       <div className="grid grid-cols-[1fr_6.5rem] gap-3">
                         <Label className="block font-normal">
@@ -199,15 +217,10 @@ export default async function ShopPage() {
                           className="w-full text-sm"
                         />
                       </Label>
-                      <Label className="block font-normal">
+                      <div className="block">
                         <span className="block text-xs font-medium text-muted-foreground mb-1">Options</span>
-                        <Input
-                          name="options"
-                          defaultValue={item.options.join(", ")}
-                          placeholder="red, blue, green"
-                          className="w-full text-sm"
-                        />
-                      </Label>
+                        <OptionsEditor name="options" initial={item.options} />
+                      </div>
                       <Label className="block font-normal">
                         <span className="block text-xs font-medium text-muted-foreground mb-1">
                           Replace image (optional — leave empty to keep the current one)
@@ -226,10 +239,45 @@ export default async function ShopPage() {
                         Save changes
                       </PendingButton>
                     </form>
-                  </details>
+                  </Disclosure>
                 </div>
               </Card>
             ))}
+          </div>
+        )}
+
+        {allItems.length > PER && (
+          <div className="flex items-center justify-between gap-3 mt-4 text-sm">
+            <span className="text-muted-foreground">
+              Showing {start + 1}–{Math.min(start + PER, allItems.length)} of {allItems.length}
+            </span>
+            <Pagination className="mx-0 w-auto justify-end">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationLink
+                    href={`/shop?page=${cur - 1}`}
+                    aria-label="Previous page"
+                    className={cur <= 1 ? "pointer-events-none opacity-40" : ""}
+                  >
+                    ←
+                  </PaginationLink>
+                </PaginationItem>
+                <PaginationItem>
+                  <span className="px-2 text-muted-foreground tabular-nums">
+                    {cur} / {pages}
+                  </span>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationLink
+                    href={`/shop?page=${cur + 1}`}
+                    aria-label="Next page"
+                    className={cur >= pages ? "pointer-events-none opacity-40" : ""}
+                  >
+                    →
+                  </PaginationLink>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </div>
