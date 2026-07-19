@@ -205,9 +205,22 @@ export default async function ReviewDetail({
               <span className="grid place-items-center w-8 h-8 rounded-full bg-brand/15 text-brand text-xs font-semibold shrink-0">
                 {String(ownerName).replace(/^@/, "").slice(0, 2).toUpperCase()}
               </span>
-              <Link href={`/players/${p.user_id}`} className="font-medium hover:text-brand truncate">
-                {ownerName}
-              </Link>
+              <div className="min-w-0">
+                <Link href={`/players/${p.user_id}`} className="font-medium hover:text-brand truncate block">
+                  {ownerName}
+                </Link>
+                {p.users?.slack_id && (
+                  <a
+                    href={`https://hackclub.slack.com/team/${p.users.slack_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-mono text-ink/45 hover:text-brand"
+                    title="Open in Slack"
+                  >
+                    {p.users.slack_id}
+                  </a>
+                )}
+              </div>
             </div>
             {p.repo_url && (
               <a
