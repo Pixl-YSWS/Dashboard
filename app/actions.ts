@@ -162,11 +162,11 @@ async function insertReviewAudit(
   if (error) console.error("review audit insert failed", error.message);
 }
 
-// Every review earns $1 = 10 pixels, paid into the reviewer's game account.
+// Every review earns $0.50 = 5 pixels, paid into the reviewer's game account.
 // Rushed reviews are cut 30% (50% if doubly rushed); a first pass that the
 // final reviewer overturns is cut 50%, and one whose hours get slashed is cut
 // 30%. First-pass payouts stay pending until the final verdict settles them.
-const PAYOUT_PIXELS = 10;
+const PAYOUT_PIXELS = 5;
 
 function payoutFlagCut(formData: FormData, verdict: string): { pct: number; reason: string } {
   const total = readSeconds(formData.get("totalSeconds"));
@@ -345,8 +345,8 @@ export async function reviewProject(formData: FormData): Promise<void> {
   if (!note)
     redirect(`${back}?error=${encodeURIComponent("Feedback is required for every verdict.")}`);
   const auditNote = String(formData.get("auditNote") ?? "").trim();
-  if (auditNote.length < 200)
-    redirect(`${back}?error=${encodeURIComponent("The internal audit note needs at least 200 characters.")}`);
+  if (auditNote.length < 150)
+    redirect(`${back}?error=${encodeURIComponent("The internal audit note needs at least 150 characters.")}`);
 
   const claimedHours = await claimedHoursFor(projectId);
   const hoursRaw = String(formData.get("approvedHours") ?? "").trim();

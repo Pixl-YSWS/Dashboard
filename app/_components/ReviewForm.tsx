@@ -63,6 +63,8 @@ export function ReviewForm({
   const totalSeconds = useRef<HTMLInputElement>(null);
   const away = useRef<{ kind: "repo" | "demo"; at: number } | null>(null);
   const openedAt = useRef(Date.now());
+  const [auditLen, setAuditLen] = useState(0);
+  const AUDIT_MIN = 150;
 
   useEffect(() => {
     openedAt.current = Date.now();
@@ -159,14 +161,24 @@ export function ReviewForm({
           ))}
         </div>
       )}
-      <textarea
-        name="auditNote"
-        required
-        minLength={200}
-        placeholder="Internal audit note — never shown to the player, admins only. What did you check, what did the commits look like, anything sus? Min 200 characters."
-        className="pixl-input w-full text-sm"
-        rows={3}
-      />
+      <div className="relative">
+        <textarea
+          name="auditNote"
+          required
+          minLength={AUDIT_MIN}
+          onChange={(e) => setAuditLen(e.target.value.trim().length)}
+          placeholder="Internal audit note — never shown to the player, admins only. What did you check, what did the commits look like, anything sus? Min 150 characters."
+          className="pixl-input w-full text-sm"
+          rows={3}
+        />
+        <span
+          className={`pointer-events-none absolute bottom-1.5 right-2 text-[10px] tabular-nums ${
+            auditLen >= AUDIT_MIN ? "text-emerald-500" : "text-ink/40"
+          }`}
+        >
+          {auditLen}/{AUDIT_MIN}
+        </span>
+      </div>
       <div className="flex flex-wrap gap-2 items-start">
         <textarea
           name="note"
