@@ -43,11 +43,11 @@
   /* Vercel / Fumadocs neutral dark: near-black surfaces, thin translucent
      hairlines, high-contrast near-white text. */
   --color-ink: #ededed;
-  --bg: #0a0a0a;
-  --surface: #101011;
-  --surface-2: #18181a;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.145);
+  --bg: #080808;
+  --surface: #131315;
+  --surface-2: #1c1c1f;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.16);
   --text: #ededed;
   --text-muted: #9b9b9f;
 
@@ -67,10 +67,15 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  letter-spacing: -0.011em;
   transition: background-color 200ms ease, color 200ms ease;
+}
+
+code, pre, .font-mono, .tabular-nums {
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .font-pixel {
