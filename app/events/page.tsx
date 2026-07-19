@@ -9,6 +9,20 @@ import {
   type DashEventRow,
 } from "@/lib/db";
 import { createEvent, stopEvent, deleteEvent } from "@/app/actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +34,11 @@ function status(ev: DashEventRow): "live" | "upcoming" | "ended" | "stopped" {
   return "live";
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  live: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-  upcoming: "bg-parch",
-  ended: "bg-parch text-ink/50",
-  stopped: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+const STATUS_VARIANT: Record<string, "success" | "secondary" | "destructive"> = {
+  live: "success",
+  upcoming: "secondary",
+  ended: "secondary",
+  stopped: "destructive",
 };
 
 function fmt(iso: string): string {
@@ -74,85 +88,92 @@ export default async function EventsPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-ink tracking-tight">Events</h1>
-        <p className="text-sm text-ink/55 mt-1 max-w-2xl">
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Events</h1>
+        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Weekend events players see in-game the moment they go live. All times are UTC. Bonus
           math runs server-side — nothing here hands out free pixels.
         </p>
       </div>
 
       {created && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 p-3 text-sm font-medium">
-          Event created.
-        </div>
+        <Alert>
+          <AlertDescription className="font-medium text-emerald-600 dark:text-emerald-400">
+            Event created.
+          </AlertDescription>
+        </Alert>
       )}
       {error && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 p-3 text-sm font-medium">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription className="font-medium text-destructive">{error}</AlertDescription>
+        </Alert>
       )}
 
-      <div className="pixl-card p-5 md:p-6">
+      <Card className="p-5 md:p-6 gap-0">
         <div className="text-base font-semibold mb-1">Start an event</div>
-        <p className="text-xs text-ink/50 mb-4">
+        <p className="text-xs text-muted-foreground mb-4">
           Fill only the fields your event type uses — the rest are ignored.
         </p>
         <form action={createEvent} className="space-y-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <label className="block">
-              <span className="block text-sm font-medium mb-1.5">Type</span>
-              <select name="type" className="pixl-input w-full text-sm">
-                {Object.entries(EVENT_TYPES).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
+            <div className="block">
+              <Label className="block text-sm font-medium mb-1.5">Type</Label>
+              <Select name="type" defaultValue={Object.keys(EVENT_TYPES)[0]}>
+                <SelectTrigger className="w-full text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(EVENT_TYPES).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>
+                      {v}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Name (players see this)</span>
-              <input
+              <Input
                 name="name"
                 required
                 maxLength={100}
                 placeholder="e.g. Double Streak Weekend"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-            </label>
-            <label className="block">
+            </Label>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Starts (UTC, blank = now)</span>
-              <input name="startsAt" type="datetime-local" className="pixl-input w-full text-sm" />
-            </label>
-            <label className="block">
+              <Input name="startsAt" type="datetime-local" className="w-full text-sm" />
+            </Label>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Ends (UTC)</span>
-              <input name="endsAt" type="datetime-local" required className="pixl-input w-full text-sm" />
-            </label>
+              <Input name="endsAt" type="datetime-local" required className="w-full text-sm" />
+            </Label>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <label className="block">
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Bounty reward (px)</span>
-              <input name="reward" type="number" min={0} max={500} placeholder="50" className="pixl-input w-full text-sm" />
-            </label>
-            <label className="block">
+              <Input name="reward" type="number" min={0} max={500} placeholder="50" className="w-full text-sm" />
+            </Label>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Bounty description</span>
-              <input
+              <Input
                 name="description"
                 maxLength={500}
                 placeholder="e.g. ship something multiplayer"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-            </label>
-            <label className="block">
+            </Label>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Goal: ships target / bonus %</span>
               <div className="flex gap-2">
-                <input name="target" type="number" min={0} placeholder="25" className="pixl-input w-full text-sm" />
-                <input name="bonusPct" type="number" min={0} max={50} placeholder="10" className="pixl-input w-full text-sm" />
+                <Input name="target" type="number" min={0} placeholder="25" className="w-full text-sm" />
+                <Input name="bonusPct" type="number" min={0} max={50} placeholder="10" className="w-full text-sm" />
               </div>
-            </label>
-            <label className="block">
+            </Label>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Blitz multiplier</span>
-              <input name="mult" type="number" step="0.1" min={1} max={3} placeholder="1.5" className="pixl-input w-full text-sm" />
-            </label>
+              <Input name="mult" type="number" step="0.1" min={1} max={3} placeholder="1.5" className="w-full text-sm" />
+            </Label>
           </div>
           {shopItems.length > 0 && (
             <div>
@@ -162,49 +183,49 @@ export default async function EventsPage({
               </span>
               <div className="flex flex-wrap gap-3">
                 {shopItems.map((i) => (
-                  <label
+                  <Label
                     key={i.id}
-                    className={`flex items-center gap-2 text-sm rounded-lg border border-[var(--line)] px-3 py-1.5 ${
+                    className={`flex items-center gap-2 text-sm font-normal rounded-lg border border-border px-3 py-1.5 ${
                       i.active ? "opacity-60" : ""
                     }`}
                   >
-                    <input type="checkbox" name="itemIds" value={i.id} className="w-4 h-4" />
+                    <Checkbox name="itemIds" value={String(i.id)} />
                     {i.name}
-                    {i.active && <span className="text-xs text-ink/45">(active anyway)</span>}
-                  </label>
+                    {i.active && <span className="text-xs text-muted-foreground">(active anyway)</span>}
+                  </Label>
                 ))}
               </div>
             </div>
           )}
-          <button className="pixl-btn bg-brand text-white border-transparent">Create event</button>
+          <Button className="bg-brand text-white border-transparent">Create event</Button>
         </form>
-      </div>
+      </Card>
 
       <div>
-        <div className="text-sm font-medium text-ink/60 mb-3">All events</div>
+        <div className="text-sm font-medium text-muted-foreground mb-3">All events</div>
         <div className="space-y-3">
           {events.map((ev) => {
             const st = status(ev);
             return (
-              <div key={ev.id} className="pixl-card p-4 flex items-start justify-between gap-4 flex-wrap">
+              <Card key={ev.id} className="p-4 gap-0 flex-row items-start justify-between flex-wrap">
                 <div className="min-w-0">
                   <div className="font-bold flex items-center gap-2 flex-wrap">
                     {ev.name}
-                    <span className="badge bg-parch text-[0.65rem] uppercase tracking-wide">
+                    <Badge variant="secondary" className="text-[0.65rem] uppercase tracking-wide">
                       {EVENT_TYPES[ev.type] ?? ev.type}
-                    </span>
-                    <span className={`badge text-[0.65rem] uppercase tracking-wide ${STATUS_BADGE[st]}`}>
+                    </Badge>
+                    <Badge variant={STATUS_VARIANT[st]} className="text-[0.65rem] uppercase tracking-wide">
                       {st}
-                    </span>
+                    </Badge>
                   </div>
-                  <div className="text-sm text-ink/60 mt-1">{configSummary(ev)}</div>
-                  <div className="text-xs text-ink/45 mt-1">
+                  <div className="text-sm text-muted-foreground mt-1">{configSummary(ev)}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
                     {fmt(ev.starts_at)} → {fmt(ev.ends_at)} UTC
                     {ev.created_by ? ` · by ${ev.created_by.replace(/\s*\([^)]*\)\s*$/, "")}` : ""}
                   </div>
                   {ev.type === "community_goal" && progress.has(ev.id) && (
                     <div className="mt-2 max-w-sm">
-                      <div className="flex justify-between text-xs text-ink/60 mb-1">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>
                           {progress.get(ev.id)} / {Number(ev.config.target) || 0} ships
                         </span>
@@ -214,7 +235,7 @@ export default async function EventsPage({
                             : `+${Number(ev.config.bonusPct) || 0}% if hit`}
                         </span>
                       </div>
-                      <div className="h-2 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div
                           className="h-full bg-emerald-500"
                           style={{
@@ -230,7 +251,7 @@ export default async function EventsPage({
                     </div>
                   )}
                   {ev.type === "bounty" && (
-                    <div className="text-xs text-ink/60 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       {claims.get(ev.id) ?? 0} project{(claims.get(ev.id) ?? 0) === 1 ? "" : "s"} claimed it
                     </div>
                   )}
@@ -239,25 +260,29 @@ export default async function EventsPage({
                   {(st === "live" || st === "upcoming") && (
                     <form action={stopEvent}>
                       <input type="hidden" name="id" value={ev.id} />
-                      <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
+                      >
                         Stop
-                      </button>
+                      </Button>
                     </form>
                   )}
                   {st !== "live" && (
                     <form action={deleteEvent}>
                       <input type="hidden" name="id" value={ev.id} />
-                      <button className="pixl-btn bg-transparent text-ink/50 text-sm">Delete</button>
+                      <Button variant="ghost" size="sm" className="text-muted-foreground">Delete</Button>
                     </form>
                   )}
                 </div>
-              </div>
+              </Card>
             );
           })}
           {events.length === 0 && (
-            <div className="pixl-card p-5 text-ink/50 text-sm">
+            <Card className="p-5 text-muted-foreground text-sm">
               No events yet. Start one above — players see it in-game instantly.
-            </div>
+            </Card>
           )}
         </div>
       </div>

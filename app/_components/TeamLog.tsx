@@ -1,5 +1,14 @@
 import { listTeamLog, type TeamLogRow } from "@/lib/db";
 import { undoTeamChange } from "@/app/actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+} from "@/components/ui/table";
 
 function describe(row: TeamLogRow): string {
   const before = row.before ?? [];
@@ -25,11 +34,14 @@ function describe(row: TeamLogRow): string {
   }
 }
 
-const ACTION_BADGE: Record<string, string> = {
-  added: "bg-mint/30 dark:bg-mint/20",
-  removed: "bg-brand/15 text-brand",
-  updated: "bg-parch",
-  undo: "bg-tang/20 text-tang",
+const ACTION_VARIANT: Record<
+  string,
+  "success" | "destructive" | "secondary" | "warning"
+> = {
+  added: "success",
+  removed: "destructive",
+  updated: "secondary",
+  undo: "warning",
 };
 
 export async function TeamLog() {
@@ -37,40 +49,55 @@ export async function TeamLog() {
   if (rows.length === 0) return null;
   return (
     <div>
-      <div className="text-sm font-medium text-ink/60 mb-3">Team log</div>
-      <div className="pixl-card divide-y divide-[var(--line)]">
-        {rows.map((row) => (
-          <div key={row.id} className="p-4 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-sm">
-                <span className="font-semibold">{row.name || row.slack_id}</span>{" "}
-                <span className={`badge ${ACTION_BADGE[row.action] ?? "bg-parch"} text-[0.65rem] uppercase tracking-wide align-middle mx-1`}>
-                  {row.action}
-                </span>
-                <span className="text-ink/70">{describe(row)}</span>
-              </div>
-              {row.reason && (
-                <div className="text-xs text-ink/60 mt-0.5">Reason: {row.reason}</div>
-              )}
-              <div className="text-xs text-ink/45 mt-0.5 truncate">
-                by {row.actor || "unknown"} ·{" "}
-                {new Date(row.created_at).toLocaleString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
-            </div>
-            {row.action !== "undo" && (
-              <form action={undoTeamChange} className="shrink-0">
-                <input type="hidden" name="id" value={row.id} />
-                <button className="pixl-btn bg-[var(--surface)] text-ink text-sm">Undo</button>
-              </form>
-            )}
-          </div>
-        ))}
-      </div>
+      <div className="text-sm font-medium text-muted-foreground mb-3">Team log</div>
+      <Card className="overflow-hidden py-0">
+        <Table>
+          <TableBody>
+            {rows.map((row) => (
+              <TableRow key={row.id} className="hover:bg-transparent">
+                <TableCell className="p-4 align-top whitespace-normal">
+                  <div className="text-sm">
+                    <span className="font-semibold">
+                      {row.name || row.slack_id}
+                    </span>{" "}
+                    <Badge
+                      variant={ACTION_VARIANT[row.action] ?? "secondary"}
+                      className="text-[0.65rem] uppercase tracking-wide align-middle mx-1"
+                    >
+                      {row.action}
+                    </Badge>
+                    <span className="text-foreground/70">{describe(row)}</span>
+                  </div>
+                  {row.reason && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Reason: {row.reason}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                    by {row.actor || "unknown"} ·{" "}
+                    {new Date(row.created_at).toLocaleString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </TableCell>
+                <TableCell className="p-4 align-top text-right w-px">
+                  {row.action !== "undo" && (
+                    <form action={undoTeamChange}>
+                      <input type="hidden" name="id" value={row.id} />
+                      <Button variant="outline" size="sm">
+                        Undo
+                      </Button>
+                    </form>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
     </div>
   );
 }

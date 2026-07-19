@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 export function ReviewTabs({
   isSuper,
@@ -21,33 +23,27 @@ export function ReviewTabs({
     tabs.push({ href: "/review/audit", label: "Audit notes" });
   }
 
+  const active = tabs.find((t) => t.href === pathname)?.href ?? "/review";
+
   return (
-    <div className="flex gap-6 mb-6 border-b border-[var(--line)]">
-      {tabs.map((t) => {
-        const active = pathname === t.href;
-        return (
-          <Link
-            key={t.href}
-            href={t.href}
-            className={`relative -mb-px px-0.5 pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${
-              active
-                ? "text-brand border-b-2 border-brand"
-                : "text-ink/55 hover:text-ink border-b-2 border-transparent"
-            }`}
-          >
-            {t.label}
-            {t.count ? (
-              <span
-                className={`text-[0.7rem] font-semibold px-1.5 py-0.5 rounded-full ${
-                  active ? "bg-brand text-white" : "bg-black/[0.06] dark:bg-white/10 text-ink/60"
-                }`}
-              >
-                {t.count}
-              </span>
-            ) : null}
-          </Link>
-        );
-      })}
-    </div>
+    <Tabs value={active} className="mb-6">
+      <TabsList variant="line" className="h-auto border-b border-border w-full justify-start rounded-none pb-0">
+        {tabs.map((t) => (
+          <TabsTrigger key={t.href} value={t.href} asChild className="pb-3">
+            <Link href={t.href}>
+              {t.label}
+              {t.count ? (
+                <Badge
+                  variant={t.href === active ? "default" : "secondary"}
+                  className="ml-1"
+                >
+                  {t.count}
+                </Badge>
+              ) : null}
+            </Link>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

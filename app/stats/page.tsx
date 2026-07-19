@@ -1,5 +1,6 @@
 import { publicStats, publicGallery } from "@/lib/db";
 import { GrowthChart } from "@/app/_components/GrowthChart";
+import { Card, CardContent } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +11,10 @@ export const metadata = {
 
 function Tile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="pixl-card p-5 text-center">
+    <Card className="p-5 gap-0 text-center">
       <div className="text-3xl font-semibold tabular-nums leading-tight">{value}</div>
-      <div className="text-sm text-ink/55 mt-1">{label}</div>
-    </div>
+      <div className="text-sm text-muted-foreground mt-1">{label}</div>
+    </Card>
   );
 }
 
@@ -28,7 +29,7 @@ export default async function StatsPage() {
             <span className="text-4xl font-bold tracking-tight text-brand">PIXL</span>
           </a>
           <h1 className="text-xl font-semibold mt-2">Live stats</h1>
-          <p className="text-sm text-ink/55 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Teenagers building games, getting paid in pixels.{" "}
             <a href="https://pixl.rsvp" className="text-brand hover:underline">
               Join in →
@@ -48,14 +49,14 @@ export default async function StatsPage() {
           <Tile label="reviews done" value={stats.reviews.toLocaleString("en-US")} />
         </div>
 
-        <div className="pixl-card p-5">
+        <Card className="p-5">
           <GrowthChart
             title="Ships per day (last 30 days)"
             series="projects"
             kind="daily"
             points={stats.shipsSeries}
           />
-        </div>
+        </Card>
 
         {gallery.length > 0 && (
           <div>
@@ -67,37 +68,39 @@ export default async function StatsPage() {
                   href={p.demo_url || "https://pixl.rsvp"}
                   target="_blank"
                   rel="noreferrer"
-                  className="pixl-card overflow-hidden hover:-translate-y-0.5 transition-transform"
+                  className="block hover:-translate-y-0.5 transition-transform"
                 >
-                  {p.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={p.image_url}
-                      alt=""
-                      className="w-full h-36 object-cover border-b border-[var(--line)]"
-                    />
-                  ) : (
-                    <div className="w-full h-36 grid place-items-center bg-[var(--surface-2)] border-b border-[var(--line)] text-3xl">
-                      🎮
-                    </div>
-                  )}
-                  <div className="p-3">
-                    <div className="font-semibold truncate">{p.name}</div>
-                    <div className="text-xs text-ink/55 truncate">
-                      by {p.owner}
-                      {p.approved_hours != null ? ` · ${p.approved_hours}h` : ""}
-                    </div>
-                    {p.description && (
-                      <div className="text-xs text-ink/60 mt-1 line-clamp-2">{p.description}</div>
+                  <Card className="overflow-hidden py-0 gap-0 h-full">
+                    {p.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.image_url}
+                        alt=""
+                        className="w-full h-36 object-cover border-b border-border"
+                      />
+                    ) : (
+                      <div className="w-full h-36 grid place-items-center bg-muted border-b border-border text-3xl">
+                        🎮
+                      </div>
                     )}
-                  </div>
+                    <CardContent className="p-3">
+                      <div className="font-semibold truncate">{p.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        by {p.owner}
+                        {p.approved_hours != null ? ` · ${p.approved_hours}h` : ""}
+                      </div>
+                      {p.description && (
+                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.description}</div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </a>
               ))}
             </div>
           </div>
         )}
 
-        <div className="text-center text-xs text-ink/45 pb-6">
+        <div className="text-center text-xs text-muted-foreground pb-6">
           Updated live ·{" "}
           <a href="https://pixl.rsvp" className="hover:text-brand">
             pixl.rsvp

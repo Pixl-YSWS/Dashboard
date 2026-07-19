@@ -5,6 +5,15 @@ import { slackHandles } from "@/lib/slack";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
 import { ReviewTable } from "@/app/_components/ReviewTable";
 import { LiveReview } from "@/app/_components/LiveReview";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -51,14 +60,14 @@ export default async function ReviewListPage({
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-3">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
-            <h2 className="text-sm font-semibold text-ink">
+            <h2 className="text-sm font-semibold text-foreground">
               Awaiting your final pass
-              <span className="ml-2 badge bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
+              <Badge variant="violet" className="ml-2">
                 {finalRows.length}
-              </span>
+              </Badge>
             </h2>
           </div>
-          <p className="text-xs text-ink/55 mb-3">
+          <p className="text-xs text-muted-foreground mb-3">
             These passed a first review. Your approval credits pixels and ships them.
           </p>
           <ReviewTable
@@ -70,25 +79,25 @@ export default async function ReviewListPage({
       )}
 
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-        <div className="inline-flex items-center rounded-lg border border-[var(--line)] p-0.5 bg-[var(--surface)]">
+        <div className="inline-flex items-center rounded-lg border border-border p-0.5 bg-card">
           {SORTS.map((s) => (
-            <Link
+            <Button
               key={s.key}
-              href={`/review${s.key !== "oldest" ? `?sort=${s.key}` : ""}`}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                sortKey === s.key
-                  ? "bg-ink text-white"
-                  : "text-ink/60 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
-              }`}
+              asChild
+              variant="ghost"
+              size="sm"
+              className={sortKey === s.key ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : ""}
             >
-              {s.label}
-            </Link>
+              <Link href={`/review${s.key !== "oldest" ? `?sort=${s.key}` : ""}`}>
+                {s.label}
+              </Link>
+            </Button>
           ))}
         </div>
         <div className="flex items-center gap-3">
           <LiveReview />
-          <div className="text-sm text-ink/50">
-            Showing <span className="font-semibold text-ink/70">{total}</span> of {total}
+          <div className="text-sm text-muted-foreground">
+            Showing <span className="font-semibold text-foreground/70">{total}</span> of {total}
           </div>
         </div>
       </div>
@@ -101,53 +110,59 @@ export default async function ReviewListPage({
 
       {total > 0 && (
         <div className="flex items-center justify-between gap-3 mt-4 text-sm">
-          <span className="text-ink/50">
+          <span className="text-muted-foreground">
             Showing {start + 1}–{Math.min(start + PER, total)} of {total}
           </span>
-          <div className="flex items-center gap-2">
-            <Link
-              href={qp(cur - 1)}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur <= 1 ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              ←
-            </Link>
-            <span className="text-ink/60 tabular-nums px-1">
-              {cur} / {pages}
-            </span>
-            <Link
-              href={qp(cur + 1)}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur >= pages ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              →
-            </Link>
-          </div>
+          <Pagination className="mx-0 w-auto justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationLink
+                  href={qp(cur - 1)}
+                  aria-label="Previous page"
+                  className={cur <= 1 ? "pointer-events-none opacity-40" : ""}
+                >
+                  ←
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-2 text-muted-foreground tabular-nums">
+                  {cur} / {pages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink
+                  href={qp(cur + 1)}
+                  aria-label="Next page"
+                  className={cur >= pages ? "pointer-events-none opacity-40" : ""}
+                >
+                  →
+                </PaginationLink>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
       {myRecent.length > 0 && (
         <div className="mt-8">
-          <h3 className="text-sm font-semibold text-ink/60 mb-3">Recently reviewed by you</h3>
-          <div className="pixl-card divide-y divide-[var(--line)]">
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Recently reviewed by you</h3>
+          <Card className="divide-y divide-border py-0">
             {myRecent.map((a) => (
               <Link
                 key={a.id}
                 href={`/projects/${a.project_id}`}
-                className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1 hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1 hover:bg-muted/50"
               >
                 <span className="font-medium text-sm">{a.project_name}</span>
-                <span className="text-xs text-ink/55">
+                <span className="text-xs text-muted-foreground">
                   {a.verdict.replaceAll("_", " ")} · {a.player_name}
                 </span>
-                <span className="text-xs text-ink/45 ml-auto shrink-0">
+                <span className="text-xs text-muted-foreground ml-auto shrink-0">
                   {new Date(a.created_at).toLocaleString()}
                 </span>
               </Link>
             ))}
-          </div>
+          </Card>
         </div>
       )}
     </div>

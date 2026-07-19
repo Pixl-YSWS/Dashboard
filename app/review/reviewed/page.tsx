@@ -14,7 +14,7 @@ export default async function ReviewedPage() {
   return (
     <div>
       <ReviewTabs isSuper={access.isSuper} pending={pending} />
-      <div className="text-sm text-ink/50 mb-4">{rows.length} reviewed</div>
+      <div className="text-sm text-muted-foreground mb-4">{rows.length} reviewed</div>
       <ReviewTable rows={rows} handles={handles} emptyLabel="No projects reviewed yet." />
     </div>
   );

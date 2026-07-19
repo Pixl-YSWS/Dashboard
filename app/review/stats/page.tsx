@@ -1,6 +1,15 @@
 import { requirePagePerm } from "@/lib/guard";
 import { db, type ReviewAuditRow } from "@/lib/db";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -75,54 +84,54 @@ export default async function ReviewStatsPage() {
   return (
     <div>
       <ReviewTabs isSuper={access.isSuper} />
-      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-1">
+      <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-1">
         {access.isSuper ? "Reviewer stats" : "Your review stats"}
       </h1>
-      <p className="text-sm text-ink/55 mb-5">
+      <p className="text-sm text-muted-foreground mb-5">
         From the review audit log — verdicts, hours credited, time spent per review, and whether
         the repo/demo were actually opened.
       </p>
 
       {stats.length === 0 ? (
-        <div className="pixl-card p-8 text-center text-ink/55 text-sm">No reviews logged yet.</div>
+        <Card className="p-8 text-center text-muted-foreground text-sm">No reviews logged yet.</Card>
       ) : (
-        <div className="pixl-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b border-[var(--line)] text-ink/60">
-                <th className="p-3 font-medium">Reviewer</th>
-                <th className="p-3 font-medium">Reviews</th>
-                <th className="p-3 font-medium">Approved</th>
-                <th className="p-3 font-medium">First pass</th>
-                <th className="p-3 font-medium">Changes</th>
-                <th className="p-3 font-medium">Hours credited</th>
-                <th className="p-3 font-medium" title="Average time spent on the review page per verdict">
+        <Card className="overflow-hidden py-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="p-3 font-medium">Reviewer</TableHead>
+                <TableHead className="p-3 font-medium">Reviews</TableHead>
+                <TableHead className="p-3 font-medium">Approved</TableHead>
+                <TableHead className="p-3 font-medium">First pass</TableHead>
+                <TableHead className="p-3 font-medium">Changes</TableHead>
+                <TableHead className="p-3 font-medium">Hours credited</TableHead>
+                <TableHead className="p-3 font-medium" title="Average time spent on the review page per verdict">
                   Avg time
-                </th>
-                <th className="p-3 font-medium" title="How often the repo / demo were actually opened">
+                </TableHead>
+                <TableHead className="p-3 font-medium" title="How often the repo / demo were actually opened">
                   Repo / demo
-                </th>
-                <th className="p-3 font-medium">Last active</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
+                </TableHead>
+                <TableHead className="p-3 font-medium">Last active</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {stats.map((s) => (
-                <tr key={s.reviewer}>
-                  <td className="p-3 font-medium break-words">{s.reviewer}</td>
-                  <td className="p-3 tabular-nums">{s.total}</td>
-                  <td className="p-3 tabular-nums text-hc-green font-medium">{s.approved}</td>
-                  <td className="p-3 tabular-nums">{s.firstPass}</td>
-                  <td className="p-3 tabular-nums">{s.changes}</td>
-                  <td className="p-3 tabular-nums">{s.hoursCredited}h</td>
-                  <td
+                <TableRow key={s.reviewer} className="hover:bg-transparent">
+                  <TableCell className="p-3 font-medium break-words">{s.reviewer}</TableCell>
+                  <TableCell className="p-3 tabular-nums">{s.total}</TableCell>
+                  <TableCell className="p-3 tabular-nums text-hc-green font-medium">{s.approved}</TableCell>
+                  <TableCell className="p-3 tabular-nums">{s.firstPass}</TableCell>
+                  <TableCell className="p-3 tabular-nums">{s.changes}</TableCell>
+                  <TableCell className="p-3 tabular-nums">{s.hoursCredited}h</TableCell>
+                  <TableCell
                     className={`p-3 tabular-nums ${
                       s.avgSeconds > 0 && s.avgSeconds < 60 ? "text-rose-600 dark:text-rose-400 font-semibold" : ""
                     }`}
                     title={s.avgSeconds > 0 && s.avgSeconds < 60 ? "Under a minute per review — rubber-stamping?" : undefined}
                   >
                     {fmtDur(s.avgSeconds)}
-                  </td>
-                  <td className="p-3 tabular-nums">
+                  </TableCell>
+                  <TableCell className="p-3 tabular-nums">
                     <span className={s.repoOpenedPct < 50 ? "text-rose-600 dark:text-rose-400" : ""}>
                       {s.repoOpenedPct}%
                     </span>{" "}
@@ -130,15 +139,15 @@ export default async function ReviewStatsPage() {
                     <span className={s.demoOpenedPct < 50 ? "text-rose-600 dark:text-rose-400" : ""}>
                       {s.demoOpenedPct}%
                     </span>
-                  </td>
-                  <td className="p-3 text-ink/60">
+                  </TableCell>
+                  <TableCell className="p-3 text-muted-foreground">
                     {s.lastActive ? new Date(s.lastActive).toLocaleDateString() : "—"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );

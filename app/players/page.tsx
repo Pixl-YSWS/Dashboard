@@ -3,7 +3,34 @@ import { requirePagePerm } from "@/lib/guard";
 import { listPlayers } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
 import { massPlayerAction, syncSlackAvatars } from "@/app/actions";
-import { SelectAllBox } from "@/app/_components/MassSelect";
+import { SelectAllBox, RowSelect } from "@/app/_components/MassSelect";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -30,37 +57,36 @@ export default async function PlayersPage({
   const canWarn = access.perms.has("warn");
   const canNotify = access.perms.has("notify");
   const canBan = access.perms.has("ban");
+  const defaultAction = canWarn ? "warn" : canNotify ? "notify" : "ban";
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-6">Players</h1>
+      <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-6">Players</h1>
 
       {done && (
-        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 p-3 text-sm font-medium">
-          {done}
-        </div>
+        <Alert className="mb-4">
+          <AlertDescription className="font-medium text-emerald-600 dark:text-emerald-400">{done}</AlertDescription>
+        </Alert>
       )}
       {error && (
-        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 p-3 text-sm font-medium">
-          {error}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription className="font-medium text-destructive">{error}</AlertDescription>
+        </Alert>
       )}
 
       <div className="mb-5 flex gap-2 items-center flex-wrap">
         <form className="flex gap-2 flex-1 min-w-64">
-          <input
+          <Input
             name="q"
             defaultValue={q ?? ""}
             placeholder="Search display names…"
-            className="pixl-input flex-1 min-w-0 max-w-72"
+            className="flex-1 min-w-0 max-w-72"
           />
-          <button className="pixl-btn bg-ink dark:bg-gray-700 text-white">Search</button>
+          <Button type="submit">Search</Button>
         </form>
         {access.isSuper && (
           <form action={syncSlackAvatars}>
-            <button className="pixl-btn bg-[var(--surface)] text-ink text-sm">
-              Sync Slack photos
-            </button>
+            <Button variant="outline">Sync Slack photos</Button>
           </form>
         )}
       </div>
@@ -68,148 +94,149 @@ export default async function PlayersPage({
       <form action={massPlayerAction}>
         <input type="hidden" name="back" value={qp(cur)} />
 
-        <div className="pixl-card p-4 mb-4">
+        <Card className="p-4 mb-4 gap-0">
           <div className="text-sm font-semibold mb-3">
             Mass action — tick players below, then apply to all of them at once
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="block">
-              <span className="block text-xs font-medium text-ink/60 mb-1">Action</span>
-              <select name="massAction" className="pixl-input text-sm">
-                {canWarn && <option value="warn">Warn</option>}
-                {canNotify && <option value="notify">Notify</option>}
-                {canBan && <option value="ban">Ban</option>}
-                {canBan && <option value="unban">Lift bans</option>}
-              </select>
-            </label>
-            <label className="block flex-1 min-w-56">
-              <span className="block text-xs font-medium text-ink/60 mb-1">
+            <div className="block">
+              <Label className="block text-xs font-medium text-muted-foreground mb-1">Action</Label>
+              <Select name="massAction" defaultValue={defaultAction}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {canWarn && <SelectItem value="warn">Warn</SelectItem>}
+                  {canNotify && <SelectItem value="notify">Notify</SelectItem>}
+                  {canBan && <SelectItem value="ban">Ban</SelectItem>}
+                  {canBan && <SelectItem value="unban">Lift bans</SelectItem>}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="block flex-1 min-w-56">
+              <Label className="block text-xs font-medium text-muted-foreground mb-1">
                 Message / reason (required for ban &amp; notify)
-              </span>
-              <input
+              </Label>
+              <Input
                 name="message"
                 maxLength={1000}
                 placeholder="Sent to every selected player"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-            </label>
-            <label className="block w-44">
-              <span className="block text-xs font-medium text-ink/60 mb-1">Title (notify only)</span>
-              <input
+            </div>
+            <div className="block w-44">
+              <Label className="block text-xs font-medium text-muted-foreground mb-1">Title (notify only)</Label>
+              <Input
                 name="title"
                 maxLength={100}
                 placeholder="Message from the Pixl team"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-            </label>
-            <label className="block w-32">
-              <span className="block text-xs font-medium text-ink/60 mb-1">Ban hours (blank = permanent)</span>
-              <input
+            </div>
+            <div className="block w-32">
+              <Label className="block text-xs font-medium text-muted-foreground mb-1">Ban hours (blank = permanent)</Label>
+              <Input
                 name="hours"
                 type="number"
                 min={0}
                 placeholder="∞"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-            </label>
-            <button className="pixl-btn bg-brand text-white border-transparent text-sm">
+            </div>
+            <Button className="bg-brand text-white border-transparent">
               Apply to selected
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
 
-        <div className="pixl-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b border-[var(--line)] bg-parch">
-                <th className="p-3 w-8">
+        <Card className="overflow-hidden py-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="p-3 w-8">
                   <SelectAllBox />
-                </th>
-                <th className="p-3">Player</th>
-                <th className="p-3">Projects</th>
-                <th className="p-3">Violations</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Joined</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
+                </TableHead>
+                <TableHead className="p-3">Player</TableHead>
+                <TableHead className="p-3">Projects</TableHead>
+                <TableHead className="p-3">Violations</TableHead>
+                <TableHead className="p-3">Status</TableHead>
+                <TableHead className="p-3">Joined</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {players.map((p) => (
-                <tr key={p.id} className="hover:bg-cream">
-                  <td className="p-3">
-                    <input
-                      type="checkbox"
-                      name="userIds"
-                      value={p.id}
-                      aria-label={`Select ${p.display_name ?? p.id}`}
-                      className="w-4 h-4 align-middle"
-                    />
-                  </td>
-                  <td className="p-3">
+                <TableRow key={p.id}>
+                  <TableCell className="p-3">
+                    <RowSelect id={p.id} label={`Select ${p.display_name ?? p.id}`} />
+                  </TableCell>
+                  <TableCell className="p-3">
                     <Link href={`/players/${p.id}`} className="font-bold hover:text-brand">
                       {(p.slack_id && handles.get(p.slack_id)) ?? p.display_name ?? "Unknown"}
                     </Link>
-                    <div className="text-xs text-ink/50">
+                    <div className="text-xs text-muted-foreground">
                       {p.slack_id ?? "no slack id"} · {p.oauth_provider}
                     </div>
-                  </td>
-                  <td className="p-3">{p.projectCount}</td>
-                  <td className={`p-3 ${p.violationCount > 0 ? "text-tang font-bold" : ""}`}>
+                  </TableCell>
+                  <TableCell className="p-3">{p.projectCount}</TableCell>
+                  <TableCell className={`p-3 ${p.violationCount > 0 ? "text-tang font-bold" : ""}`}>
                     {p.violationCount}
-                  </td>
-                  <td className="p-3">
+                  </TableCell>
+                  <TableCell className="p-3">
                     {p.activeBan ? (
-                      <span className="badge bg-brand text-white">
-                        banned
-                      </span>
+                      <Badge className="bg-brand text-white">banned</Badge>
                     ) : (
-                      <span className="badge bg-mint/30 dark:bg-mint/20">
-                        ok
-                      </span>
+                      <Badge variant="success">ok</Badge>
                     )}
-                  </td>
-                  <td className="p-3 text-ink/60">
+                  </TableCell>
+                  <TableCell className="p-3 text-muted-foreground">
                     {new Date(p.created_at).toLocaleDateString()}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
               {players.length === 0 && (
-                <tr>
-                  <td className="p-5 text-ink/50" colSpan={6}>
+                <TableRow className="hover:bg-transparent">
+                  <TableCell className="p-5 text-muted-foreground" colSpan={6}>
                     No players found.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       </form>
 
       {total > 0 && (
         <div className="flex items-center justify-between gap-3 mt-4 text-sm">
-          <span className="text-ink/50">
+          <span className="text-muted-foreground">
             Showing {start + 1}–{Math.min(start + PER, total)} of {total}
           </span>
-          <div className="flex items-center gap-2">
-            <Link
-              href={qp(cur - 1)}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur <= 1 ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              ←
-            </Link>
-            <span className="text-ink/60 tabular-nums px-1">
-              {cur} / {pages}
-            </span>
-            <Link
-              href={qp(cur + 1)}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur >= pages ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              →
-            </Link>
-          </div>
+          <Pagination className="mx-0 w-auto justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationLink
+                  href={qp(cur - 1)}
+                  aria-label="Previous page"
+                  className={cur <= 1 ? "pointer-events-none opacity-40" : ""}
+                >
+                  ←
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-2 text-muted-foreground tabular-nums">
+                  {cur} / {pages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink
+                  href={qp(cur + 1)}
+                  aria-label="Next page"
+                  className={cur >= pages ? "pointer-events-none opacity-40" : ""}
+                >
+                  →
+                </PaginationLink>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </div>

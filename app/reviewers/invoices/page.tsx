@@ -2,6 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/guard";
 import { payoutInvoice } from "@/lib/db";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -47,110 +58,107 @@ export default async function InvoicesPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/reviewers" className="text-sm text-ink/50 hover:text-brand">
+        <Link href="/reviewers" className="text-sm text-muted-foreground hover:text-brand">
           ← Reviewers
         </Link>
       </div>
 
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold text-ink tracking-tight">Payout invoices</h1>
-          <p className="text-sm text-ink/55 mt-1 max-w-2xl">
+          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Payout invoices</h1>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             What each reviewer earned from the $1-per-review payouts, month by month. 10 pixels
             = $1 — settle the dollar column however you pay people.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/reviewers/invoices?m=${prev}`} className="pixl-btn bg-[var(--surface)] text-ink text-sm">
-            ←
-          </Link>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/reviewers/invoices?m=${prev}`}>←</Link>
+          </Button>
           <span className="text-sm font-semibold px-1 whitespace-nowrap">{monthName}</span>
-          <Link
-            href={`/reviewers/invoices?m=${next}`}
-            className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-              isCurrent ? "pointer-events-none opacity-40" : ""
-            }`}
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className={isCurrent ? "pointer-events-none opacity-40" : ""}
           >
-            →
-          </Link>
-          <a
-            href={`/api/invoices?m=${key}`}
-            className="pixl-btn bg-ink dark:bg-gray-700 text-white text-sm ml-2"
-          >
-            Download CSV
-          </a>
+            <Link href={`/reviewers/invoices?m=${next}`}>→</Link>
+          </Button>
+          <Button asChild size="sm" className="bg-ink text-white hover:bg-ink/90 ml-2">
+            <a href={`/api/invoices?m=${key}`}>Download CSV</a>
+          </Button>
         </div>
       </div>
 
-      <div className="pixl-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left border-b border-[var(--line)] bg-parch">
-              <th className="p-3">Reviewer</th>
-              <th className="p-3">Reviews paid</th>
-              <th className="p-3">Pixels</th>
-              <th className="p-3">Owed</th>
-              <th className="p-3">Cuts</th>
-              <th className="p-3">Not credited</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
+      <Card className="overflow-hidden py-0">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="p-3">Reviewer</TableHead>
+              <TableHead className="p-3">Reviews paid</TableHead>
+              <TableHead className="p-3">Pixels</TableHead>
+              <TableHead className="p-3">Owed</TableHead>
+              <TableHead className="p-3">Cuts</TableHead>
+              <TableHead className="p-3">Not credited</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((r) => (
-              <tr key={r.slackId} className="hover:bg-cream">
-                <td className="p-3">
+              <TableRow key={r.slackId}>
+                <TableCell className="p-3">
                   <Link href={`/reviewers/${r.slackId}`} className="font-bold hover:text-brand">
                     {r.reviewer}
                   </Link>
-                  <div className="text-xs text-ink/50 font-mono">{r.slackId}</div>
-                </td>
-                <td className="p-3 tabular-nums">{r.payouts}</td>
-                <td className="p-3 tabular-nums">
+                  <div className="text-xs text-muted-foreground font-mono">{r.slackId}</div>
+                </TableCell>
+                <TableCell className="p-3 tabular-nums">{r.payouts}</TableCell>
+                <TableCell className="p-3 tabular-nums">
                   {r.paidPixels}
                   {r.paidPixels < r.fullPixels && (
-                    <span className="text-xs text-ink/50"> of {r.fullPixels}</span>
+                    <span className="text-xs text-muted-foreground"> of {r.fullPixels}</span>
                   )}
-                </td>
-                <td className="p-3 tabular-nums font-semibold">
+                </TableCell>
+                <TableCell className="p-3 tabular-nums font-semibold">
                   ${(r.paidPixels / 10).toFixed(2)}
-                </td>
-                <td
+                </TableCell>
+                <TableCell
                   className={`p-3 tabular-nums ${
                     r.cuts > 0 ? "text-rose-600 dark:text-rose-400 font-bold" : ""
                   }`}
                 >
                   {r.cuts}
-                </td>
-                <td
+                </TableCell>
+                <TableCell
                   className={`p-3 tabular-nums ${
                     r.uncredited > 0 ? "text-tang font-bold" : ""
                   }`}
                 >
                   {r.uncredited}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
             {rows.length === 0 && (
-              <tr>
-                <td className="p-5 text-ink/50" colSpan={6}>
+              <TableRow className="hover:bg-transparent">
+                <TableCell className="p-5 text-muted-foreground" colSpan={6}>
                   No settled payouts in {monthName}.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
+          </TableBody>
           {rows.length > 0 && (
-            <tfoot>
-              <tr className="border-t border-[var(--line)] bg-parch font-semibold">
-                <td className="p-3">Total</td>
-                <td className="p-3 tabular-nums">{totals.payouts}</td>
-                <td className="p-3 tabular-nums">{totals.paidPixels}</td>
-                <td className="p-3 tabular-nums">${(totals.paidPixels / 10).toFixed(2)}</td>
-                <td className="p-3 tabular-nums">{totals.cuts}</td>
-                <td className="p-3" />
-              </tr>
-            </tfoot>
+            <TableFooter>
+              <TableRow className="hover:bg-transparent font-semibold">
+                <TableCell className="p-3">Total</TableCell>
+                <TableCell className="p-3 tabular-nums">{totals.payouts}</TableCell>
+                <TableCell className="p-3 tabular-nums">{totals.paidPixels}</TableCell>
+                <TableCell className="p-3 tabular-nums">${(totals.paidPixels / 10).toFixed(2)}</TableCell>
+                <TableCell className="p-3 tabular-nums">{totals.cuts}</TableCell>
+                <TableCell className="p-3" />
+              </TableRow>
+            </TableFooter>
           )}
-        </table>
-      </div>
+        </Table>
+      </Card>
     </div>
   );
 }

@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { reviewProject } from "@/app/actions";
-import { resetDeductions, subscribeDeductions, totalDeductedMinutes } from "@/app/_components/deflateStore";
+import { initDeductions, clearDeductions, subscribeDeductions, totalDeductedMinutes } from "@/app/_components/deflateStore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function VerdictButtons({ secondPass }: { secondPass: boolean }) {
   const { pending } = useFormStatus();
@@ -11,24 +16,24 @@ function VerdictButtons({ secondPass }: { secondPass: boolean }) {
   const approveLabel = secondPass ? "Approve & credit pixels" : "Approve";
   return (
     <>
-      <button
+      <Button
         name="verdict"
         value="approved"
         disabled={pending}
         onClick={() => setClicked("approved")}
-        className="pixl-btn bg-emerald-700 text-white disabled:opacity-60"
+        className="bg-emerald-600 text-white hover:bg-emerald-700"
       >
         {pending && clicked === "approved" ? "Approving…" : approveLabel}
-      </button>
-      <button
+      </Button>
+      <Button
         name="verdict"
         value="needs_changes"
         disabled={pending}
         onClick={() => setClicked("needs_changes")}
-        className="pixl-btn bg-red-700 text-white disabled:opacity-60"
+        className="bg-red-600 text-white hover:bg-red-700"
       >
         {pending && clicked === "needs_changes" ? "Sending back…" : "Request changes"}
-      </button>
+      </Button>
     </>
   );
 }
@@ -71,12 +76,15 @@ export function ReviewForm({
   const [hours, setHours] = useState(baseHours);
   const [deducted, setDeducted] = useState(0);
   useEffect(() => {
-    resetDeductions();
-    const unsub = subscribeDeductions(() => {
+    const update = () => {
       const mins = totalDeductedMinutes();
       setDeducted(mins);
       setHours(Math.max(0, Math.round((baseHours - mins / 60) * 10) / 10));
-    });
+    };
+    const unsub = subscribeDeductions(update);
+    // Load any saved draft for this project, then sync once.
+    initDeductions(String(projectId));
+    update();
     return unsub;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -115,6 +123,8 @@ export function ReviewForm({
           totalSeconds.current.value = String(
             Math.round((Date.now() - openedAt.current) / 1000),
           );
+        // Verdict submitted — the saved draft has served its purpose.
+        clearDeductions();
       }}
       className="mt-4 flex flex-col gap-2"
     >
@@ -126,28 +136,30 @@ export function ReviewForm({
       <input type="hidden" name="totalSeconds" defaultValue="0" ref={totalSeconds} />
       <div className="flex flex-wrap gap-2 items-center text-sm font-bold">
         {repoUrl && (
-          <a
-            href={repoUrl}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => markOpen("repo")}
-            className="pixl-btn bg-ink dark:bg-gray-700 text-white"
-          >
-            Repo
-          </a>
+          <Button asChild variant="secondary">
+            <a
+              href={repoUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => markOpen("repo")}
+            >
+              Repo
+            </a>
+          </Button>
         )}
         {demoUrl && (
-          <a
-            href={demoUrl}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => markOpen("demo")}
-            className="pixl-btn bg-ink dark:bg-gray-700 text-white"
-          >
-            Demo
-          </a>
+          <Button asChild variant="secondary">
+            <a
+              href={demoUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => markOpen("demo")}
+            >
+              Demo
+            </a>
+          </Button>
         )}
-        <label className="flex items-center gap-2 ml-auto font-normal text-ink/70">
+        <Label className="flex items-center gap-2 ml-auto font-normal text-muted-foreground">
           Hours to credit (decrease only)
           {deducted > 0 && (
             <span className="text-xs text-rose-600 dark:text-rose-400 font-medium" title="Deflated from commits / journals">
@@ -155,7 +167,7 @@ export function ReviewForm({
               {deducted % 60}m
             </span>
           )}
-          <input
+          <Input
             name="approvedHours"
             type="number"
             step="0.1"
@@ -163,9 +175,9 @@ export function ReviewForm({
             max={claimedHours}
             value={hours}
             onChange={(e) => setHours(Math.min(claimedHours, Math.max(0, Number(e.target.value) || 0)))}
-            className="pixl-input w-24 text-sm"
+            className="w-24 text-sm"
           />
-        </label>
+        </Label>
       </div>
       {bounties.length > 0 && (
         <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/[0.06] p-3">
@@ -173,40 +185,40 @@ export function ReviewForm({
             Bounty board — tick what this project meets (paid on final approval)
           </div>
           {bounties.map((b) => (
-            <label key={b.id} className="flex items-start gap-2 text-sm py-0.5">
-              <input type="checkbox" name="bountyIds" value={b.id} className="w-4 h-4 mt-0.5" />
+            <Label key={b.id} className="flex items-start gap-2 text-sm py-0.5 font-normal">
+              <Checkbox name="bountyIds" value={String(b.id)} className="mt-0.5" />
               <span>
                 {b.name} <span className="font-semibold">+{b.reward} px</span>
-                {b.description && <span className="text-ink/55"> — {b.description}</span>}
+                {b.description && <span className="text-muted-foreground"> — {b.description}</span>}
               </span>
-            </label>
+            </Label>
           ))}
         </div>
       )}
       <div className="relative">
-        <textarea
+        <Textarea
           name="auditNote"
           required
           minLength={AUDIT_MIN}
           onChange={(e) => setAuditLen(e.target.value.trim().length)}
           placeholder="Internal audit note — never shown to the player, admins only. What did you check, what did the commits look like, anything sus? Min 150 characters."
-          className="pixl-input w-full text-sm"
+          className="w-full text-sm"
           rows={3}
         />
         <span
           className={`pointer-events-none absolute bottom-1.5 right-2 text-[10px] tabular-nums ${
-            auditLen >= AUDIT_MIN ? "text-emerald-500" : "text-ink/40"
+            auditLen >= AUDIT_MIN ? "text-emerald-500" : "text-muted-foreground"
           }`}
         >
           {auditLen}/{AUDIT_MIN}
         </span>
       </div>
       <div className="flex flex-wrap gap-2 items-start">
-        <textarea
+        <Textarea
           name="note"
           required
           placeholder="Feedback for the player (required)"
-          className="pixl-input flex-1 min-w-64 text-sm"
+          className="flex-1 min-w-64 text-sm"
           rows={2}
         />
         <VerdictButtons secondPass={secondPass} />

@@ -1,6 +1,16 @@
 import Link from "next/link";
 import type { ShippedProject } from "@/lib/db";
 import { LevelBadge, StatusBadge } from "@/app/_components/ProjectBadges";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 function fmtHM(hours: number): string {
   const h = Math.floor(hours);
@@ -40,74 +50,102 @@ export function ReviewTable({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="pixl-card p-10 text-center text-ink/55">{emptyLabel}</div>
+      <Card className="p-10 text-center text-muted-foreground">{emptyLabel}</Card>
     );
   }
   return (
-    <div className="pixl-card overflow-hidden">
-      <div className="hidden md:grid grid-cols-[1fr_240px_140px_120px] gap-4 px-5 py-3 border-b border-[var(--line)] text-xs font-semibold uppercase tracking-wide text-ink/45">
-        <div>Project</div>
-        <div>Maker</div>
-        <div>Status</div>
-        <div className="text-right">Waiting</div>
-      </div>
-      <div className="divide-y divide-[var(--line)]">
-        {rows.map((p) => {
-          const maker =
-            (p.users?.slack_id && handles.get(p.users.slack_id)) ??
-            p.users?.display_name ??
-            p.users?.slack_id ??
-            p.user_id;
-          return (
-            <Link
-              key={p.id}
-              href={`/review/${p.id}`}
-              prefetch={false}
-              className="grid md:grid-cols-[1fr_240px_140px_120px] gap-x-4 gap-y-2 px-5 py-3.5 items-center hover:bg-black/[0.03] dark:hover:bg-white/[0.04] transition-colors"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                {p.image_url ? (
-                  <img
-                    src={p.image_url}
-                    alt=""
-                    className="w-10 h-10 rounded-lg object-cover border border-[var(--line)] shrink-0"
+    <Card className="overflow-hidden py-0">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="px-5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Project
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Maker
+            </TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Status
+            </TableHead>
+            <TableHead className="px-5 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Waiting
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((p) => {
+            const maker =
+              (p.users?.slack_id && handles.get(p.users.slack_id)) ??
+              p.users?.display_name ??
+              p.users?.slack_id ??
+              p.user_id;
+            return (
+              <TableRow key={p.id} className="relative cursor-pointer">
+                <TableCell className="px-5 py-3.5">
+                  <Link
+                    href={`/review/${p.id}`}
+                    prefetch={false}
+                    aria-label={p.name}
+                    className="absolute inset-0 z-10"
                   />
-                ) : (
-                  <span className="w-10 h-10 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] shrink-0" />
-                )}
-                <div className="min-w-0">
-                  <div className="font-semibold truncate">{p.name}</div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-ink/40 font-mono">#{p.id}</span>
-                    <LevelBadge level={p.level} />
+                  <div className="flex items-center gap-3 min-w-0">
+                    {p.image_url ? (
+                      <img
+                        src={p.image_url}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover border border-border shrink-0"
+                      />
+                    ) : (
+                      <span className="w-10 h-10 rounded-lg bg-muted border border-border shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate">{p.name}</div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-muted-foreground font-mono">
+                          #{p.id}
+                        </span>
+                        <LevelBadge level={p.level} />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </TableCell>
 
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="grid place-items-center w-6 h-6 rounded-full bg-brand/15 text-brand text-[0.6rem] font-semibold shrink-0">
-                  {initials(String(maker))}
-                </span>
-                <span className="text-sm truncate text-ink/80">{maker}</span>
-              </div>
+                <TableCell className="py-3.5">
+                  <div className="flex items-center gap-2 min-w-0 max-w-[240px]">
+                    <span className="grid place-items-center w-6 h-6 rounded-full bg-primary/15 text-primary text-[0.6rem] font-semibold shrink-0">
+                      {initials(String(maker))}
+                    </span>
+                    <span className="text-sm truncate text-foreground/80">
+                      {maker}
+                    </span>
+                  </div>
+                </TableCell>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <StatusBadge status={p.status} />
-                {p.own && (
-                  <span className="badge bg-tang/20 text-tang text-[0.65rem] uppercase tracking-wide">
-                    yours
-                  </span>
-                )}
-              </div>
+                <TableCell className="py-3.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <StatusBadge status={p.status} />
+                    {p.own && (
+                      <Badge
+                        variant="warning"
+                        className="text-[0.65rem] uppercase tracking-wide"
+                      >
+                        yours
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
 
-              <div className="md:text-right text-sm">
-                <div className="text-ink/70">{waited(p.shipped_at)}</div>
-                <div className="text-xs text-ink/45">{fmtHM(p.hours)} logged</div>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+                <TableCell className="px-5 py-3.5 text-right">
+                  <div className="text-foreground/70">{waited(p.shipped_at)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {fmtHM(p.hours)} logged
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }

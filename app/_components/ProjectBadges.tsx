@@ -1,23 +1,27 @@
-const TONES = {
-  gray: "bg-black/[0.05] text-ink/70 dark:bg-white/[0.08]",
-  green: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-  amber: "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  rose: "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
-  blue: "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
-  violet: "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
-};
+import { Badge as UIBadge } from "@/components/ui/badge";
+
+type Tone = "gray" | "green" | "amber" | "rose" | "blue" | "violet";
+
+const TONE_VARIANT = {
+  gray: "secondary",
+  green: "success",
+  amber: "warning",
+  rose: "destructive",
+  blue: "info",
+  violet: "violet",
+} as const;
 
 export function Badge({
   tone = "gray",
   children,
 }: {
-  tone?: keyof typeof TONES;
+  tone?: Tone;
   children: React.ReactNode;
 }) {
-  return <span className={`badge ${TONES[tone]}`}>{children}</span>;
+  return <UIBadge variant={TONE_VARIANT[tone]}>{children}</UIBadge>;
 }
 
-const STATUS: Record<string, { label: string; tone: keyof typeof TONES; dot: string }> = {
+const STATUS: Record<string, { label: string; tone: Tone; dot: string }> = {
   draft: { label: "Draft", tone: "gray", dot: "bg-gray-400" },
   shipped: { label: "In review", tone: "amber", dot: "bg-amber-500" },
   second_review: { label: "Final review", tone: "violet", dot: "bg-violet-500" },

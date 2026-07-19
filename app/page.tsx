@@ -1,10 +1,20 @@
 import Link from "next/link";
 import { requireAdmin, canView } from "@/lib/guard";
-import { getStats, getGrowthSeries, listViolations, listActivityFeed } from "@/lib/db";
+import {
+  getStats,
+  getGrowthSeries,
+  listViolations,
+  listActivityFeed,
+} from "@/lib/db";
 import { GrowthChart } from "@/app/_components/GrowthChart";
 import { Badge } from "@/app/_components/ProjectBadges";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const FEED_BADGE: Record<string, { label: string; tone: "amber" | "rose" | "green" | "blue" }> = {
+const FEED_BADGE: Record<
+  string,
+  { label: string; tone: "amber" | "rose" | "green" | "blue" }
+> = {
   mod: { label: "mod", tone: "amber" },
   team: { label: "team", tone: "rose" },
   review: { label: "review", tone: "green" },
@@ -40,150 +50,222 @@ export default async function Overview({
   ]);
 
   const cards = [
-    { label: "Players", value: stats.players, delta: stats.playersWeek, accent: false },
-    { label: "Projects", value: stats.projects, delta: stats.projectsWeek, accent: false },
+    {
+      label: "Players",
+      value: stats.players,
+      delta: stats.playersWeek,
+      accent: false,
+    },
+    {
+      label: "Projects",
+      value: stats.projects,
+      delta: stats.projectsWeek,
+      accent: false,
+    },
     ...(showModeration
       ? [
-          { label: "Violations · 7d", value: stats.violations7d, delta: null, accent: false },
-          { label: "Active bans", value: stats.activeBans, delta: null, accent: true },
+          {
+            label: "Violations · 7d",
+            value: stats.violations7d,
+            delta: null,
+            accent: false,
+          },
+          {
+            label: "Active bans",
+            value: stats.activeBans,
+            delta: null,
+            accent: true,
+          },
         ]
       : []),
   ];
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 w-full">
         {cards.map((c) => (
-          <div key={c.label} className="pixl-card p-5">
-            <div className="text-sm font-medium text-ink/55">{c.label}</div>
-            <div className="flex items-end gap-2 mt-2">
-              <div
-                className={`text-3xl font-semibold tabular-nums ${
-                  c.accent ? "text-brand" : "text-ink"
-                }`}
-              >
-                {c.value.toLocaleString()}
+          <Card key={c.label} className="w-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {c.label}
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              <div className="flex items-end gap-2">
+                <div
+                  className={`text-3xl font-bold tabular-nums ${
+                    c.accent ? "text-brand" : ""
+                  }`}
+                >
+                  {c.value.toLocaleString()}
+                </div>
+
+                {c.delta !== null && c.delta > 0 && (
+                  <span className="text-xs font-medium text-emerald-500">
+                    ▲ {c.delta}/wk
+                  </span>
+                )}
               </div>
-              {c.delta !== null && c.delta > 0 && (
-                <span className="mb-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                  ▲ {c.delta} / wk
-                </span>
-              )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold text-ink tracking-tight mb-3">New players</h3>
+        <h3 className="text-lg font-semibold text-foreground tracking-tight mb-3">
+          New players
+        </h3>
         <div className="grid grid-cols-3 gap-4">
           {[
             { label: "Today", value: stats.playersToday },
             { label: "This week", value: stats.playersWeek },
             { label: "This month", value: stats.playersMonth },
           ].map((c) => (
-            <div key={c.label} className="pixl-card p-5">
-              <div className="text-sm font-medium text-ink/55">{c.label}</div>
-              <div className="text-3xl font-semibold text-ink tabular-nums mt-2">
+            <Card key={c.label} className="p-5 gap-0">
+              <div className="text-sm font-medium text-muted-foreground">{c.label}</div>
+              <div className="text-3xl font-semibold text-foreground tabular-nums mt-2">
                 +{c.value.toLocaleString()}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       </div>
 
       <div>
         <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-          <h3 className="text-lg font-semibold text-ink tracking-tight">Growth</h3>
-          <div className="inline-flex items-center rounded-lg border border-[var(--line)] p-0.5 bg-[var(--surface)]">
+          <h3 className="text-lg font-semibold text-foreground tracking-tight">
+            Growth
+          </h3>
+          <div className="inline-flex items-center rounded-lg border border-border p-0.5 bg-card">
             {RANGES.map((r) => (
-              <Link
+              <Button
                 key={r}
-                href={r === 30 ? "/" : `/?range=${r}`}
-                className={`px-2.5 py-1 text-xs font-medium rounded-md transition-colors ${
-                  r === days
-                    ? "bg-ink text-white"
-                    : "text-ink/60 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
+                asChild
+                variant="ghost"
+                size="sm"
+                className={r === days ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : ""}
               >
-                {r}d
-              </Link>
+                <Link href={r === 30 ? "/" : `/?range=${r}`}>{r}d</Link>
+              </Button>
             ))}
           </div>
         </div>
         <div className="grid lg:grid-cols-2 gap-4">
-          <div className="pixl-card p-5">
-            <GrowthChart title="Players" series="players" kind="cumulative" points={growth.players} />
-          </div>
-          <div className="pixl-card p-5">
-            <GrowthChart title="Projects" series="projects" kind="cumulative" points={growth.projects} />
-          </div>
+          <Card className="p-5">
+            <GrowthChart
+              title="Players"
+              series="players"
+              kind="cumulative"
+              points={growth.players}
+            />
+          </Card>
+          <Card className="p-5">
+            <GrowthChart
+              title="Projects"
+              series="projects"
+              kind="cumulative"
+              points={growth.projects}
+            />
+          </Card>
           {showModeration && (
-            <div className="pixl-card p-5 lg:col-span-2">
-              <GrowthChart title="Violations" series="violations" kind="daily" points={growth.violations} />
-            </div>
+            <Card className="p-5 lg:col-span-2">
+              <GrowthChart
+                title="Violations"
+                series="violations"
+                kind="daily"
+                points={growth.violations}
+              />
+            </Card>
           )}
         </div>
       </div>
 
       {feed.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-ink tracking-tight mb-3">Activity</h3>
-          <div className="pixl-card divide-y divide-[var(--line)]">
+          <h3 className="text-lg font-semibold text-foreground tracking-tight mb-3">
+            Activity
+          </h3>
+          <Card className="divide-y divide-border py-0">
             {feed.map((f, i) => {
               const badge = FEED_BADGE[f.kind] ?? FEED_BADGE.mod;
               return (
-                <div key={i} className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <div
+                  key={i}
+                  className="p-3.5 flex flex-wrap items-center gap-x-3 gap-y-1"
+                >
                   <Badge tone={badge.tone}>{badge.label}</Badge>
                   <div className="flex-1 min-w-0">
                     {f.href ? (
-                      <Link href={f.href} className="font-medium text-sm hover:text-brand">
+                      <Link
+                        href={f.href}
+                        className="font-medium text-sm hover:text-brand"
+                      >
                         {f.text}
                       </Link>
                     ) : (
                       <span className="font-medium text-sm">{f.text}</span>
                     )}
                     {f.detail && (
-                      <div className="text-xs text-ink/55 truncate">{f.detail}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {f.detail}
+                      </div>
                     )}
                   </div>
-                  <div className="text-xs text-ink/45 shrink-0">
+                  <div className="text-xs text-muted-foreground shrink-0">
                     {new Date(f.when).toLocaleString()}
                   </div>
                 </div>
               );
             })}
-          </div>
+          </Card>
         </div>
       )}
 
       {showModeration && (
         <div>
           <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
-            <h3 className="text-lg font-semibold text-ink tracking-tight">Latest violations</h3>
-            <Link href="/violations" className="text-brand font-medium text-sm hover:underline">
+            <h3 className="text-lg font-semibold text-foreground tracking-tight">
+              Latest violations
+            </h3>
+            <Link
+              href="/violations"
+              className="text-brand font-medium text-sm hover:underline"
+            >
               See all →
             </Link>
           </div>
-          <div className="pixl-card divide-y divide-[var(--line)]">
+          <Card className="divide-y divide-border py-0">
             {recent.length === 0 && (
-              <div className="p-5 text-ink/50 text-sm">Nothing yet — squeaky clean.</div>
+              <div className="p-5 text-muted-foreground text-sm">
+                Nothing yet — squeaky clean.
+              </div>
             )}
             {recent.map((v) => (
-              <div key={v.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1">
-                <Badge tone={v.kind === "chat" ? "amber" : "rose"}>{v.kind}</Badge>
+              <div
+                key={v.id}
+                className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1"
+              >
+                <Badge tone={v.kind === "chat" ? "amber" : "rose"}>
+                  {v.kind}
+                </Badge>
                 <div className="flex-1 min-w-0">
-                  <Link href={`/players/${v.user_id}`} className="font-medium hover:text-brand">
+                  <Link
+                    href={`/players/${v.user_id}`}
+                    className="font-medium hover:text-brand"
+                  >
                     {v.users?.display_name ?? v.user_id}
                   </Link>
-                  <div className="text-sm text-ink/60 truncate">“{v.content}”</div>
+                  <div className="text-sm text-muted-foreground truncate">
+                    “{v.content}”
+                  </div>
                 </div>
-                <div className="text-xs text-ink/45 shrink-0">
+                <div className="text-xs text-muted-foreground shrink-0">
                   {new Date(v.created_at).toLocaleString()}
                 </div>
               </div>
             ))}
-          </div>
+          </Card>
         </div>
       )}
     </div>

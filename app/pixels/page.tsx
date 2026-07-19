@@ -3,6 +3,24 @@ import { redirect } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { listPixelTransactions } from "@/lib/db";
 import { PixelAdjustForm } from "@/app/_components/PixelAdjustForm";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -70,146 +88,159 @@ export default async function PixelsPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-1">Pixels log</h1>
-      <p className="text-sm text-ink/55 mb-5">
+      <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-1">Pixels log</h1>
+      <p className="text-sm text-muted-foreground mb-5">
         Every pixel movement — who it went to, how many, why, and who granted it. 1 hour = 5
         pixels · 10 pixels = $1 · whole pixels only.
       </p>
 
       {error && (
-        <div className="pixl-card p-3 mb-4 text-sm font-medium text-rose-600">{error}</div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription className="font-medium text-destructive">{error}</AlertDescription>
+        </Alert>
       )}
       {adjusted && (
-        <div className="pixl-card p-3 mb-4 text-sm font-medium text-hc-green">
-          Balance adjusted — it&apos;s in the ledger below.
-        </div>
+        <Alert className="mb-4">
+          <AlertDescription className="font-medium text-hc-green">
+            Balance adjusted — it&apos;s in the ledger below.
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <Link href={qp({ filter: "given" })} className="pixl-card p-4 hover:border-hc-green/50 transition-colors">
-          <div className="text-xs font-medium text-ink/50 uppercase tracking-wide">Given out</div>
-          <div className="text-2xl font-bold mt-1 tabular-nums text-hc-green">{fmt(issued)}</div>
-          <div className="text-xs text-ink/45 mt-0.5">≈ ${(issued / 10).toFixed(2)}</div>
+        <Link href={qp({ filter: "given" })} className="block">
+          <Card className="p-4 gap-0 h-full transition-[box-shadow] hover:ring-hc-green/50">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Given out</div>
+            <div className="text-2xl font-bold mt-1 tabular-nums text-hc-green">{fmt(issued)}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">≈ ${(issued / 10).toFixed(2)}</div>
+          </Card>
         </Link>
-        <Link href={qp({ filter: "spent" })} className="pixl-card p-4 hover:border-brand/50 transition-colors">
-          <div className="text-xs font-medium text-ink/50 uppercase tracking-wide">Spent / removed</div>
-          <div className="text-2xl font-bold mt-1 tabular-nums text-brand">{fmt(-spent)}</div>
-          <div className="text-xs text-ink/45 mt-0.5">≈ ${(-spent / 10).toFixed(2)}</div>
+        <Link href={qp({ filter: "spent" })} className="block">
+          <Card className="p-4 gap-0 h-full transition-[box-shadow] hover:ring-brand/50">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Spent / removed</div>
+            <div className="text-2xl font-bold mt-1 tabular-nums text-brand">{fmt(-spent)}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">≈ ${(-spent / 10).toFixed(2)}</div>
+          </Card>
         </Link>
-        <Link href={qp({ filter: "all" })} className="pixl-card p-4 hover:border-[var(--line-strong)] transition-colors">
-          <div className="text-xs font-medium text-ink/50 uppercase tracking-wide">Net in wallets</div>
-          <div className="text-2xl font-bold mt-1 tabular-nums">{fmt(net)}</div>
-          <div className="text-xs text-ink/45 mt-0.5">≈ ${(net / 10).toFixed(2)}</div>
+        <Link href={qp({ filter: "all" })} className="block">
+          <Card className="p-4 gap-0 h-full transition-[box-shadow] hover:ring-foreground/25">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Net in wallets</div>
+            <div className="text-2xl font-bold mt-1 tabular-nums">{fmt(net)}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">≈ ${(net / 10).toFixed(2)}</div>
+          </Card>
         </Link>
       </div>
 
       {access.isSuper && <PixelAdjustForm />}
 
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-        <div className="inline-flex items-center rounded-lg border border-[var(--line)] p-0.5 bg-[var(--surface)]">
+        <div className="inline-flex items-center rounded-lg border border-border p-0.5 bg-card">
           {filters.map((f) => (
-            <Link
+            <Button
               key={f.key}
-              href={qp({ filter: f.key })}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                activeFilter === f.key
-                  ? "bg-ink text-white"
-                  : "text-ink/60 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
-              }`}
+              asChild
+              variant="ghost"
+              size="sm"
+              className={activeFilter === f.key ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : ""}
             >
-              {f.label}
-            </Link>
+              <Link href={qp({ filter: f.key })}>{f.label}</Link>
+            </Button>
           ))}
         </div>
         {user && (
-          <Link
-            href={activeFilter !== "all" ? `/pixels?filter=${activeFilter}` : "/pixels"}
-            className="badge bg-brand/10 text-brand hover:bg-brand/20"
-          >
-            {userName} ✕
-          </Link>
+          <Badge asChild variant="destructive">
+            <Link href={activeFilter !== "all" ? `/pixels?filter=${activeFilter}` : "/pixels"}>
+              {userName} ✕
+            </Link>
+          </Badge>
         )}
       </div>
 
-      <div className="pixl-card overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left border-b border-[var(--line)] text-ink/60">
-              <th className="p-3 font-medium">Player</th>
-              <th className="p-3 font-medium">Amount</th>
-              <th className="p-3 font-medium">Reason</th>
-              <th className="p-3 font-medium">Project</th>
-              <th className="p-3 font-medium">By</th>
-              <th className="p-3 font-medium">When</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--line)]">
+      <Card className="overflow-hidden py-0">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="p-3 font-medium">Player</TableHead>
+              <TableHead className="p-3 font-medium">Amount</TableHead>
+              <TableHead className="p-3 font-medium">Reason</TableHead>
+              <TableHead className="p-3 font-medium">Project</TableHead>
+              <TableHead className="p-3 font-medium">By</TableHead>
+              <TableHead className="p-3 font-medium">When</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {slice.map((t) => (
-              <tr key={t.id}>
-                <td className="p-3">
+              <TableRow key={t.id}>
+                <TableCell className="p-3">
                   <Link href={`/pixels?user=${t.user_id}`} className="font-medium hover:text-brand">
                     {t.player_name}
                   </Link>
-                </td>
-                <td
+                </TableCell>
+                <TableCell
                   className={`p-3 tabular-nums font-semibold ${
                     t.amount >= 0 ? "text-hc-green" : "text-brand"
                   }`}
                 >
                   {t.amount >= 0 ? "+" : "−"}
                   {fmt(Math.abs(t.amount))}
-                </td>
-                <td className="p-3 text-ink/70">{REASON_LABEL[t.reason] ?? (t.reason || "—")}</td>
-                <td className="p-3">
+                </TableCell>
+                <TableCell className="p-3 text-foreground/70">{REASON_LABEL[t.reason] ?? (t.reason || "—")}</TableCell>
+                <TableCell className="p-3">
                   {t.project_id != null ? (
                     <Link href={`/projects/${t.project_id}`} className="hover:text-brand">
                       {t.project_name}
                     </Link>
                   ) : (
-                    <span className="text-ink/40">—</span>
+                    <span className="text-muted-foreground">—</span>
                   )}
-                </td>
-                <td className="p-3 text-ink/60">{t.created_by || "—"}</td>
-                <td className="p-3 text-ink/60">{new Date(t.created_at).toLocaleString()}</td>
-              </tr>
+                </TableCell>
+                <TableCell className="p-3 text-muted-foreground">{t.created_by || "—"}</TableCell>
+                <TableCell className="p-3 text-muted-foreground">{new Date(t.created_at).toLocaleString()}</TableCell>
+              </TableRow>
             ))}
             {slice.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-5 text-ink/50">
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={6} className="p-5 text-muted-foreground">
                   No pixel activity matches.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
       {total > 0 && (
         <div className="flex items-center justify-between gap-3 mt-4 text-sm">
-          <span className="text-ink/50">
+          <span className="text-muted-foreground">
             Showing {start + 1}–{Math.min(start + PER, total)} of {total}
           </span>
-          <div className="flex items-center gap-2">
-            <Link
-              href={qp({ page: cur - 1 })}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur <= 1 ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              ←
-            </Link>
-            <span className="text-ink/60 tabular-nums px-1">
-              {cur} / {pages}
-            </span>
-            <Link
-              href={qp({ page: cur + 1 })}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur >= pages ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              →
-            </Link>
-          </div>
+          <Pagination className="mx-0 w-auto justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationLink
+                  href={qp({ page: cur - 1 })}
+                  aria-label="Previous page"
+                  className={cur <= 1 ? "pointer-events-none opacity-40" : ""}
+                >
+                  ←
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-2 text-muted-foreground tabular-nums">
+                  {cur} / {pages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink
+                  href={qp({ page: cur + 1 })}
+                  aria-label="Next page"
+                  className={cur >= pages ? "pointer-events-none opacity-40" : ""}
+                >
+                  →
+                </PaginationLink>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </div>

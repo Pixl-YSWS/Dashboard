@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { adjustPixels, searchPlayers, type PlayerHit } from "@/app/actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 function SubmitButton({ mode }: { mode: "deduct" | "grant" }) {
   const { pending } = useFormStatus();
   return (
-    <button
+    <Button
       disabled={pending}
-      className={`pixl-btn text-white border-transparent text-sm disabled:opacity-60 ${
-        mode === "deduct" ? "bg-brand" : "bg-hc-green"
+      className={`text-white border-transparent ${
+        mode === "deduct" ? "bg-brand hover:bg-brand/90" : "bg-hc-green hover:bg-hc-green/90"
       }`}
     >
       {pending
@@ -20,7 +23,7 @@ function SubmitButton({ mode }: { mode: "deduct" | "grant" }) {
         : mode === "deduct"
           ? "Deduct pixels"
           : "Grant pixels"}
-    </button>
+    </Button>
   );
 }
 
@@ -70,14 +73,14 @@ export function PixelAdjustForm() {
   }, []);
 
   return (
-    <details className="pixl-card p-4 mb-6">
+    <details className="rounded-xl border border-border bg-card p-4 mb-6">
       <summary className="cursor-pointer text-sm font-semibold select-none">
         Adjust a player&apos;s pixels (owners only)
       </summary>
       <form action={adjustPixels} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto_auto] items-start">
         <div ref={boxRef} className="relative">
           {selected && <input type="hidden" name="userId" value={selected.id} />}
-          <input
+          <Input
             autoComplete="off"
             value={player}
             onChange={(e) => {
@@ -87,12 +90,12 @@ export function PixelAdjustForm() {
             onFocus={() => hits.length > 0 && setOpen(true)}
             placeholder="Search player…"
             required
-            className="pixl-input w-full text-sm"
+            className="w-full text-sm"
           />
           {open && (
-            <div className="absolute z-20 mt-1 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg overflow-hidden">
+            <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg overflow-hidden">
               {searching && hits.length === 0 && (
-                <div className="px-3 py-2 text-sm text-ink/50">Searching…</div>
+                <div className="px-3 py-2 text-sm text-muted-foreground">Searching…</div>
               )}
               {hits.map((h) => (
                 <button
@@ -103,53 +106,53 @@ export function PixelAdjustForm() {
                     setPlayer(h.name);
                     setOpen(false);
                   }}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-black/5 dark:hover:bg-white/10"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
                 >
                   {h.name}
                 </button>
               ))}
               {!searching && hits.length === 0 && (
-                <div className="px-3 py-2 text-sm text-ink/50">No players found.</div>
+                <div className="px-3 py-2 text-sm text-muted-foreground">No players found.</div>
               )}
             </div>
           )}
         </div>
-        <div className="inline-flex items-center rounded-lg border border-[var(--line)] p-0.5 bg-[var(--surface)]">
+        <div className="inline-flex items-center rounded-lg border border-border p-0.5 bg-card">
           <input type="hidden" name="mode" value={mode} />
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setMode("deduct")}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md ${
-              mode === "deduct" ? "bg-brand text-white" : "text-ink/60 hover:text-ink"
-            }`}
+            className={mode === "deduct" ? "bg-brand text-white hover:bg-brand/90" : ""}
           >
             Deduct
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={() => setMode("grant")}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md ${
-              mode === "grant" ? "bg-hc-green text-white" : "text-ink/60 hover:text-ink"
-            }`}
+            className={mode === "grant" ? "bg-hc-green text-white hover:bg-hc-green/90" : ""}
           >
             Grant
-          </button>
+          </Button>
         </div>
-        <input
+        <Input
           name="amount"
           type="number"
           min="1"
           step="1"
           required
           placeholder="Pixels"
-          className="pixl-input w-28 text-sm"
+          className="w-28 text-sm"
         />
-        <textarea
+        <Textarea
           name="reason"
           required
           rows={2}
           placeholder="Reason (required — shown to the player and kept in the log)…"
-          className="pixl-input text-sm resize-y sm:col-span-2"
+          className="text-sm resize-y sm:col-span-2"
         />
         <SubmitButton mode={mode} />
       </form>

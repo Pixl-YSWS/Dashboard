@@ -3,6 +3,16 @@ import { requirePagePerm } from "@/lib/guard";
 import { listViolations } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
 import { BanForm, WarnForm } from "@/app/_components/Moderate";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
 
 export const dynamic = "force-dynamic";
 
@@ -57,43 +67,43 @@ export default async function ViolationsPage({
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-1">Violations</h1>
-      <p className="text-sm text-ink/55 mb-5">
+      <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-1">Violations</h1>
+      <p className="text-sm text-muted-foreground mb-5">
         Every censored chat message and rejected display name, newest first.
       </p>
 
       <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-        <div className="inline-flex items-center rounded-lg border border-[var(--line)] p-0.5 bg-[var(--surface)]">
+        <div className="inline-flex items-center rounded-lg border border-border p-0.5 bg-card">
           {filters.map((f) => (
-            <Link
+            <Button
               key={f.key}
-              href={withParams({ kind: f.key })}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 ${
-                activeKind === f.key
-                  ? "bg-ink text-white"
-                  : "text-ink/60 hover:text-ink hover:bg-black/5 dark:hover:bg-white/10"
-              }`}
+              asChild
+              variant="ghost"
+              size="sm"
+              className={activeKind === f.key ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : ""}
             >
-              {f.label}
-              <span className="text-[0.7rem] opacity-70">{f.count}</span>
-            </Link>
+              <Link href={withParams({ kind: f.key })}>
+                {f.label}
+                <span className="text-[0.7rem] opacity-70">{f.count}</span>
+              </Link>
+            </Button>
           ))}
         </div>
         <form className="flex gap-2">
           {activeKind !== "all" && <input type="hidden" name="kind" value={activeKind} />}
-          <input
+          <Input
             name="q"
             defaultValue={q ?? ""}
             placeholder="Search player or text…"
-            className="pixl-input text-sm min-w-0 w-56"
+            className="text-sm min-w-0 w-56"
           />
-          <button className="pixl-btn bg-ink text-white text-sm">Search</button>
+          <Button type="submit">Search</Button>
         </form>
       </div>
 
-      <div className="pixl-card divide-y divide-[var(--line)]">
+      <Card className="divide-y divide-border py-0">
         {slice.length === 0 && (
-          <div className="p-6 text-ink/50 text-sm text-center">No violations match.</div>
+          <div className="p-6 text-muted-foreground text-sm text-center">No violations match.</div>
         )}
         {slice.map((v) => {
           const name = v.users?.display_name ?? v.user_id;
@@ -108,7 +118,7 @@ export default async function ViolationsPage({
           return (
             <div key={v.id} className="p-4">
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="grid place-items-center w-8 h-8 rounded-full bg-brand/15 text-brand text-xs font-semibold shrink-0">
+                <span className="grid place-items-center w-8 h-8 rounded-full bg-primary/15 text-primary text-xs font-semibold shrink-0">
                   {initials}
                 </span>
                 <div className="min-w-0">
@@ -118,23 +128,20 @@ export default async function ViolationsPage({
                   >
                     {name}
                   </Link>
-                  <span className="text-xs text-ink/45">
+                  <span className="text-xs text-muted-foreground">
                     {handle ? `${handle} · ` : ""}
                     {!v.users?.slack_id && "no slack — can't DM · "}
                     {new Date(v.created_at).toLocaleString()}
                   </span>
                 </div>
-                <span
-                  className={`badge ml-auto ${
-                    v.kind === "chat"
-                      ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-                      : "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-                  }`}
+                <Badge
+                  variant={v.kind === "chat" ? "warning" : "destructive"}
+                  className="ml-auto"
                 >
                   {v.kind === "chat" ? "chat" : v.kind}
-                </span>
+                </Badge>
               </div>
-              <div className="text-sm bg-[var(--surface-2)] border border-[var(--line)] rounded-lg px-3 py-1.5 my-2 break-words">
+              <div className="text-sm bg-muted border border-border rounded-lg px-3 py-1.5 my-2 break-words">
                 {v.content}
               </div>
               <div className="flex gap-3 flex-wrap">
@@ -144,34 +151,40 @@ export default async function ViolationsPage({
             </div>
           );
         })}
-      </div>
+      </Card>
 
       {total > PER && (
         <div className="flex items-center justify-between gap-3 mt-4 text-sm">
-          <span className="text-ink/50">
+          <span className="text-muted-foreground">
             Showing {start + 1}–{Math.min(start + PER, total)} of {total}
           </span>
-          <div className="flex items-center gap-2">
-            <Link
-              href={withParams({ page: String(cur - 1) })}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur <= 1 ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              ←
-            </Link>
-            <span className="text-ink/60 tabular-nums px-1">
-              {cur} / {pages}
-            </span>
-            <Link
-              href={withParams({ page: String(cur + 1) })}
-              className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-                cur >= pages ? "pointer-events-none opacity-40" : ""
-              }`}
-            >
-              →
-            </Link>
-          </div>
+          <Pagination className="mx-0 w-auto justify-end">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationLink
+                  href={withParams({ page: String(cur - 1) })}
+                  aria-label="Previous page"
+                  className={cur <= 1 ? "pointer-events-none opacity-40" : ""}
+                >
+                  ←
+                </PaginationLink>
+              </PaginationItem>
+              <PaginationItem>
+                <span className="px-2 text-muted-foreground tabular-nums">
+                  {cur} / {pages}
+                </span>
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationLink
+                  href={withParams({ page: String(cur + 1) })}
+                  aria-label="Next page"
+                  className={cur >= pages ? "pointer-events-none opacity-40" : ""}
+                >
+                  →
+                </PaginationLink>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </div>

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StatusBadge } from "@/app/_components/ProjectBadges";
+import { Input } from "@/components/ui/input";
+import { Kbd } from "@/components/ui/kbd";
 
 interface PlayerHit {
   id: string;
@@ -137,14 +139,14 @@ export function GlobalSearch() {
     <div ref={wrapRef} className="relative w-full">
       <div className="relative">
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40 pointer-events-none"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none z-10"
           width="16" height="16" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
         >
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.2-3.2" />
         </svg>
-        <input
+        <Input
           ref={inputRef}
           value={q}
           onChange={(e) => {
@@ -154,28 +156,28 @@ export function GlobalSearch() {
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
           placeholder="Search players, projects…"
-          className="pixl-input w-full pl-9 pr-12 h-9 py-0"
+          className="w-full pl-9 pr-12 h-9"
           aria-label="Global search"
         />
-        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 text-[0.65rem] text-ink/45 border border-[var(--line)] rounded px-1.5 py-0.5 pointer-events-none">
+        <Kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 hidden sm:flex pointer-events-none">
           ⌘K
-        </kbd>
+        </Kbd>
       </div>
 
       {showPanel && (
-        <div className="absolute z-40 mt-2 w-full pixl-card p-1.5 max-h-[70vh] overflow-y-auto shadow-lg">
+        <div className="absolute z-40 mt-2 w-full rounded-xl border border-border bg-popover p-1.5 max-h-[70vh] overflow-y-auto shadow-lg">
           {loading && items.length === 0 && (
-            <div className="px-3 py-3 text-sm text-ink/50">Searching…</div>
+            <div className="px-3 py-3 text-sm text-muted-foreground">Searching…</div>
           )}
           {!loading && items.length === 0 && (
-            <div className="px-3 py-3 text-sm text-ink/50">No matches for “{q.trim()}”.</div>
+            <div className="px-3 py-3 text-sm text-muted-foreground">No matches for “{q.trim()}”.</div>
           )}
           {(["Players", "Projects"] as const).map((group) => {
             const groupItems = items.filter((i) => i.group === group);
             if (groupItems.length === 0) return null;
             return (
               <div key={group} className="mb-1 last:mb-0">
-                <div className="px-3 pt-2 pb-1 text-[0.68rem] font-semibold uppercase tracking-wide text-ink/40">
+                <div className="px-3 pt-2 pb-1 text-[0.68rem] font-semibold uppercase tracking-wide text-muted-foreground">
                   {group}
                 </div>
                 {groupItems.map((item) => {
@@ -189,12 +191,12 @@ export function GlobalSearch() {
                       onMouseEnter={() => setActive(idx)}
                       onClick={() => go(item)}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
-                        isActive ? "bg-brand/10 text-brand" : "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                        isActive ? "bg-primary/10 text-primary" : "hover:bg-muted"
                       }`}
                     >
                       <span className="flex-1 min-w-0 truncate font-medium">{item.label}</span>
                       {item.sub && (
-                        <span className="text-xs text-ink/45 truncate shrink-0 max-w-[40%]">
+                        <span className="text-xs text-muted-foreground truncate shrink-0 max-w-[40%]">
                           {item.sub}
                         </span>
                       )}

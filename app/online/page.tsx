@@ -2,6 +2,18 @@ import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
 import { fetchOnlinePlayers, gameServerConfigured } from "@/lib/gameServer";
 import { kickPlayer } from "@/app/actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -19,67 +31,67 @@ export default async function OnlinePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-ink tracking-tight">Online now</h1>
-        <p className="text-sm text-ink/55 mt-1">
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Online now</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Live view from the game server. Kicking disconnects the player immediately; they can
           reconnect unless you ban them.
         </p>
       </div>
 
       {players === null ? (
-        <div className="pixl-card p-8 text-center text-ink/55 text-sm">
+        <Card className="p-8 text-center text-muted-foreground text-sm">
           {gameServerConfigured()
             ? "Couldn't reach the game server. It might be restarting — try again in a minute."
             : "Not configured — set PIXL_SERVER_URL and ADMIN_API_KEY in the dashboard env."}
-        </div>
+        </Card>
       ) : players.length === 0 ? (
-        <div className="pixl-card p-8 text-center text-ink/55 text-sm">
-          Nobody's online right now.
-        </div>
+        <Card className="p-8 text-center text-muted-foreground text-sm">
+          Nobody&apos;s online right now.
+        </Card>
       ) : (
-        <div className="pixl-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b border-[var(--line)] bg-parch">
-                <th className="p-3">Player</th>
-                <th className="p-3">Where</th>
-                {canKick && <th className="p-3">Kick</th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
+        <Card className="overflow-hidden py-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="p-3">Player</TableHead>
+                <TableHead className="p-3">Where</TableHead>
+                {canKick && <TableHead className="p-3">Kick</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {players.map((p) => (
-                <tr key={p.userId} className="hover:bg-cream">
-                  <td className="p-3">
+                <TableRow key={p.userId}>
+                  <TableCell className="p-3">
                     <Link href={`/players/${p.userId}`} className="font-bold hover:text-brand">
                       {p.displayName || "Player"}
                     </Link>
-                    <div className="text-xs text-ink/50 font-mono">{p.userId}</div>
-                  </td>
-                  <td className="p-3">
-                    <span className="badge bg-mint/30 dark:bg-mint/20">{sceneLabel(p.scene)}</span>
-                  </td>
+                    <div className="text-xs text-muted-foreground font-mono">{p.userId}</div>
+                  </TableCell>
+                  <TableCell className="p-3">
+                    <Badge variant="success">{sceneLabel(p.scene)}</Badge>
+                  </TableCell>
                   {canKick && (
-                    <td className="p-3">
+                    <TableCell className="p-3">
                       <form action={kickPlayer} className="flex gap-2 items-center flex-wrap">
                         <input type="hidden" name="userId" value={p.userId} />
-                        <input
+                        <Input
                           name="reason"
                           maxLength={100}
                           placeholder="Reason (optional)"
-                          className="pixl-input text-sm w-44"
+                          className="text-sm w-44"
                         />
-                        <button className="pixl-btn bg-tang text-ink text-sm">Kick</button>
+                        <Button className="bg-tang text-white hover:bg-tang/90">Kick</Button>
                       </form>
-                    </td>
+                    </TableCell>
                   )}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
-      <div className="text-xs text-ink/45">
+      <div className="text-xs text-muted-foreground">
         {players !== null &&
           `${players.length} player${players.length === 1 ? "" : "s"} online · refresh the page to update`}
       </div>

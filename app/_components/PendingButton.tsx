@@ -1,24 +1,21 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 
 export function PendingButton({
-  className,
   children,
   pendingText = "Working…",
-}: {
-  className?: string;
+  ...props
+}: ComponentProps<typeof Button> & {
   children: ReactNode;
   pendingText?: string;
 }) {
   const { pending } = useFormStatus();
   return (
-    <button
-      disabled={pending}
-      className={`${className ?? ""} disabled:opacity-60 disabled:pointer-events-none`}
-    >
+    <Button disabled={pending} {...props}>
       {pending ? pendingText : children}
-    </button>
+    </Button>
   );
 }

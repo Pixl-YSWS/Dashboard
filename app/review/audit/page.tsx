@@ -3,14 +3,19 @@ import { redirect } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { listReviewAudits, countPendingReviews } from "@/lib/db";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
-const VERDICT_BADGE: Record<string, string> = {
-  approved: "bg-mint/30 dark:bg-mint/20",
-  first_pass_approved: "bg-parch",
-  needs_changes: "bg-tang/20 text-tang",
-  reverted: "bg-brand/15 text-brand",
+const VERDICT_VARIANT: Record<
+  string,
+  "success" | "secondary" | "warning" | "destructive"
+> = {
+  approved: "success",
+  first_pass_approved: "secondary",
+  needs_changes: "warning",
+  reverted: "destructive",
 };
 
 export default async function AuditNotesPage() {
@@ -22,18 +27,18 @@ export default async function AuditNotesPage() {
   return (
     <div>
       <ReviewTabs isSuper={access.isSuper} pending={pending} />
-      <p className="text-sm text-ink/55 mb-4 max-w-2xl">
+      <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
         Internal notes reviewers write with every verdict. Players never see these — they&apos;re
         for audits and fraud checks.
       </p>
       {withNotes.length === 0 ? (
-        <div className="pixl-card p-8 text-center text-ink/55 text-sm">
+        <Card className="p-8 text-center text-muted-foreground text-sm">
           No audit notes yet — they&apos;ll appear as reviews come in.
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
           {withNotes.map((a) => (
-            <div key={a.id} className="pixl-card p-5">
+            <Card key={a.id} className="p-5 gap-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
                   href={`/projects/${a.project_id}`}
@@ -41,21 +46,21 @@ export default async function AuditNotesPage() {
                 >
                   {a.project_name}
                 </Link>
-                <span className={`badge ${VERDICT_BADGE[a.verdict] ?? "bg-parch"}`}>
+                <Badge variant={VERDICT_VARIANT[a.verdict] ?? "secondary"}>
                   {a.verdict.replaceAll("_", " ")}
-                </span>
-                <span className="text-xs text-ink/50">
+                </Badge>
+                <span className="text-xs text-muted-foreground">
                   by {a.reviewer.replace(/\s*\([^)]*\)\s*$/, "")} · player{" "}
                   <Link href={`/players/${a.user_id}`} className="hover:text-brand">
                     {a.player_name}
                   </Link>
                 </span>
-                <span className="text-xs text-ink/45 ml-auto">
+                <span className="text-xs text-muted-foreground ml-auto">
                   {new Date(a.created_at).toLocaleString()}
                 </span>
               </div>
-              <p className="text-sm text-ink/80 mt-3 whitespace-pre-wrap">{a.audit_note}</p>
-            </div>
+              <p className="text-sm text-foreground/80 mt-3 whitespace-pre-wrap">{a.audit_note}</p>
+            </Card>
           ))}
         </div>
       )}

@@ -12,6 +12,11 @@ import { banProject } from "@/app/actions";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
 import { slackHandle } from "@/lib/slack";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +35,15 @@ function ago(iso: string | null): string {
   if (hrs >= 1) return `${hrs}h ago`;
   return `${Math.floor(d / 60_000)}m ago`;
 }
+
+const TRUST_VARIANT = (level: string): "success" | "destructive" | "warning" | "info" =>
+  level === "green"
+    ? "success"
+    : level === "red" || level === "convicted"
+      ? "destructive"
+      : level === "yellow" || level === "suspected"
+        ? "warning"
+        : "info";
 
 export default async function ReviewDetail({
   params,
@@ -139,13 +153,17 @@ export default async function ReviewDetail({
       </Link>
 
       {error && (
-        <div className="pixl-card p-3 mt-4 text-sm font-medium text-rose-600">{error}</div>
+        <Alert variant="destructive" className="mt-4">
+          <AlertDescription className="font-medium text-destructive">{error}</AlertDescription>
+        </Alert>
       )}
       {!claim.ok && (
-        <div className="mt-4 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300">
-          Heads up — {claimHandle ?? claim.by ?? "another reviewer"} is already reviewing this
-          submission. Avoid double-grading it.
-        </div>
+        <Alert className="mt-4 border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10">
+          <AlertDescription className="text-amber-800 dark:text-amber-300">
+            Heads up — {claimHandle ?? claim.by ?? "another reviewer"} is already reviewing this
+            submission. Avoid double-grading it.
+          </AlertDescription>
+        </Alert>
       )}
 
       <div className="flex flex-col lg:flex-row gap-6 pb-24 mt-4">
@@ -156,12 +174,12 @@ export default async function ReviewDetail({
               <StatusBadge status={p.status} />
               <LevelBadge level={p.level} />
               <ShipBadges project={p} />
-              <span className="text-xs text-ink/40 font-mono ml-auto">#{p.id}</span>
+              <span className="text-xs text-muted-foreground font-mono ml-auto">#{p.id}</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight break-words">{p.name}</h1>
             {p.description && (
               <div
-                className="md text-ink/60 mt-2 break-words"
+                className="md text-muted-foreground mt-2 break-words"
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(p.description) }}
               />
             )}
@@ -171,24 +189,26 @@ export default async function ReviewDetail({
             <img
               src={p.image_url}
               alt=""
-              className="w-full max-h-96 object-contain rounded-xl border border-[var(--line)] bg-black/40"
+              className="w-full max-h-96 object-contain rounded-xl border border-border bg-black/40"
             />
           )}
 
           {p.system_note && (
-            <div className="rounded-xl border border-brand/30 bg-brand/10 p-3 text-sm font-medium text-brand">
-              {p.system_note}
-            </div>
+            <Alert className="border-brand/30 bg-brand/10">
+              <AlertDescription className="font-medium text-brand">{p.system_note}</AlertDescription>
+            </Alert>
           )}
           {(() => {
             const aiCommits = commits.commits.filter((c) => c.ai).length;
             if (aiCommits === 0 || p.used_ai) return null;
             return (
-              <div className="rounded-xl border border-violet-300 dark:border-violet-500/40 bg-violet-50 dark:bg-violet-500/10 p-3 text-sm font-medium text-violet-700 dark:text-violet-300">
-                {aiCommits} commit{aiCommits === 1 ? "" : "s"} in this repo {aiCommits === 1 ? "is" : "are"} signed
-                by an AI tool, but the maker did not tick &ldquo;AI used&rdquo;. Undisclosed AI —
-                verify before crediting.
-              </div>
+              <Alert className="border-violet-300 dark:border-violet-500/40 bg-violet-50 dark:bg-violet-500/10">
+                <AlertDescription className="font-medium text-violet-700 dark:text-violet-300">
+                  {aiCommits} commit{aiCommits === 1 ? "" : "s"} in this repo {aiCommits === 1 ? "is" : "are"} signed
+                  by an AI tool, but the maker did not tick &ldquo;AI used&rdquo;. Undisclosed AI —
+                  verify before crediting.
+                </AlertDescription>
+              </Alert>
             );
           })()}
           {p.is_update && p.update_notes && (
@@ -214,7 +234,7 @@ export default async function ReviewDetail({
 
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="grid place-items-center w-8 h-8 rounded-full bg-brand/15 text-brand text-xs font-semibold shrink-0">
+              <span className="grid place-items-center w-8 h-8 rounded-full bg-primary/15 text-primary text-xs font-semibold shrink-0">
                 {String(ownerName).replace(/^@/, "").slice(0, 2).toUpperCase()}
               </span>
               <div className="min-w-0">
@@ -226,7 +246,7 @@ export default async function ReviewDetail({
                     href={`https://hackclub.slack.com/team/${p.users.slack_id}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-mono text-ink/45 hover:text-brand"
+                    className="text-xs font-mono text-muted-foreground hover:text-brand"
                     title="Open in Slack"
                   >
                     {p.users.slack_id}
@@ -235,28 +255,22 @@ export default async function ReviewDetail({
               </div>
             </div>
             {p.repo_url && (
-              <a
-                href={p.repo_url}
-                target="_blank"
-                rel="noreferrer"
-                className="pixl-btn bg-[var(--surface)] text-ink text-sm"
-              >
-                Repo ↗
-              </a>
+              <Button asChild variant="secondary" size="sm">
+                <a href={p.repo_url} target="_blank" rel="noreferrer">
+                  Repo ↗
+                </a>
+              </Button>
             )}
             {p.demo_url && (
-              <a
-                href={p.demo_url}
-                target="_blank"
-                rel="noreferrer"
-                className="pixl-btn bg-[var(--surface)] text-ink text-sm"
-              >
-                Live demo ↗
-              </a>
+              <Button asChild variant="secondary" size="sm">
+                <a href={p.demo_url} target="_blank" rel="noreferrer">
+                  Live demo ↗
+                </a>
+              </Button>
             )}
           </div>
 
-          <div className="text-xs text-ink/45">
+          <div className="text-xs text-muted-foreground">
             Submitted {ago(p.shipped_at)} · {fmtHM(hours)} logged
             {p.hackatime_projects?.length > 0 && (
               <>
@@ -280,48 +294,36 @@ export default async function ReviewDetail({
         {/* sidebar */}
         <aside className="lg:w-80 shrink-0">
           <div className="lg:sticky lg:top-24 space-y-4">
-            <div className="pixl-card p-5">
-              <div className="text-xs font-medium text-ink/50 uppercase tracking-wide">
+            <Card className="p-5 gap-0">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Logged hours
               </div>
               <div className="mt-1 mb-3">
                 <span className="text-3xl font-bold">{fmtHM(hours)}</span>{" "}
-                <span className="text-ink/50 text-sm">logged</span>
+                <span className="text-muted-foreground text-sm">logged</span>
               </div>
-              <div className="h-2 rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden flex">
+              <div className="h-2 rounded-full bg-muted overflow-hidden flex">
                 <div className="h-full bg-[color:var(--color-hc-blue)]" style={{ width: `${htPct}%` }} />
                 <div className="h-full bg-[color:var(--color-hc-purple)]" style={{ width: `${100 - htPct}%` }} />
               </div>
               <div className="mt-4 space-y-2 text-sm">
                 <a href="#hackatime" className="flex items-center gap-2 hover:text-brand" title="See the full Hackatime breakdown">
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--color-hc-blue)]" />
-                  <span className="text-ink/70">Hackatime →</span>
+                  <span className="text-foreground/70">Hackatime →</span>
                   <span className="ml-auto tabular-nums font-medium">{fmtHM(hackatimeHours)}</span>
                 </a>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--color-hc-purple)]" />
-                  <span className="text-ink/70">Journals</span>
+                  <span className="text-foreground/70">Journals</span>
                   <span className="ml-auto tabular-nums font-medium">{fmtHM(journalHours)}</span>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {trust && (
-              <div className="pixl-card p-4 flex items-center gap-3">
-                <span
-                  className={`badge ${
-                    trust.level === "green"
-                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-                      : trust.level === "red" || trust.level === "convicted"
-                        ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-                        : trust.level === "yellow" || trust.level === "suspected"
-                          ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
-                          : "bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
-                  }`}
-                >
-                  {trust.level}
-                </span>
-                <span className="text-xs text-ink/55">
+              <Card className="p-4 flex-row items-center gap-3">
+                <Badge variant={TRUST_VARIANT(trust.level)}>{trust.level}</Badge>
+                <span className="text-xs text-muted-foreground">
                   Hackatime trust factor — {trust.level === "green"
                     ? "no fraud flags on this account."
                     : trust.level === "red" || trust.level === "convicted"
@@ -330,45 +332,45 @@ export default async function ReviewDetail({
                         ? "Hackatime suspects this account — verify carefully."
                         : "not scored yet."}
                 </span>
-              </div>
+              </Card>
             )}
 
             {isFinalStage && (
-              <div className="pixl-card p-5 border-violet-300 dark:border-violet-500/30">
+              <Card className="p-5 gap-0 ring-violet-300 dark:ring-violet-500/30">
                 <div className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide mb-2">
                   First pass
                 </div>
-                <div className="text-sm text-ink/70">
-                  Passed by <span className="font-medium text-ink">{p.first_pass_by || "a reviewer"}</span>
+                <div className="text-sm text-foreground/70">
+                  Passed by <span className="font-medium text-foreground">{p.first_pass_by || "a reviewer"}</span>
                   {p.first_pass_hours != null && <> · credited {p.first_pass_hours}h</>}
                 </div>
                 {p.first_pass_note && (
-                  <p className="mt-2 text-sm whitespace-pre-wrap break-words text-ink/80">
+                  <p className="mt-2 text-sm whitespace-pre-wrap break-words text-foreground/80">
                     {p.first_pass_note}
                   </p>
                 )}
-              </div>
+              </Card>
             )}
 
             {isOwn && p.status === "shipped" && (
-              <div className="pixl-card p-5 text-sm border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-300">
+              <Card className="p-5 text-sm gap-0 ring-amber-300 dark:ring-amber-500/30 text-amber-700 dark:text-amber-300">
                 This is your own submission — another reviewer has to do the first pass.
-              </div>
+              </Card>
             )}
             {isOwn && isFinalStage && canReview && (
-              <div className="pixl-card p-4 text-xs border-amber-300 dark:border-amber-500/30 text-amber-700 dark:text-amber-300">
+              <Card className="p-4 text-xs gap-0 ring-amber-300 dark:ring-amber-500/30 text-amber-700 dark:text-amber-300">
                 Your own submission — someone else first-passed it, so you may finalize. This is
                 logged.
-              </div>
+              </Card>
             )}
 
             {canReview ? (
               <>
-                <div className="pixl-card p-5">
+                <Card className="p-5 gap-0">
                   <div className="text-sm font-semibold mb-1">
                     {isFinalStage ? "Final pass" : canSecondPass ? "Your verdict" : "First pass"}
                   </div>
-                  <p className="text-xs text-ink/55 mb-3">
+                  <p className="text-xs text-muted-foreground mb-3">
                     {canSecondPass
                       ? "Approving credits pixels at the player's level rate ($4–7/hr in px) and ships it. Every verdict needs a note. You can only lower the credited hours."
                       : "Every verdict needs a note. Approving sends this to a final reviewer before pixels are credited. You can only lower the credited hours."}
@@ -382,75 +384,67 @@ export default async function ReviewDetail({
                     secondPass={canSecondPass}
                     bounties={bounties}
                   />
-                </div>
+                </Card>
 
-                <details className="pixl-card p-4 border-rose-300 dark:border-rose-500/30">
+                <details className="rounded-xl bg-card ring-1 ring-rose-300 dark:ring-rose-500/30 p-4 text-card-foreground">
                   <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-rose-700 dark:text-rose-400 select-none list-none">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
                     Ban project — permanent
                   </summary>
-                  <p className="text-xs text-ink/55 mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Permanently bans this project — it can never be shipped again and is hidden
                     everywhere. Different from requesting changes. Reversible by staff only.
                   </p>
                   <form action={banProject} className="mt-3 flex flex-col gap-2">
                     <input type="hidden" name="projectId" value={p.id} />
                     <input type="hidden" name="returnTo" value={`/review/${p.id}`} />
-                    <textarea
+                    <Textarea
                       name="reason"
                       required
                       rows={2}
                       placeholder="Reason for the ban (shown to the owner)…"
-                      className="pixl-input text-sm resize-y"
+                      className="text-sm resize-y"
                     />
-                    <button className="pixl-btn bg-rose-800 text-white border-transparent text-sm">
+                    <Button className="bg-rose-800 text-white border-transparent hover:bg-rose-900">
                       Ban project
-                    </button>
+                    </Button>
                   </form>
                 </details>
               </>
             ) : isOwn ? null : isFinalStage ? (
-              <div className="pixl-card p-5 text-sm text-ink/60">
+              <Card className="p-5 text-sm text-muted-foreground">
                 Passed the first review — waiting on a final reviewer to sign off before pixels are
                 credited.
-              </div>
+              </Card>
             ) : (
-              <div className="pixl-card p-5 text-sm text-ink/60">
+              <Card className="p-5 text-sm text-muted-foreground">
                 Already reviewed —{" "}
                 <StatusBadge status={p.status} />. See the{" "}
                 <Link href={`/projects/${p.id}`} className="text-brand hover:underline">
                   project page
                 </Link>{" "}
                 to revert or take further action.
-              </div>
+              </Card>
             )}
           </div>
         </aside>
       </div>
 
       {/* sticky nav bar */}
-      <div className="sticky bottom-0 -mx-4 md:-mx-6 px-4 md:px-6 py-3 border-t border-[var(--line)] bg-[var(--surface)]/90 backdrop-blur flex items-center gap-4">
-        <Link
-          href={prev ? `/review/${prev.id}` : "#"}
-          prefetch={false}
-          className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-            prev ? "" : "pointer-events-none opacity-40"
-          }`}
-        >
-          ← Prev
-        </Link>
-        <div className="flex-1 text-center text-sm text-ink/55 tabular-nums">
+      <div className="sticky bottom-0 -mx-4 md:-mx-6 px-4 md:px-6 py-3 border-t border-border bg-background/90 backdrop-blur flex items-center gap-4">
+        <Button asChild variant="outline" size="sm" className={prev ? "" : "pointer-events-none opacity-40"}>
+          <Link href={prev ? `/review/${prev.id}` : "#"} prefetch={false}>
+            ← Prev
+          </Link>
+        </Button>
+        <div className="flex-1 text-center text-sm text-muted-foreground tabular-nums">
           {idx >= 0 ? `Submission ${idx + 1} of ${queue.length}` : "Not in queue"}
         </div>
-        <Link
-          href={next ? `/review/${next.id}` : "#"}
-          prefetch={false}
-          className={`pixl-btn bg-[var(--surface)] text-ink text-sm ${
-            next ? "" : "pointer-events-none opacity-40"
-          }`}
-        >
-          Next →
-        </Link>
+        <Button asChild variant="outline" size="sm" className={next ? "" : "pointer-events-none opacity-40"}>
+          <Link href={next ? `/review/${next.id}` : "#"} prefetch={false}>
+            Next →
+          </Link>
+        </Button>
       </div>
     </div>
   );

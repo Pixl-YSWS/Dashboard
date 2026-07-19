@@ -5,6 +5,16 @@ import { banIsActive, getPlayer } from "@/lib/db";
 import { slackHandle } from "@/lib/slack";
 import { BanForm, LiftBanForm, NotifyForm, WarnForm } from "@/app/_components/Moderate";
 import { StatusBadge } from "@/app/_components/ProjectBadges";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +29,9 @@ function Section({
 }) {
   return (
     <section className="mb-8">
-      <h2 className="text-lg font-semibold text-ink mb-3 flex items-center gap-2">
+      <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
         {title}
-        {count !== undefined && (
-          <span className="badge bg-black/[0.05] text-ink/60 dark:bg-white/[0.08]">{count}</span>
-        )}
+        {count !== undefined && <Badge variant="secondary">{count}</Badge>}
       </h2>
       {children}
     </section>
@@ -32,10 +40,10 @@ function Section({
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="pixl-card p-4">
-      <div className="text-xs font-medium text-ink/50 uppercase tracking-wide">{label}</div>
-      <div className={`text-2xl font-bold mt-1 tabular-nums ${tone ?? "text-ink"}`}>{value}</div>
-    </div>
+    <Card className="p-4 gap-0">
+      <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</div>
+      <div className={`text-2xl font-bold mt-1 tabular-nums ${tone ?? "text-foreground"}`}>{value}</div>
+    </Card>
   );
 }
 
@@ -79,24 +87,24 @@ export default async function PlayerPage({
       </Link>
 
       <div className="flex items-start gap-4 flex-wrap mt-3 mb-5">
-        <span className="grid place-items-center w-14 h-14 rounded-full bg-brand/15 text-brand text-lg font-bold shrink-0">
+        <span className="grid place-items-center w-14 h-14 rounded-full bg-primary/15 text-primary text-lg font-bold shrink-0">
           {initials}
         </span>
         <div className="min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-semibold text-ink tracking-tight break-words">
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight break-words">
               {user.display_name}
             </h1>
             {activeBan && (
-              <span className="badge bg-rose-600 text-white">
+              <Badge className="bg-rose-600 text-white">
                 Banned{" "}
                 {activeBan.expires_at
                   ? `until ${new Date(activeBan.expires_at).toLocaleDateString()}`
                   : "forever"}
-              </span>
+              </Badge>
             )}
           </div>
-          <div className="text-sm text-ink/55 mt-1 break-words">
+          <div className="text-sm text-muted-foreground mt-1 break-words">
             {handle ? `${handle} · ` : ""}
             {user.slack_id ? (
               <span className="font-mono">{user.slack_id}</span>
@@ -117,7 +125,7 @@ export default async function PlayerPage({
         <Stat label="Violations" value={String(violations.length)} />
       </div>
 
-      <div className="pixl-card p-5 mb-8">
+      <Card className="p-5 mb-8 gap-0">
         <div className="text-base font-semibold mb-3">Moderate</div>
         <div className="flex flex-col gap-3">
           {can("warn") && <WarnForm userId={user.id} />}
@@ -125,17 +133,17 @@ export default async function PlayerPage({
           {can("ban") && activeBan && <LiftBanForm userId={user.id} />}
           {can("notify") && <NotifyForm userId={user.id} />}
           {!can("warn") && !can("ban") && !can("notify") && (
-            <div className="text-sm text-ink/50">
+            <div className="text-sm text-muted-foreground">
               You don&apos;t have any moderation permissions.
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       <Section title="Projects" count={projects.length}>
-        <div className="pixl-card divide-y divide-[var(--line)]">
+        <Card className="divide-y divide-border py-0">
           {projects.length === 0 && (
-            <div className="p-4 text-ink/50 text-sm">No projects yet.</div>
+            <div className="p-4 text-muted-foreground text-sm">No projects yet.</div>
           )}
           {projects.map((p) => (
             <div key={p.id} className="p-4">
@@ -145,15 +153,15 @@ export default async function PlayerPage({
                 </Link>
                 <StatusBadge status={p.status} />
                 {p.status === "approved" && p.approved_hours != null && (
-                  <span className="badge bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                  <Badge variant="warning">
                     {fmt(Number(p.approved_hours))} px
-                  </span>
+                  </Badge>
                 )}
               </div>
               {p.description && (
-                <div className="text-sm text-ink/70 mt-1 break-words">{p.description}</div>
+                <div className="text-sm text-foreground/70 mt-1 break-words">{p.description}</div>
               )}
-              <div className="text-xs text-ink/50 mt-1 flex gap-3 flex-wrap">
+              <div className="text-xs text-muted-foreground mt-1 flex gap-3 flex-wrap">
                 {p.repo_url && (
                   <a className="underline text-brand" href={p.repo_url} target="_blank" rel="noreferrer">
                     repo
@@ -171,105 +179,97 @@ export default async function PlayerPage({
               </div>
             </div>
           ))}
-        </div>
+        </Card>
       </Section>
 
       <Section title="Violations" count={violations.length}>
-        <div className="pixl-card divide-y divide-[var(--line)]">
+        <Card className="divide-y divide-border py-0">
           {violations.length === 0 && (
-            <div className="p-4 text-ink/50 text-sm">Clean record.</div>
+            <div className="p-4 text-muted-foreground text-sm">Clean record.</div>
           )}
           {violations.map((v) => (
             <div key={v.id} className="p-3 flex gap-3 items-baseline">
-              <span className="badge bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                {v.kind}
-              </span>
+              <Badge variant="warning">{v.kind}</Badge>
               <span className="text-sm flex-1 break-words">{v.content}</span>
-              <span className="text-xs text-ink/50 shrink-0">
+              <span className="text-xs text-muted-foreground shrink-0">
                 {new Date(v.created_at).toLocaleString()}
               </span>
             </div>
           ))}
-        </div>
+        </Card>
       </Section>
 
       <Section title="Bans" count={bans.length}>
-        <div className="pixl-card divide-y divide-[var(--line)]">
-          {bans.length === 0 && <div className="p-4 text-ink/50 text-sm">Never banned.</div>}
+        <Card className="divide-y divide-border py-0">
+          {bans.length === 0 && <div className="p-4 text-muted-foreground text-sm">Never banned.</div>}
           {bans.map((b) => (
             <div key={b.id} className="p-3 text-sm flex gap-3 items-baseline flex-wrap">
-              <span
-                className={`badge ${
-                  banIsActive(b)
-                    ? "bg-rose-600 text-white"
-                    : "bg-black/[0.05] text-ink/60 dark:bg-white/[0.08]"
-                }`}
-              >
-                {banIsActive(b) ? "active" : b.lifted_at ? "lifted" : "expired"}
-              </span>
+              {banIsActive(b) ? (
+                <Badge className="bg-rose-600 text-white">active</Badge>
+              ) : (
+                <Badge variant="secondary">{b.lifted_at ? "lifted" : "expired"}</Badge>
+              )}
               <span className="flex-1">
                 {b.reason || "(no reason)"} — by {b.banned_by || "?"}
               </span>
-              <span className="text-xs text-ink/50">
+              <span className="text-xs text-muted-foreground">
                 {new Date(b.created_at).toLocaleString()}
                 {b.expires_at ? ` → ${new Date(b.expires_at).toLocaleString()}` : " → forever"}
               </span>
             </div>
           ))}
-        </div>
+        </Card>
       </Section>
 
       <Section title="Last known positions">
-        <div className="pixl-card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b border-[var(--line)] text-ink/60">
-                <th className="p-2 font-medium">Scene</th>
-                <th className="p-2 font-medium">X</th>
-                <th className="p-2 font-medium">Y</th>
-                <th className="p-2 font-medium">Facing</th>
-                <th className="p-2 font-medium">Updated</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line)]">
+        <Card className="overflow-hidden py-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="p-2 font-medium">Scene</TableHead>
+                <TableHead className="p-2 font-medium">X</TableHead>
+                <TableHead className="p-2 font-medium">Y</TableHead>
+                <TableHead className="p-2 font-medium">Facing</TableHead>
+                <TableHead className="p-2 font-medium">Updated</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {states.map((s) => (
-                <tr key={s.scene}>
-                  <td className="p-2 font-mono">{s.scene}</td>
-                  <td className="p-2 tabular-nums">{Math.round(s.pos_x)}</td>
-                  <td className="p-2 tabular-nums">{Math.round(s.pos_y)}</td>
-                  <td className="p-2">{s.direction}</td>
-                  <td className="p-2 text-ink/60">{new Date(s.updated_at).toLocaleString()}</td>
-                </tr>
+                <TableRow key={s.scene} className="hover:bg-transparent">
+                  <TableCell className="p-2 font-mono">{s.scene}</TableCell>
+                  <TableCell className="p-2 tabular-nums">{Math.round(s.pos_x)}</TableCell>
+                  <TableCell className="p-2 tabular-nums">{Math.round(s.pos_y)}</TableCell>
+                  <TableCell className="p-2">{s.direction}</TableCell>
+                  <TableCell className="p-2 text-muted-foreground">{new Date(s.updated_at).toLocaleString()}</TableCell>
+                </TableRow>
               ))}
               {states.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-3 text-ink/50">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={5} className="p-3 text-muted-foreground">
                     Never entered the world.
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       </Section>
 
       <Section title="Moderation log">
-        <div className="pixl-card divide-y divide-[var(--line)]">
+        <Card className="divide-y divide-border py-0">
           {actions.length === 0 && (
-            <div className="p-4 text-ink/50 text-sm">No moderation actions yet.</div>
+            <div className="p-4 text-muted-foreground text-sm">No moderation actions yet.</div>
           )}
           {actions.map((a) => (
             <div key={a.id} className="p-3 text-sm flex gap-3 items-baseline flex-wrap">
-              <span className="badge bg-black/[0.05] text-ink/60 dark:bg-white/[0.08]">
-                {a.action}
-              </span>
+              <Badge variant="secondary">{a.action}</Badge>
               <span className="flex-1 break-words">{a.detail}</span>
-              <span className="text-xs text-ink/50">
+              <span className="text-xs text-muted-foreground">
                 {a.actor} · {new Date(a.created_at).toLocaleString()}
               </span>
             </div>
           ))}
-        </div>
+        </Card>
       </Section>
     </div>
   );

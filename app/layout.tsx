@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getAccess, canView } from "@/lib/guard";
 import { countPendingReviews } from "@/lib/db";
 import { Shell } from "@/app/_components/Shell";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+
+const jetbrainsMonoHeading = JetBrains_Mono({subsets:['latin'],variable:'--font-heading'});
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+});
 
 export const metadata: Metadata = {
   title: "Pixl HQ",
@@ -44,7 +53,17 @@ export default async function RootLayout({
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;
   return (
-    <html lang="en" suppressHydrationWarning className={`${geist.variable} ${geistMono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn(
+        geist.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable,
+        jetbrainsMonoHeading.variable,
+      )}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -96,13 +115,27 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen">
         {session && nav ? (
-          <Shell
-            session={{ name: session.name, slackId: session.slackId }}
-            nav={nav}
-            reviewCount={reviewCount}
-          >
-            {children}
-          </Shell>
+          // <Shell
+          //   session={{ name: session.name, slackId: session.slackId }}
+          //   nav={nav}
+          //   reviewCount={reviewCount}
+          // >
+          //   {children}
+          // </Shell>
+          <SidebarProvider>
+            <Shell
+              session={{ name: session.name, slackId: session.slackId }}
+              nav={nav}
+              reviewCount={reviewCount}
+            />
+
+            <main className="flex-1 min-w-0 overflow-x-hidden flex flex-col gap-4">
+              <div className="bg-command-background/40 backdrop-blur-xl backdrop-saturate-150 shadow-2xl shadow-black/30 w-full h-10 fixed z-100 p-2">
+                <SidebarTrigger />
+              </div>
+              <div className="px-10 pt-10">{children}</div>
+            </main>
+          </SidebarProvider>
         ) : (
           children
         )}

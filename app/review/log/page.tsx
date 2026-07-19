@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { listReviewAudits } from "@/lib/db";
 import { ReviewTabs } from "@/app/_components/ReviewTabs";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
 
@@ -18,33 +20,34 @@ export default async function ReviewLogPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink tracking-tight mb-3">Review log</h1>
+      <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-3">Review log</h1>
       <ReviewTabs isSuper={access.isSuper} />
-      <p className="text-sm text-ink/60 mb-4">
+      <p className="text-sm text-muted-foreground mb-4">
         Owners only — every verdict with whether the reviewer opened the repo and
         demo, how long they spent in each, and any hour adjustments.
       </p>
-      <div className="pixl-card divide-y divide-[var(--line)]">
+      <Card className="divide-y divide-border py-0">
         {log.length === 0 && (
-          <div className="p-5 text-ink/50 text-sm">No verdicts yet.</div>
+          <div className="p-5 text-muted-foreground text-sm">No verdicts yet.</div>
         )}
         {log.map((r) => (
           <div key={r.id} className="p-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <span
-              className={`badge shrink-0 ${
+            <Badge
+              variant={
                 r.verdict === "approved"
-                  ? "bg-emerald-600/20 dark:bg-emerald-600/30"
+                  ? "success"
                   : r.verdict === "reverted"
-                    ? "bg-blue-600/20 dark:bg-blue-600/30"
-                    : "bg-brand/15 dark:bg-brand/30"
-              }`}
+                    ? "info"
+                    : "destructive"
+              }
+              className="shrink-0"
             >
               {r.verdict === "approved"
                 ? "approved"
                 : r.verdict === "reverted"
                   ? "reverted"
                   : "sent back"}
-            </span>
+            </Badge>
             <div className="flex-1 min-w-48">
               <span className="font-bold">{r.reviewer}</span>
               {" → "}
@@ -55,9 +58,9 @@ export default async function ReviewLogPage() {
               <Link href={`/projects/${r.project_id}`} className="font-bold hover:text-brand">
                 {r.project_name}
               </Link>
-              <div className="text-ink/70 break-words">{r.note}</div>
+              <div className="text-foreground/70 break-words">{r.note}</div>
               {r.verdict !== "reverted" && (
-                <div className="text-xs text-ink/50 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   repo {r.repo_opened ? `✓ ${fmtSeconds(r.repo_seconds)}` : "✗ never opened"}
                   {" · "}
                   demo {r.demo_opened ? `✓ ${fmtSeconds(r.demo_seconds)}` : "✗ never opened"}
@@ -70,12 +73,12 @@ export default async function ReviewLogPage() {
                 </div>
               )}
             </div>
-            <div className="text-xs text-ink/50 shrink-0">
+            <div className="text-xs text-muted-foreground shrink-0">
               {new Date(r.created_at).toLocaleString()}
             </div>
           </div>
         ))}
-      </div>
+      </Card>
     </div>
   );
 }

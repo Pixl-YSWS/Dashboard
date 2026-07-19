@@ -3,8 +3,16 @@ import { requireAdmin } from "@/lib/guard";
 import { listShopItems } from "@/lib/db";
 import { addShopItem, toggleShopItem, deleteShopItem, updateShopItem } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const dynamic = "force-dynamic";
+
+const FILE_INPUT =
+  "block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-secondary-foreground hover:file:bg-secondary/80";
 
 export default async function ShopPage() {
   const access = await requireAdmin();
@@ -14,123 +22,123 @@ export default async function ShopPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-ink tracking-tight">Shop</h1>
-        <p className="text-sm text-ink/55 mt-1 max-w-2xl">
+        <h1 className="text-2xl font-semibold text-foreground tracking-tight">Shop</h1>
+        <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Items shown in the in-game Pixl shop. Purchases aren&apos;t enabled yet — players can
           only browse, so feel free to stock the shelves.
         </p>
       </div>
 
-      <div className="pixl-card p-5 md:p-6">
+      <Card className="p-5 md:p-6 gap-0">
         <div className="text-base font-semibold mb-4">Add an item</div>
         <form action={addShopItem} className="space-y-4">
           <div className="grid sm:grid-cols-3 gap-4">
-            <label className="block sm:col-span-2">
+            <Label className="block sm:col-span-2 font-normal">
               <span className="block text-sm font-medium mb-1.5">Name</span>
-              <input
+              <Input
                 name="name"
                 required
                 maxLength={60}
                 placeholder="e.g. Holo Sticker"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-            </label>
-            <label className="block">
+            </Label>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Price (pixels)</span>
-              <input
+              <Input
                 name="price"
                 type="number"
                 min={0}
                 required
                 placeholder="60"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-            </label>
+            </Label>
           </div>
-          <label className="block">
+          <Label className="block font-normal">
             <span className="block text-sm font-medium mb-1.5">Description</span>
-            <input
+            <Input
               name="description"
               maxLength={300}
               placeholder="Holographic, shimmery. Looks great on a laptop."
-              className="pixl-input w-full text-sm"
+              className="w-full text-sm"
             />
-          </label>
+          </Label>
           <div className="grid sm:grid-cols-2 gap-4">
-            <label className="block">
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Options (optional)</span>
-              <input
+              <Input
                 name="options"
                 placeholder="red, blue, green"
-                className="pixl-input w-full text-sm"
+                className="w-full text-sm"
               />
-              <span className="block text-xs text-ink/45 mt-1">
+              <span className="block text-xs text-muted-foreground mt-1">
                 Comma-separated variants, if the item has any.
               </span>
-            </label>
-            <label className="block">
+            </Label>
+            <Label className="block font-normal">
               <span className="block text-sm font-medium mb-1.5">Image (optional)</span>
               <input
                 name="image"
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
-                className="block w-full text-sm text-ink/70 file:pixl-btn file:bg-[var(--surface)] file:text-ink file:text-sm file:mr-3 file:border-[var(--line)]"
+                className={FILE_INPUT}
               />
-              <span className="block text-xs text-ink/45 mt-1">PNG/JPG/WebP, max 4 MB.</span>
-            </label>
+              <span className="block text-xs text-muted-foreground mt-1">PNG/JPG/WebP, max 4 MB.</span>
+            </Label>
           </div>
           <div className="flex justify-end">
             <PendingButton
-              className="pixl-btn bg-brand text-white border-transparent"
+              className="bg-brand text-white border-transparent"
               pendingText="Adding… (uploading the image can take a few seconds)"
             >
               Add item
             </PendingButton>
           </div>
         </form>
-      </div>
+      </Card>
 
       <div>
-        <div className="text-sm font-medium text-ink/60 mb-3">
+        <div className="text-sm font-medium text-muted-foreground mb-3">
           {items.length} item{items.length === 1 ? "" : "s"} · only active ones show in game
         </div>
         {items.length === 0 ? (
-          <div className="pixl-card p-8 text-center text-ink/55 text-sm">
+          <Card className="p-8 text-center text-muted-foreground text-sm">
             Empty shelves. Add the first item above.
-          </div>
+          </Card>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
             {items.map((item) => (
-              <div key={item.id} className={`pixl-card p-4 flex gap-4 ${item.active ? "" : "opacity-60"}`}>
+              <Card key={item.id} className={`p-4 gap-0 flex-row ${item.active ? "" : "opacity-60"}`}>
                 {item.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={item.image_url}
                     alt=""
-                    className="w-20 h-20 rounded-lg object-cover border border-[var(--line)] shrink-0 [image-rendering:pixelated]"
+                    className="w-20 h-20 rounded-lg object-cover border border-border shrink-0 [image-rendering:pixelated]"
                   />
                 ) : (
-                  <span className="grid place-items-center w-20 h-20 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] shrink-0 text-2xl">
+                  <span className="grid place-items-center w-20 h-20 rounded-lg bg-muted border border-border shrink-0 text-2xl">
                     🛍️
                   </span>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold">{item.name}</span>
-                    <span className="badge bg-mint/30 dark:bg-mint/20 tabular-nums">
+                    <Badge variant="success" className="tabular-nums">
                       {item.price} px
-                    </span>
-                    {!item.active && <span className="badge bg-parch">hidden</span>}
+                    </Badge>
+                    {!item.active && <Badge variant="secondary">hidden</Badge>}
                   </div>
                   {item.description && (
-                    <div className="text-sm text-ink/60 mt-1">{item.description}</div>
+                    <div className="text-sm text-muted-foreground mt-1">{item.description}</div>
                   )}
                   {item.options.length > 0 && (
                     <div className="flex gap-1.5 flex-wrap mt-2">
                       {item.options.map((o) => (
-                        <span key={o} className="badge bg-black/[0.05] dark:bg-white/[0.08] text-ink/70">
+                        <Badge key={o} variant="secondary">
                           {o}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
                   )}
@@ -138,77 +146,81 @@ export default async function ShopPage() {
                     <form action={toggleShopItem}>
                       <input type="hidden" name="id" value={item.id} />
                       <input type="hidden" name="active" value={item.active ? "0" : "1"} />
-                      <button className="pixl-btn bg-[var(--surface)] text-ink text-sm">
+                      <Button variant="outline" size="sm">
                         {item.active ? "Hide" : "Show"}
-                      </button>
+                      </Button>
                     </form>
                     <form action={deleteShopItem}>
                       <input type="hidden" name="id" value={item.id} />
-                      <button className="pixl-btn bg-transparent text-rose-600 border-rose-200 dark:border-rose-500/30 text-sm hover:bg-rose-50 dark:hover:bg-rose-500/10">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
+                      >
                         Delete
-                      </button>
+                      </Button>
                     </form>
                   </div>
                   <details className="mt-3">
-                    <summary className="text-sm text-ink/60 cursor-pointer select-none hover:text-brand">
+                    <summary className="text-sm text-muted-foreground cursor-pointer select-none hover:text-brand">
                       Edit item
                     </summary>
                     <form action={updateShopItem} className="mt-3 space-y-3">
                       <input type="hidden" name="id" value={item.id} />
                       <div className="grid grid-cols-[1fr_6.5rem] gap-3">
-                        <label className="block">
-                          <span className="block text-xs font-medium text-ink/60 mb-1">Name</span>
-                          <input
+                        <Label className="block font-normal">
+                          <span className="block text-xs font-medium text-muted-foreground mb-1">Name</span>
+                          <Input
                             name="name"
                             required
                             maxLength={60}
                             defaultValue={item.name}
-                            className="pixl-input w-full text-sm"
+                            className="w-full text-sm"
                           />
-                        </label>
-                        <label className="block">
-                          <span className="block text-xs font-medium text-ink/60 mb-1">Price (px)</span>
-                          <input
+                        </Label>
+                        <Label className="block font-normal">
+                          <span className="block text-xs font-medium text-muted-foreground mb-1">Price (px)</span>
+                          <Input
                             name="price"
                             type="number"
                             min={0}
                             required
                             defaultValue={item.price}
-                            className="pixl-input w-full text-sm"
+                            className="w-full text-sm"
                           />
-                        </label>
+                        </Label>
                       </div>
-                      <label className="block">
-                        <span className="block text-xs font-medium text-ink/60 mb-1">Description</span>
-                        <input
+                      <Label className="block font-normal">
+                        <span className="block text-xs font-medium text-muted-foreground mb-1">Description</span>
+                        <Input
                           name="description"
                           maxLength={300}
                           defaultValue={item.description}
-                          className="pixl-input w-full text-sm"
+                          className="w-full text-sm"
                         />
-                      </label>
-                      <label className="block">
-                        <span className="block text-xs font-medium text-ink/60 mb-1">Options</span>
-                        <input
+                      </Label>
+                      <Label className="block font-normal">
+                        <span className="block text-xs font-medium text-muted-foreground mb-1">Options</span>
+                        <Input
                           name="options"
                           defaultValue={item.options.join(", ")}
                           placeholder="red, blue, green"
-                          className="pixl-input w-full text-sm"
+                          className="w-full text-sm"
                         />
-                      </label>
-                      <label className="block">
-                        <span className="block text-xs font-medium text-ink/60 mb-1">
+                      </Label>
+                      <Label className="block font-normal">
+                        <span className="block text-xs font-medium text-muted-foreground mb-1">
                           Replace image (optional — leave empty to keep the current one)
                         </span>
                         <input
                           name="image"
                           type="file"
                           accept="image/png,image/jpeg,image/webp"
-                          className="block w-full text-sm text-ink/70 file:pixl-btn file:bg-[var(--surface)] file:text-ink file:text-sm file:mr-3 file:border-[var(--line)]"
+                          className={FILE_INPUT}
                         />
-                      </label>
+                      </Label>
                       <PendingButton
-                        className="pixl-btn bg-brand text-white border-transparent text-sm"
+                        className="bg-brand text-white border-transparent"
                         pendingText="Saving…"
                       >
                         Save changes
@@ -216,7 +228,7 @@ export default async function ShopPage() {
                     </form>
                   </details>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
