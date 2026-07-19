@@ -5,6 +5,7 @@ import { getProject, listShippedProjects, listSecondReviewProjects, claimReview 
 import { fetchCommits, attachCommitStats } from "@/lib/github";
 import { fetchUserSpans, attachTrackedTime, fetchTrustFactor } from "@/lib/hackatime";
 import { yswsShipsFor } from "@/lib/ysws";
+import { renderMarkdown } from "@/lib/markdown";
 import { db } from "@/lib/db";
 import { ReviewForm, type BountyOption } from "@/app/_components/ReviewForm";
 import { banProject } from "@/app/actions";
@@ -152,7 +153,12 @@ export default async function ReviewDetail({
               <span className="text-xs text-ink/40 font-mono ml-auto">#{p.id}</span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight break-words">{p.name}</h1>
-            {p.description && <p className="text-ink/60 mt-2 break-words">{p.description}</p>}
+            {p.description && (
+              <div
+                className="md text-ink/60 mt-2 break-words"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(p.description) }}
+              />
+            )}
           </div>
 
           {p.image_url && (
