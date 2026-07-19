@@ -90,7 +90,6 @@ export function ReviewDetailTabs({
 
       {tab === "ysws" && (() => {
         const matches = yswsShips.filter((s) => s.urlMatch);
-        const other = yswsShips.filter((s) => !s.urlMatch);
         const Row = (s: YswsShip, i: number) => (
           <div key={i} className="p-4">
             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -134,16 +133,6 @@ export function ReviewDetailTabs({
                 </>
               )}
             </div>
-            {other.length > 0 && (
-              <details className="border-t border-[var(--line)]">
-                <summary className="p-4 text-sm text-ink/55 cursor-pointer select-none hover:text-ink">
-                  This maker&apos;s other YSWS ships ({other.length}) — context only, not this project
-                </summary>
-                <div className="divide-y divide-[var(--line)] border-t border-[var(--line)]">
-                  {other.map(Row)}
-                </div>
-              </details>
-            )}
           </div>
         );
       })()}

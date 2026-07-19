@@ -47,18 +47,19 @@ async function loadArchive(): Promise<ArchiveEntry[]> {
   }
 }
 
-// Everything this maker has already shipped to other YSWS programs (matched by
-// slack id), plus any archive entry that reuses this project's repo/demo URL —
-// so reviewers can compare hours and dates for overlap before crediting.
+// Archive entries that reuse THIS project's repo/demo URL — i.e. the same
+// project shipped to another YSWS (a possible double-dip). Reviewers compare
+// hours and dates for overlap before crediting. The maker's unrelated ships are
+// intentionally not returned; they're noise on a per-project review.
 export async function yswsShipsFor(
-  slackId: string | null | undefined,
+  _slackId: string | null | undefined,
   repoUrl: string | null,
   demoUrl: string | null,
 ): Promise<YswsShip[]> {
   const entries = await loadArchive();
   const repo = norm(repoUrl ?? "");
   const demo = norm(demoUrl ?? "");
-  const sid = (slackId ?? "").trim();
+  if (repo === "" && demo === "") return [];
 
   const out: YswsShip[] = [];
   for (const e of entries) {
@@ -67,8 +68,7 @@ export async function yswsShipsFor(
     const urlMatch =
       (repo !== "" && (eRepo === repo || eDemo === repo)) ||
       (demo !== "" && (eRepo === demo || eDemo === demo));
-    const bySlack = sid !== "" && sid !== "null" && e.slack_id === sid;
-    if (!urlMatch && !bySlack) continue;
+    if (!urlMatch) continue;
     out.push({
       ysws: String(e.ysws ?? "?"),
       approvedAt:
