@@ -90,31 +90,37 @@ export default async function ReviewDetail({
     }));
   }
 
-  const commits = await fetchCommits(p.repo_url);
-  const [trust] = await Promise.all([
-    fetchTrustFactor(p.users?.slack_id),
-    attachCommitStats(commits),
-  ]);
-  if (commits.commits.length > 0 && (p.hackatime_projects?.length ?? 0) > 0) {
-    const { data: tokenRow } = await db
-      .from("users")
-      .select("hackatime_token")
-      .eq("id", p.user_id)
-      .single();
-    const spans = await fetchUserSpans(
-      p.users?.slack_id,
-      (tokenRow as { hackatime_token?: string } | null)?.hackatime_token ?? null,
-      p.hackatime_projects,
-    );
-    if (spans) attachTrackedTime(commits.commits, spans);
-  }
-  const yswsShips = await yswsShipsFor(p.users?.slack_id, p.repo_url, p.demo_url);
-  const ownerHandle = await slackHandle(p.users?.slack_id);
-  const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;
+  // These calls hit GitHub, Hackatime, the YSWS archive, Slack and the DB.
+  // They're independent, so run them concurrently — the page is only as slow as
+  // the slowest one, not their sum. The commit stats + tracked-time attach form
+  // one chain (both mutate `commits`) that runs alongside the rest.
+  const commitsChain = (async () => {
+    const commits = await fetchCommits(p.repo_url);
+    await attachCommitStats(commits);
+    if (commits.commits.length > 0 && (p.hackatime_projects?.length ?? 0) > 0) {
+      const { data: tokenRow } = await db
+        .from("users")
+        .select("hackatime_token")
+        .eq("id", p.user_id)
+        .single();
+      const spans = await fetchUserSpans(
+        p.users?.slack_id,
+        (tokenRow as { hackatime_token?: string } | null)?.hackatime_token ?? null,
+        p.hackatime_projects,
+      );
+      if (spans) attachTrackedTime(commits.commits, spans);
+    }
+    return commits;
+  })();
 
-  const queue = isFinalStage
-    ? await listSecondReviewProjects(viewer)
-    : await listShippedProjects(viewer);
+  const [commits, trust, yswsShips, ownerHandle, queue] = await Promise.all([
+    commitsChain,
+    fetchTrustFactor(p.users?.slack_id),
+    yswsShipsFor(p.users?.slack_id, p.repo_url, p.demo_url),
+    slackHandle(p.users?.slack_id),
+    isFinalStage ? listSecondReviewProjects(viewer) : listShippedProjects(viewer),
+  ]);
+  const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;
   const idx = queue.findIndex((q) => q.id === projectId);
   const prev = idx > 0 ? queue[idx - 1] : null;
   const next = idx >= 0 && idx < queue.length - 1 ? queue[idx + 1] : null;
