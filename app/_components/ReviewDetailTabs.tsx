@@ -5,6 +5,7 @@ import type { CommitResult } from "@/lib/github";
 import type { JournalRow, ModActionRow } from "@/lib/db";
 import type { YswsShip } from "@/lib/ysws";
 import { CommitList } from "@/app/_components/CommitList";
+import { renderMarkdown } from "@/lib/markdown";
 
 const VERDICT_LABEL: Record<string, { label: string; cls: string }> = {
   project_approved: { label: "Approved", cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
@@ -78,7 +79,10 @@ export function ReviewDetailTabs({
                   {new Date(j.created_at).toLocaleString()}
                 </span>
               </div>
-              <div className="text-sm whitespace-pre-wrap break-words text-ink/80">{j.content}</div>
+              <div
+                className="md text-sm break-words text-ink/80"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(j.content) }}
+              />
             </div>
           ))}
         </div>
