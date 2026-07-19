@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
 import { getProject, listShippedProjects, listSecondReviewProjects, claimReview } from "@/lib/db";
 import { fetchCommits, attachCommitStats } from "@/lib/github";
-import { fetchUserSpans, attachTrackedTime, fetchTrustFactor } from "@/lib/hackatime";
+import { fetchUserSpans, attachTrackedTime, fetchTrustFactor, fetchHackatimeReport } from "@/lib/hackatime";
 import { yswsShipsFor } from "@/lib/ysws";
 import { renderMarkdown } from "@/lib/markdown";
 import { db } from "@/lib/db";
@@ -95,31 +95,37 @@ export default async function ReviewDetail({
   // They're independent, so run them concurrently — the page is only as slow as
   // the slowest one, not their sum. The commit stats + tracked-time attach form
   // one chain (both mutate `commits`) that runs alongside the rest.
-  const commitsChain = (async () => {
-    const commits = await fetchCommits(p.repo_url);
-    await attachCommitStats(commits);
-    if (commits.commits.length > 0 && (p.hackatime_projects?.length ?? 0) > 0) {
-      const { data: tokenRow } = await db
+  const hackatimeProjects = p.hackatime_projects ?? [];
+  const tokenPromise = hackatimeProjects.length
+    ? db
         .from("users")
         .select("hackatime_token")
         .eq("id", p.user_id)
-        .single();
-      const spans = await fetchUserSpans(
-        p.users?.slack_id,
-        (tokenRow as { hackatime_token?: string } | null)?.hackatime_token ?? null,
-        p.hackatime_projects,
-      );
+        .single()
+        .then((r) => (r.data as { hackatime_token?: string } | null)?.hackatime_token ?? null)
+    : Promise.resolve(null);
+
+  const commitsChain = (async () => {
+    const commits = await fetchCommits(p.repo_url);
+    await attachCommitStats(commits);
+    if (commits.commits.length > 0 && hackatimeProjects.length > 0) {
+      const spans = await fetchUserSpans(p.users?.slack_id, await tokenPromise, hackatimeProjects);
       if (spans) attachTrackedTime(commits.commits, spans);
     }
     return commits;
   })();
 
-  const [commits, trust, yswsShips, ownerHandle, queue] = await Promise.all([
+  const hackatimeReportPromise = hackatimeProjects.length
+    ? tokenPromise.then((tok) => fetchHackatimeReport(p.users?.slack_id, tok, hackatimeProjects))
+    : Promise.resolve(null);
+
+  const [commits, trust, yswsShips, ownerHandle, queue, hackatimeReport] = await Promise.all([
     commitsChain,
     fetchTrustFactor(p.users?.slack_id),
     yswsShipsFor(p.users?.slack_id, p.repo_url, p.demo_url),
     slackHandle(p.users?.slack_id),
     isFinalStage ? listSecondReviewProjects(viewer) : listShippedProjects(viewer),
+    hackatimeReportPromise,
   ]);
   const ownerName = ownerHandle ?? p.users?.display_name ?? p.users?.slack_id ?? p.user_id;
   const idx = queue.findIndex((q) => q.id === projectId);
@@ -252,7 +258,14 @@ export default async function ReviewDetail({
 
           <div className="text-xs text-ink/45">
             Submitted {ago(p.shipped_at)} · {fmtHM(hours)} logged
-            {p.hackatime_projects?.length > 0 && <> · hackatime: {p.hackatime_projects.join(", ")}</>}
+            {p.hackatime_projects?.length > 0 && (
+              <>
+                {" · "}
+                <a href="#hackatime" className="text-brand hover:underline">
+                  hackatime: {p.hackatime_projects.join(", ")}
+                </a>
+              </>
+            )}
           </div>
 
           <ReviewDetailTabs
@@ -260,6 +273,7 @@ export default async function ReviewDetail({
             journals={journals}
             verdicts={verdicts}
             yswsShips={yswsShips}
+            hackatime={hackatimeReport}
           />
         </div>
 
@@ -279,11 +293,11 @@ export default async function ReviewDetail({
                 <div className="h-full bg-[color:var(--color-hc-purple)]" style={{ width: `${100 - htPct}%` }} />
               </div>
               <div className="mt-4 space-y-2 text-sm">
-                <div className="flex items-center gap-2">
+                <a href="#hackatime" className="flex items-center gap-2 hover:text-brand" title="See the full Hackatime breakdown">
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--color-hc-blue)]" />
-                  <span className="text-ink/70">Hackatime</span>
+                  <span className="text-ink/70">Hackatime →</span>
                   <span className="ml-auto tabular-nums font-medium">{fmtHM(hackatimeHours)}</span>
-                </div>
+                </a>
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--color-hc-purple)]" />
                   <span className="text-ink/70">Journals</span>

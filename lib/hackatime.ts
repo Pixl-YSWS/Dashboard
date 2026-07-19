@@ -67,6 +67,165 @@ export async function fetchTrustFactor(
   }
 }
 
+export interface HackatimeBreakdown {
+  name: string;
+  seconds: number;
+  text: string;
+  percent: number;
+  color?: string;
+}
+
+export interface HackatimeProjectReport {
+  name: string;
+  seconds: number;
+  text: string;
+  percent: number;
+  linked: boolean;
+  sessions: number;
+  firstActivity: number | null;
+  lastActivity: number | null;
+}
+
+export interface HackatimeReport {
+  ok: boolean;
+  totalSeconds: number;
+  humanReadableTotal: string;
+  dailyAverageSeconds: number;
+  rangeStart: string | null;
+  rangeEnd: string | null;
+  languages: HackatimeBreakdown[];
+  editors: HackatimeBreakdown[];
+  operatingSystems: HackatimeBreakdown[];
+  machines: HackatimeBreakdown[];
+  projects: HackatimeProjectReport[];
+}
+
+function fmtSeconds(s: number): string {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function mapBreakdown(arr: unknown): HackatimeBreakdown[] {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((x) => {
+    const o = x as Record<string, unknown>;
+    return {
+      name: String(o.name ?? "?"),
+      seconds: Number(o.total_seconds) || 0,
+      text: String(o.text ?? fmtSeconds(Number(o.total_seconds) || 0)),
+      percent: Number(o.percent) || 0,
+      color: typeof o.color === "string" ? o.color : undefined,
+    };
+  });
+}
+
+// Everything Hackatime exposes for this maker, focused on the projects they
+// linked to the submission: overall totals + language/editor/OS breakdowns, and
+// per linked project the total time, share, coding-session count and first/last
+// activity (from span data). Public endpoints; the token just unlocks private
+// stats. Never throws into the page.
+export async function fetchHackatimeReport(
+  slackId: string | null | undefined,
+  token: string | null,
+  linkedProjects: string[],
+): Promise<HackatimeReport> {
+  const empty: HackatimeReport = {
+    ok: false,
+    totalSeconds: 0,
+    humanReadableTotal: "",
+    dailyAverageSeconds: 0,
+    rangeStart: null,
+    rangeEnd: null,
+    languages: [],
+    editors: [],
+    operatingSystems: [],
+    machines: [],
+    projects: [],
+  };
+  const id = (slackId ?? "").trim();
+  if (!id) return empty;
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const linked = new Set(linkedProjects);
+
+  try {
+    const statsRes = await fetch(
+      `${BASE}/api/v1/users/${encodeURIComponent(id)}/stats` +
+        `?features=projects,languages,editors,operating_systems,machines`,
+      { headers, signal: AbortSignal.timeout(10000), next: { revalidate: 300 } },
+    );
+    if (!statsRes.ok) return empty;
+    const data = ((await statsRes.json()) as { data?: Record<string, unknown> }).data ?? {};
+
+    const rawProjects = mapBreakdown(data.projects);
+    // Per-project sessions/first/last from spans (only for linked projects, in
+    // parallel — a maker links a handful at most).
+    const spanInfo = new Map<string, { sessions: number; first: number | null; last: number | null }>();
+    await Promise.all(
+      [...linked].map(async (name) => {
+        try {
+          const r = await fetch(
+            `${BASE}/api/v1/users/${encodeURIComponent(id)}/heartbeats/spans` +
+              `?filter_by_project=${encodeURIComponent(name)}`,
+            { headers, signal: AbortSignal.timeout(8000), next: { revalidate: 300 } },
+          );
+          if (!r.ok) return;
+          const spans = ((await r.json()) as { spans?: { start_time?: number; end_time?: number }[] }).spans ?? [];
+          if (spans.length === 0) return;
+          let first = Infinity;
+          let last = 0;
+          for (const s of spans) {
+            first = Math.min(first, Number(s.start_time) || Infinity);
+            last = Math.max(last, Number(s.end_time) || 0);
+          }
+          spanInfo.set(name, {
+            sessions: spans.length,
+            first: Number.isFinite(first) ? first : null,
+            last: last > 0 ? last : null,
+          });
+        } catch {
+          /* ignore per-project span failures */
+        }
+      }),
+    );
+
+    const projects: HackatimeProjectReport[] = rawProjects
+      .filter((p) => linked.has(p.name) || p.seconds > 0)
+      .map((p) => {
+        const info = spanInfo.get(p.name);
+        return {
+          name: p.name,
+          seconds: p.seconds,
+          text: p.text,
+          percent: p.percent,
+          linked: linked.has(p.name),
+          sessions: info?.sessions ?? 0,
+          firstActivity: info?.first ?? null,
+          lastActivity: info?.last ?? null,
+        };
+      })
+      .sort((a, b) => Number(b.linked) - Number(a.linked) || b.seconds - a.seconds);
+
+    return {
+      ok: true,
+      totalSeconds: Number(data.total_seconds) || 0,
+      humanReadableTotal: String(data.human_readable_total ?? ""),
+      dailyAverageSeconds: Number(data.daily_average) || 0,
+      rangeStart: typeof data.start === "string" ? data.start : null,
+      rangeEnd: typeof data.end === "string" ? data.end : null,
+      languages: mapBreakdown(data.languages),
+      editors: mapBreakdown(data.editors),
+      operatingSystems: mapBreakdown(data.operating_systems),
+      machines: mapBreakdown(data.machines),
+      projects,
+    };
+  } catch (e) {
+    console.error("hackatime report fetch failed", (e as Error).message);
+    return empty;
+  }
+}
+
 function overlap(spans: Span[], from: number, to: number): number {
   let sum = 0;
   for (const s of spans) {

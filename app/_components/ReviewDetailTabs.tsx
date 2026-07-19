@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CommitResult } from "@/lib/github";
+import type { HackatimeReport } from "@/lib/hackatime";
 import type { JournalRow, ModActionRow } from "@/lib/db";
 import type { YswsShip } from "@/lib/ysws";
 import { CommitList } from "@/app/_components/CommitList";
 import { renderMarkdown } from "@/lib/markdown";
 import { DeflateInput } from "@/app/_components/DeflateInput";
+import { HackatimePanel } from "@/app/_components/HackatimePanel";
 
 const VERDICT_LABEL: Record<string, { label: string; cls: string }> = {
   project_approved: { label: "Approved", cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
@@ -19,17 +21,29 @@ export function ReviewDetailTabs({
   journals,
   verdicts,
   yswsShips,
+  hackatime,
 }: {
   commits: CommitResult;
   journals: JournalRow[];
   verdicts: ModActionRow[];
   yswsShips: YswsShip[];
+  hackatime: HackatimeReport | null;
 }) {
-  const [tab, setTab] = useState<"commits" | "journals" | "reviews" | "ysws">("commits");
+  const [tab, setTab] = useState<"commits" | "journals" | "reviews" | "ysws" | "hackatime">("commits");
+
+  useEffect(() => {
+    const open = () => {
+      if (location.hash === "#hackatime" && hackatime) setTab("hackatime");
+    };
+    open();
+    window.addEventListener("hashchange", open);
+    return () => window.removeEventListener("hashchange", open);
+  }, [hackatime]);
 
   const tabs = [
     { key: "commits" as const, label: "Commits", count: commits.commits.length },
     { key: "journals" as const, label: "Journals", count: journals.length },
+    ...(hackatime?.ok ? [{ key: "hackatime" as const, label: "Hackatime", count: hackatime.projects.length }] : []),
     { key: "reviews" as const, label: "Past reviews", count: verdicts.length },
     { key: "ysws" as const, label: "Other YSWS", count: yswsShips.filter((s) => s.urlMatch).length },
   ];
@@ -64,6 +78,8 @@ export function ReviewDetailTabs({
       </div>
 
       {tab === "commits" && <CommitList result={commits} />}
+
+      {tab === "hackatime" && hackatime && <HackatimePanel report={hackatime} />}
 
       {tab === "journals" && (
         <div className="divide-y divide-[var(--line)]">
