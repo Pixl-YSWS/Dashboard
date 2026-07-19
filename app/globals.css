@@ -40,22 +40,24 @@
 }
 
 .dark {
-  --color-ink: #e6e7ea;
-  --bg: #0d0e12;
-  --surface: #16171d;
-  --surface-2: #1c1e26;
-  --line: #262832;
-  --line-strong: #333644;
-  --text: #e6e7ea;
-  --text-muted: #9096a1;
+  /* Vercel / Fumadocs neutral dark: near-black surfaces, thin translucent
+     hairlines, high-contrast near-white text. */
+  --color-ink: #ededed;
+  --bg: #0a0a0a;
+  --surface: #101011;
+  --surface-2: #18181a;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.145);
+  --text: #ededed;
+  --text-muted: #9b9b9f;
 
   --chart-players: #33d6a6;
   --chart-projects: #5bc0de;
   --chart-violations: #ff8c37;
-  --chart-grid: #23252f;
-  --chart-surface: #16171d;
-  --chart-cross: rgba(230, 231, 234, 0.28);
-  --chart-text: rgba(230, 231, 234, 0.5);
+  --chart-grid: rgba(255, 255, 255, 0.06);
+  --chart-surface: #101011;
+  --chart-cross: rgba(237, 237, 237, 0.28);
+  --chart-text: rgba(237, 237, 237, 0.5);
 }
 
 html {
