@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { reviewProject } from "@/app/actions";
+import { resetDeductions, subscribeDeductions, totalDeductedMinutes } from "@/app/_components/deflateStore";
 
 function VerdictButtons({ secondPass }: { secondPass: boolean }) {
   const { pending } = useFormStatus();
@@ -65,6 +66,20 @@ export function ReviewForm({
   const openedAt = useRef(Date.now());
   const [auditLen, setAuditLen] = useState(0);
   const AUDIT_MIN = 150;
+
+  const baseHours = defaultHours ?? claimedHours;
+  const [hours, setHours] = useState(baseHours);
+  const [deducted, setDeducted] = useState(0);
+  useEffect(() => {
+    resetDeductions();
+    const unsub = subscribeDeductions(() => {
+      const mins = totalDeductedMinutes();
+      setDeducted(mins);
+      setHours(Math.max(0, Math.round((baseHours - mins / 60) * 10) / 10));
+    });
+    return unsub;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     openedAt.current = Date.now();
@@ -134,13 +149,20 @@ export function ReviewForm({
         )}
         <label className="flex items-center gap-2 ml-auto font-normal text-ink/70">
           Hours to credit (decrease only)
+          {deducted > 0 && (
+            <span className="text-xs text-rose-600 dark:text-rose-400 font-medium" title="Deflated from commits / journals">
+              −{Math.floor(deducted / 60) > 0 ? `${Math.floor(deducted / 60)}h ` : ""}
+              {deducted % 60}m
+            </span>
+          )}
           <input
             name="approvedHours"
             type="number"
             step="0.1"
             min="0"
             max={claimedHours}
-            defaultValue={defaultHours ?? claimedHours}
+            value={hours}
+            onChange={(e) => setHours(Math.min(claimedHours, Math.max(0, Number(e.target.value) || 0)))}
             className="pixl-input w-24 text-sm"
           />
         </label>

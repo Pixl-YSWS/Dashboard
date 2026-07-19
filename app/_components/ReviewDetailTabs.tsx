@@ -6,6 +6,7 @@ import type { JournalRow, ModActionRow } from "@/lib/db";
 import type { YswsShip } from "@/lib/ysws";
 import { CommitList } from "@/app/_components/CommitList";
 import { renderMarkdown } from "@/lib/markdown";
+import { DeflateInput } from "@/app/_components/DeflateInput";
 
 const VERDICT_LABEL: Record<string, { label: string; cls: string }> = {
   project_approved: { label: "Approved", cls: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" },
@@ -71,11 +72,14 @@ export function ReviewDetailTabs({
           )}
           {journals.map((j) => (
             <div key={j.id} className="p-4">
-              <div className="flex items-center justify-between gap-3 mb-1">
+              <div className="flex items-center gap-3 mb-1">
                 <span className="badge bg-black/[0.05] text-ink/70 dark:bg-white/[0.08]">
                   {Math.round((Number(j.hours) || 0) * 10) / 10}h
                 </span>
-                <span className="text-xs text-ink/45">
+                {Number(j.hours) > 0 && (
+                  <DeflateInput itemKey={`j:${j.id}`} maxMinutes={Math.round((Number(j.hours) || 0) * 60)} />
+                )}
+                <span className="text-xs text-ink/45 ml-auto">
                   {new Date(j.created_at).toLocaleString()}
                 </span>
               </div>

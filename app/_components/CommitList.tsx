@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CommitResult } from "@/lib/github";
+import { DeflateInput } from "@/app/_components/DeflateInput";
 
 const PER_PAGE = 8;
 
@@ -132,6 +133,10 @@ export function CommitList({ result }: { result: CommitResult }) {
             <span className="text-xs text-ink/40 shrink-0">
               {c.date ? new Date(c.date).toLocaleDateString() : ""}
             </span>
+            <DeflateInput
+              itemKey={`c:${c.sha}`}
+              maxMinutes={c.tracked !== undefined ? Math.round(c.tracked / 60) : undefined}
+            />
           </div>
         ))}
       </div>
