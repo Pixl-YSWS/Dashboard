@@ -1643,15 +1643,36 @@ export async function resolveReport(formData: FormData): Promise<void> {
   const id = Number(formData.get("id") ?? 0);
   const dismissed = formData.get("action") === "dismiss";
   if (!id) return;
-  const { error } = await db
+  const { data: updated, error } = await db
     .from("reports")
     .update({
       status: dismissed ? "dismissed" : "resolved",
       handled_by: `${session.name} (${session.slackId})`,
       handled_at: new Date().toISOString(),
     })
-    .eq("id", id);
-  if (error) console.error("resolveReport", error.message);
+    .eq("id", id)
+    .select("reporter_id, target_id")
+    .single();
+  if (error) {
+    console.error("resolveReport", error.message);
+    return;
+  }
+  // Close the loop with the reporter — works even for anonymous reports, since
+  // it goes to them privately and never names them to anyone.
+  if (updated?.reporter_id) {
+    const { data: target } = await db
+      .from("users")
+      .select("display_name")
+      .eq("id", updated.target_id)
+      .single();
+    const name = target?.display_name ?? "a player";
+    const title = "Report reviewed";
+    const body = dismissed
+      ? `Your report on ${name} was reviewed and closed — no action was needed this time. Thanks for helping keep Pixl safe.`
+      : `Your report on ${name} was reviewed and acted on. Thanks for helping keep Pixl safe.`;
+    await db.from("notifications").insert({ user_id: updated.reporter_id, title, body });
+    await dmOrEmail(updated.reporter_id, title, body);
+  }
   revalidatePath("/reports");
 }
 
