@@ -83,6 +83,13 @@ export default async function ReviewDetail({
   const formDefaultHours =
     isFinalStage && p.first_pass_hours != null ? p.first_pass_hours : hours;
 
+  const firstPassDeflated =
+    p.first_pass_hours != null ? Math.round((hours - p.first_pass_hours) * 10) / 10 : 0;
+  const firstPassCutPct =
+    p.first_pass_hours != null && hours > 0
+      ? Math.round(((hours - p.first_pass_hours) / hours) * 100)
+      : 0;
+
   const shippedAt = (p as { shipped_at?: string | null }).shipped_at ?? null;
   let bounties: BountyOption[] = [];
   if (shippedAt) {
@@ -342,10 +349,24 @@ export default async function ReviewDetail({
                 </div>
                 <div className="text-sm text-foreground/70">
                   Passed by <span className="font-medium text-foreground">{p.first_pass_by || "a reviewer"}</span>
-                  {p.first_pass_hours != null && <> · credited {p.first_pass_hours}h</>}
+                  {p.first_pass_hours != null && (
+                    <>
+                      {" "}
+                      · credited <span className="font-medium text-foreground">{p.first_pass_hours}h</span> of{" "}
+                      {hours}h claimed
+                    </>
+                  )}
                 </div>
+                {firstPassDeflated > 0 && (
+                  <div className="mt-1 text-sm font-medium text-rose-600 dark:text-rose-400">
+                    Deflated {firstPassDeflated}h {firstPassCutPct > 0 ? `(−${firstPassCutPct}%)` : ""}
+                  </div>
+                )}
                 {p.first_pass_note && (
                   <p className="mt-2 text-sm whitespace-pre-wrap break-words text-foreground/80">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Their note:{" "}
+                    </span>
                     {p.first_pass_note}
                   </p>
                 )}
