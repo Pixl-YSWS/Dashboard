@@ -33,6 +33,19 @@ const REASON_LABEL: Record<string, string> = {
   manual_grant: "Manual grant",
 };
 
+const MANUAL_REASONS = new Set(["manual_grant", "manual_deduction"]);
+
+// Manual grants/deductions pack their justification into created_by as
+// "actor — note". Split it so the note names the transaction and the By
+// column shows just who did it.
+function splitBy(reason: string, createdBy: string): { actor: string; note: string } {
+  if (MANUAL_REASONS.has(reason)) {
+    const i = createdBy.indexOf(" — ");
+    if (i !== -1) return { actor: createdBy.slice(0, i), note: createdBy.slice(i + 3) };
+  }
+  return { actor: createdBy, note: "" };
+}
+
 function fmt(n: number): string {
   return String(Math.round(n));
 }
@@ -169,7 +182,9 @@ export default async function PixelsPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {slice.map((t) => (
+            {slice.map((t) => {
+              const { actor, note } = splitBy(t.reason, t.created_by);
+              return (
               <TableRow key={t.id}>
                 <TableCell className="p-3">
                   <Link href={`/pixels?user=${t.user_id}`} className="font-medium hover:text-brand">
@@ -184,7 +199,16 @@ export default async function PixelsPage({
                   {t.amount >= 0 ? "+" : "−"}
                   {fmt(Math.abs(t.amount))}
                 </TableCell>
-                <TableCell className="p-3 text-foreground/70">{REASON_LABEL[t.reason] ?? (t.reason || "—")}</TableCell>
+                <TableCell className="p-3">
+                  {note ? (
+                    <>
+                      <div className="text-foreground font-medium">{note}</div>
+                      <div className="text-xs text-muted-foreground">{REASON_LABEL[t.reason] ?? t.reason}</div>
+                    </>
+                  ) : (
+                    <span className="text-foreground/70">{REASON_LABEL[t.reason] ?? (t.reason || "—")}</span>
+                  )}
+                </TableCell>
                 <TableCell className="p-3">
                   {t.project_id != null ? (
                     <Link href={`/projects/${t.project_id}`} className="hover:text-brand">
@@ -194,10 +218,11 @@ export default async function PixelsPage({
                     <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
-                <TableCell className="p-3 text-muted-foreground">{t.created_by || "—"}</TableCell>
+                <TableCell className="p-3 text-muted-foreground">{actor || "—"}</TableCell>
                 <TableCell className="p-3 text-muted-foreground">{new Date(t.created_at).toLocaleString()}</TableCell>
               </TableRow>
-            ))}
+              );
+            })}
             {slice.length === 0 && (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={6} className="p-5 text-muted-foreground">

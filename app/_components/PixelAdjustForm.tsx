@@ -151,7 +151,7 @@ export function PixelAdjustForm() {
           name="reason"
           required
           rows={2}
-          placeholder="Reason (required — shown to the player and kept in the log)…"
+          placeholder="What's this for? (required — names the transaction in the log, e.g. “Logo design — contract work”. Shown to the player.)"
           className="text-sm resize-y sm:col-span-2"
         />
         <SubmitButton mode={mode} />
