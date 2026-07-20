@@ -1154,6 +1154,11 @@ export interface ReportRow {
   handled_by: string;
   handled_at: string | null;
   created_at: string;
+  anonymous: boolean;
+  ai_verdict: string;
+  ai_summary: string;
+  ai_score: number | null;
+  ai_at: string | null;
   reporter_name: string;
   target_name: string;
   target_slack: string | null;
@@ -1205,6 +1210,78 @@ export async function listReportsAgainst(targetId: string, limit = 50): Promise<
     return [];
   }
   return hydrateReports((data ?? []) as ReportRow[]);
+}
+
+export async function getReport(id: number): Promise<ReportRow | null> {
+  const { data, error } = await db.from("reports").select("*").eq("id", id).single();
+  if (error || !data) return null;
+  const [row] = await hydrateReports([data as ReportRow]);
+  return row ?? null;
+}
+
+export interface ChatLogRow {
+  id: number;
+  display_name: string;
+  text: string;
+  scene: string;
+  created_at: string;
+}
+
+// A player's stored chat over the last `hours`, newest first — the evidence
+// for a report.
+export async function listChatFor(userId: string, hours = 10): Promise<ChatLogRow[]> {
+  const since = new Date(Date.now() - hours * 3600_000).toISOString();
+  const { data, error } = await db
+    .from("chat_messages")
+    .select("id, display_name, text, scene, created_at")
+    .eq("user_id", userId)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) {
+    console.error("listChatFor", error.message);
+    return [];
+  }
+  return (data ?? []) as ChatLogRow[];
+}
+
+export interface ReportViewerRow {
+  slack_id: string;
+  added_by: string;
+  created_at: string;
+}
+
+export async function listReportViewerIds(): Promise<string[]> {
+  const { data, error } = await db.from("report_viewers").select("slack_id");
+  if (error) {
+    console.error("listReportViewerIds", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => r.slack_id as string);
+}
+
+export async function listReportViewers(): Promise<ReportViewerRow[]> {
+  const { data, error } = await db
+    .from("report_viewers")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) {
+    console.error("listReportViewers", error.message);
+    return [];
+  }
+  return (data ?? []) as ReportViewerRow[];
+}
+
+export async function addReportViewer(slackId: string, by: string): Promise<void> {
+  const { error } = await db
+    .from("report_viewers")
+    .upsert({ slack_id: slackId, added_by: by }, { onConflict: "slack_id" });
+  if (error) console.error("addReportViewer", error.message);
+}
+
+export async function removeReportViewer(slackId: string): Promise<void> {
+  const { error } = await db.from("report_viewers").delete().eq("slack_id", slackId);
+  if (error) console.error("removeReportViewer", error.message);
 }
 
 export async function countOpenReports(): Promise<number> {

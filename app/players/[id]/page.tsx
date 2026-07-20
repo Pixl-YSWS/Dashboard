@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requirePagePerm } from "@/lib/guard";
+import { requirePagePerm, isReportViewer } from "@/lib/guard";
 import { banIsActive, getPlayer, listReportsAgainst } from "@/lib/db";
 import { slackHandle } from "@/lib/slack";
 import { BanForm, LiftBanForm, NotifyForm, WarnForm } from "@/app/_components/Moderate";
@@ -64,7 +64,8 @@ export default async function PlayerPage({
   const { user, states, projects, violations, bans, actions } = data;
   const activeBan = bans.find(banIsActive) ?? null;
   const handle = await slackHandle(user.slack_id);
-  const reports = await listReportsAgainst(id);
+  const canSeeReports = await isReportViewer();
+  const reports = canSeeReports ? await listReportsAgainst(id) : [];
   const openReports = reports.filter((r) => r.status === "open").length;
 
   const pixels = Math.round((Number(user.pixels) || 0) * 100) / 100;
@@ -125,13 +126,15 @@ export default async function PlayerPage({
         <Stat label="Approved hrs" value={`${fmt(approvedHours)}h`} />
         <Stat label="Projects" value={String(projects.length)} />
         <Stat label="Violations" value={String(violations.length)} />
-        <Link href={`/reports`} className="contents">
-          <Stat
-            label="Reports"
-            value={openReports > 0 ? `${reports.length} · ${openReports} open` : String(reports.length)}
-            tone={openReports > 0 ? "text-brand" : undefined}
-          />
-        </Link>
+        {canSeeReports && (
+          <Link href={`/reports`} className="contents">
+            <Stat
+              label="Reports"
+              value={openReports > 0 ? `${reports.length} · ${openReports} open` : String(reports.length)}
+              tone={openReports > 0 ? "text-brand" : undefined}
+            />
+          </Link>
+        )}
       </div>
 
       <Card className="p-5 mb-8 gap-0">
@@ -191,6 +194,7 @@ export default async function PlayerPage({
         </Card>
       </Section>
 
+      {canSeeReports && (
       <Section title="Reports" count={reports.length}>
         <Card className="divide-y divide-border py-0">
           {reports.length === 0 && (
@@ -235,6 +239,7 @@ export default async function PlayerPage({
           ))}
         </Card>
       </Section>
+      )}
 
       <Section title="Violations" count={violations.length}>
         <Card className="divide-y divide-border py-0">

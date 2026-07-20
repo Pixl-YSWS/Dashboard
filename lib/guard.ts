@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession, isAllowed, type AdminSession } from "./session";
-import { getAdmin } from "./db";
+import { getAdmin, listReportViewerIds } from "./db";
 
 export const ALL_PERMISSIONS = ["warn", "ban", "notify", "review"] as const;
 export type Permission = (typeof ALL_PERMISSIONS)[number];
@@ -97,6 +97,21 @@ export async function requirePerm(perm: Permission): Promise<AdminAccess> {
   if (!access.perms.has(perm))
     throw new Error(`You don't have the "${perm}" permission.`);
   return access;
+}
+
+// Reports are a separate, explicit allow-list (report_viewers table) — regular
+// admins/sub-admins do NOT get in. A viewer only needs a valid session.
+export async function isReportViewer(): Promise<boolean> {
+  const session = await getSession();
+  if (!session) return false;
+  return (await listReportViewerIds()).includes(session.slackId);
+}
+
+export async function requireReportViewer(): Promise<AdminSession> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (!(await listReportViewerIds()).includes(session.slackId)) redirect("/");
+  return session;
 }
 
 export async function requireSuper(): Promise<AdminAccess> {

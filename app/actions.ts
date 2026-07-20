@@ -12,6 +12,8 @@ import {
   creditReviewerPixels,
   activeDashEvents,
   communityGoalShipCount,
+  addReportViewer,
+  removeReportViewer,
   EVENT_TYPES,
   type DashEventRow,
 } from "@/lib/db";
@@ -22,8 +24,7 @@ import { dmOrEmail } from "@/lib/notify";
 import {
   requirePerm,
   requireSuper,
-  requireAdmin,
-  canView,
+  requireReportViewer,
   ownerSlackIds,
   secondPassSlackIds,
   SUBADMIN_PERMISSIONS,
@@ -1646,8 +1647,7 @@ export async function undoTeamChange(formData: FormData): Promise<void> {
 }
 
 export async function resolveReport(formData: FormData): Promise<void> {
-  const access = await requireAdmin();
-  if (!canView(access, ["warn", "ban"])) redirect("/");
+  const session = await requireReportViewer();
   const id = Number(formData.get("id") ?? 0);
   const dismissed = formData.get("action") === "dismiss";
   if (!id) return;
@@ -1655,10 +1655,26 @@ export async function resolveReport(formData: FormData): Promise<void> {
     .from("reports")
     .update({
       status: dismissed ? "dismissed" : "resolved",
-      handled_by: actorName(access),
+      handled_by: `${session.name} (${session.slackId})`,
       handled_at: new Date().toISOString(),
     })
     .eq("id", id);
   if (error) console.error("resolveReport", error.message);
+  revalidatePath("/reports");
+}
+
+export async function addReportViewerAction(formData: FormData): Promise<void> {
+  const session = await requireReportViewer();
+  const slackId = String(formData.get("slackId") ?? "").trim().toUpperCase();
+  if (!/^[UW][A-Z0-9]{6,}$/.test(slackId))
+    redirect(`/reports?verror=${encodeURIComponent("Enter a valid Slack member ID (starts with U).")}`);
+  await addReportViewer(slackId, `${session.name} (${session.slackId})`);
+  revalidatePath("/reports");
+}
+
+export async function removeReportViewerAction(formData: FormData): Promise<void> {
+  const session = await requireReportViewer();
+  const slackId = String(formData.get("slackId") ?? "").trim();
+  if (slackId && slackId !== session.slackId) await removeReportViewer(slackId);
   revalidatePath("/reports");
 }

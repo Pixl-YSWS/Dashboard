@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { getAccess, canView } from "@/lib/guard";
+import { getAccess, canView, isReportViewer } from "@/lib/guard";
 import { countPendingReviews, countOpenReports } from "@/lib/db";
 import { Shell } from "@/app/_components/Shell";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -35,6 +35,7 @@ export default async function RootLayout({
 }) {
   const access = await getAccess();
   const session = access?.session ?? null;
+  const reportViewer = await isReportViewer();
   const nav = access
     ? {
         players: canView(access, ["warn", "ban"]),
@@ -42,7 +43,7 @@ export default async function RootLayout({
         review: canView(access, ["review"]),
         pixels: access.isSuper,
         moderation: canView(access, ["warn", "ban"]),
-        reports: canView(access, ["warn", "ban"]),
+        reports: reportViewer,
         notify: access.isSuper || access.perms.has("notify"),
         admins: access.isSuper,
         reviewers: access.isSuper,
@@ -53,7 +54,7 @@ export default async function RootLayout({
       }
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;
-  const reportCount = nav?.reports ? await countOpenReports() : 0;
+  const reportCount = reportViewer ? await countOpenReports() : 0;
   return (
     <html
       lang="en"
