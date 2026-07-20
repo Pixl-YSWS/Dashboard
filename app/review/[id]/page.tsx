@@ -393,7 +393,7 @@ export default async function ReviewDetail({
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">
                     {canSecondPass
-                      ? "Approving credits pixels at the player's level rate ($4–7/hr in px) and ships it. Every verdict needs a note. You can only lower the credited hours."
+                      ? "Approving credits pixels at the player's level rate ($4–6/hr in px) and ships it. Every verdict needs a note. You can only lower the credited hours."
                       : "Every verdict needs a note. Approving sends this to a final reviewer before pixels are credited. You can only lower the credited hours."}
                   </p>
                   <ReviewForm

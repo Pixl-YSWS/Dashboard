@@ -43,27 +43,19 @@ function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
 }
 
-// XP system: 1 XP per lifetime approved hour. The $/hr rate steps up with XP
-// ($4.00 at level 0 to $7.00 at 100 XP); 10 px = $1, so px/hr = $/hr x 10.
-// A player's rate for a ship comes from their XP before that ship.
-const RATE_STEPS: [number, number][] = [
-  [0, 40],
-  [10, 45],
-  [20, 45],
-  [30, 50],
-  [40, 50],
-  [50, 55],
-  [60, 60],
-  [70, 60],
-  [80, 65],
-  [90, 65],
-  [100, 70],
-];
+// XP = 1 per lifetime approved hour; level = approved hours, capped at 100.
+// Payout is a flat $4.00/hr base plus an XP bonus ramping linearly to $6.00/hr
+// at level 100 (40 px base -> 60 px at max). A player's rate for a ship comes
+// from their XP before that ship. Keep in sync with server src/xp.ts.
+const BASE_PX_PER_HOUR = 40;
+const MAX_PX_PER_HOUR = 60;
+const MAX_LEVEL = 100;
 
 function pxPerHourFor(xp: number): number {
-  let rate = RATE_STEPS[0][1];
-  for (const [threshold, r] of RATE_STEPS) if (xp >= threshold) rate = r;
-  return rate;
+  const level = Math.min(MAX_LEVEL, Math.floor(Math.max(xp, 0)));
+  return Math.round(
+    BASE_PX_PER_HOUR + ((MAX_PX_PER_HOUR - BASE_PX_PER_HOUR) * level) / MAX_LEVEL,
+  );
 }
 
 async function lifetimeApprovedHours(userId: string, excludeProjectId: number): Promise<number> {
