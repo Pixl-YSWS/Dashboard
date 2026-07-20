@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePagePerm } from "@/lib/guard";
-import { banIsActive, getPlayer } from "@/lib/db";
+import { banIsActive, getPlayer, listReportsAgainst } from "@/lib/db";
 import { slackHandle } from "@/lib/slack";
 import { BanForm, LiftBanForm, NotifyForm, WarnForm } from "@/app/_components/Moderate";
 import { StatusBadge } from "@/app/_components/ProjectBadges";
@@ -64,6 +64,8 @@ export default async function PlayerPage({
   const { user, states, projects, violations, bans, actions } = data;
   const activeBan = bans.find(banIsActive) ?? null;
   const handle = await slackHandle(user.slack_id);
+  const reports = await listReportsAgainst(id);
+  const openReports = reports.filter((r) => r.status === "open").length;
 
   const pixels = Math.round((Number(user.pixels) || 0) * 100) / 100;
   const approvedHours =
@@ -116,13 +118,20 @@ export default async function PlayerPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <Link href={`/pixels?user=${user.id}`} className="contents">
           <Stat label="Pixels" value={fmt(pixels)} tone="text-amber-600 dark:text-amber-400" />
         </Link>
         <Stat label="Approved hrs" value={`${fmt(approvedHours)}h`} />
         <Stat label="Projects" value={String(projects.length)} />
         <Stat label="Violations" value={String(violations.length)} />
+        <Link href={`/reports`} className="contents">
+          <Stat
+            label="Reports"
+            value={openReports > 0 ? `${reports.length} · ${openReports} open` : String(reports.length)}
+            tone={openReports > 0 ? "text-brand" : undefined}
+          />
+        </Link>
       </div>
 
       <Card className="p-5 mb-8 gap-0">
@@ -177,6 +186,51 @@ export default async function PlayerPage({
                 )}
                 <span>created {new Date(p.created_at).toLocaleDateString()}</span>
               </div>
+            </div>
+          ))}
+        </Card>
+      </Section>
+
+      <Section title="Reports" count={reports.length}>
+        <Card className="divide-y divide-border py-0">
+          {reports.length === 0 && (
+            <div className="p-4 text-muted-foreground text-sm">No reports filed against this player.</div>
+          )}
+          {reports.map((r) => (
+            <div key={r.id} className="p-3">
+              <div className="flex gap-3 items-baseline flex-wrap">
+                <Badge variant={r.status === "open" ? "warning" : "outline"} className="capitalize">
+                  {r.status}
+                </Badge>
+                <span className="text-sm flex-1 break-words min-w-0">
+                  {r.reason || <span className="text-muted-foreground">no reason given</span>}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  by {r.reporter_name} · {new Date(r.created_at).toLocaleString()}
+                </span>
+              </div>
+              {r.context.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs font-medium text-muted-foreground select-none">
+                    Chat context ({r.context.length})
+                  </summary>
+                  <div className="mt-2 rounded-lg border border-border bg-background/60 divide-y divide-border">
+                    {r.context.map((c, i) => (
+                      <div key={i} className="px-3 py-1.5 text-sm break-words">
+                        <span
+                          className={`font-medium ${
+                            c.name === r.target_name ? "text-brand" : "text-foreground/70"
+                          }`}
+                        >
+                          {c.name}
+                        </span>
+                        <span className="text-muted-foreground">: </span>
+                        {c.text}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           ))}
         </Card>

@@ -22,6 +22,8 @@ import { dmOrEmail } from "@/lib/notify";
 import {
   requirePerm,
   requireSuper,
+  requireAdmin,
+  canView,
   ownerSlackIds,
   secondPassSlackIds,
   SUBADMIN_PERMISSIONS,
@@ -1641,4 +1643,22 @@ export async function undoTeamChange(formData: FormData): Promise<void> {
     actorName(access),
     actorName(access),
   );
+}
+
+export async function resolveReport(formData: FormData): Promise<void> {
+  const access = await requireAdmin();
+  if (!canView(access, ["warn", "ban"])) redirect("/");
+  const id = Number(formData.get("id") ?? 0);
+  const dismissed = formData.get("action") === "dismiss";
+  if (!id) return;
+  const { error } = await db
+    .from("reports")
+    .update({
+      status: dismissed ? "dismissed" : "resolved",
+      handled_by: actorName(access),
+      handled_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) console.error("resolveReport", error.message);
+  revalidatePath("/reports");
 }

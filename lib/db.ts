@@ -1138,6 +1138,84 @@ export async function listPixelTransactions(limit = 1000): Promise<PixelTxRow[]>
   return rows;
 }
 
+export interface ReportContextLine {
+  name: string;
+  text: string;
+}
+
+export interface ReportRow {
+  id: number;
+  reporter_id: string;
+  target_id: string;
+  reason: string;
+  context: ReportContextLine[];
+  scene: string;
+  status: string;
+  handled_by: string;
+  handled_at: string | null;
+  created_at: string;
+  reporter_name: string;
+  target_name: string;
+  target_slack: string | null;
+}
+
+// reports has two FKs to users (reporter + target), so names are resolved in a
+// second query rather than an embed.
+async function hydrateReports(rows: ReportRow[]): Promise<ReportRow[]> {
+  const ids = [...new Set(rows.flatMap((r) => [r.reporter_id, r.target_id]))];
+  const users = ids.length
+    ? await db.from("users").select("id, display_name, slack_id").in("id", ids)
+    : { data: [] };
+  const names = new Map(
+    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; slack_id: string | null }]),
+  );
+  for (const r of rows) {
+    if (!Array.isArray(r.context)) r.context = [];
+    r.reporter_name = names.get(r.reporter_id)?.display_name ?? r.reporter_id;
+    r.target_name = names.get(r.target_id)?.display_name ?? r.target_id;
+    r.target_slack = names.get(r.target_id)?.slack_id ?? null;
+  }
+  return rows;
+}
+
+// Player reports, newest first.
+export async function listReports(limit = 500): Promise<ReportRow[]> {
+  const { data, error } = await db
+    .from("reports")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listReports", error.message);
+    return [];
+  }
+  return hydrateReports((data ?? []) as ReportRow[]);
+}
+
+// Reports filed against one player, newest first — for their profile page.
+export async function listReportsAgainst(targetId: string, limit = 50): Promise<ReportRow[]> {
+  const { data, error } = await db
+    .from("reports")
+    .select("*")
+    .eq("target_id", targetId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) {
+    console.error("listReportsAgainst", error.message);
+    return [];
+  }
+  return hydrateReports((data ?? []) as ReportRow[]);
+}
+
+export async function countOpenReports(): Promise<number> {
+  const { count, error } = await db
+    .from("reports")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "open");
+  if (error) return 0;
+  return count ?? 0;
+}
+
 export interface ShopItemRow {
   id: number;
   name: string;

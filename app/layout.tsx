@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getAccess, canView } from "@/lib/guard";
-import { countPendingReviews } from "@/lib/db";
+import { countPendingReviews, countOpenReports } from "@/lib/db";
 import { Shell } from "@/app/_components/Shell";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,7 @@ export default async function RootLayout({
         review: canView(access, ["review"]),
         pixels: access.isSuper,
         moderation: canView(access, ["warn", "ban"]),
+        reports: canView(access, ["warn", "ban"]),
         notify: access.isSuper || access.perms.has("notify"),
         admins: access.isSuper,
         reviewers: access.isSuper,
@@ -52,6 +53,7 @@ export default async function RootLayout({
       }
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;
+  const reportCount = nav?.reports ? await countOpenReports() : 0;
   return (
     <html
       lang="en"
@@ -127,6 +129,7 @@ export default async function RootLayout({
               session={{ name: session.name, slackId: session.slackId }}
               nav={nav}
               reviewCount={reviewCount}
+              reportCount={reportCount}
             />
 
             <main className="flex-1 min-w-0 overflow-x-hidden flex flex-col gap-4">

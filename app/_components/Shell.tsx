@@ -25,6 +25,7 @@ export interface NavFlags {
   review: boolean;
   pixels: boolean;
   moderation: boolean;
+  reports: boolean;
   notify: boolean;
   admins: boolean;
   reviewers: boolean;
@@ -41,6 +42,7 @@ const GLYPHS = {
   players: "people-3",
   pixels: "bank",
   violations: "message",
+  reports: "message-exclamation",
   bans: "private",
   notify: "bell",
   admins: "person-badge",
@@ -73,11 +75,13 @@ export function Shell({
   session,
   nav,
   reviewCount = 0,
+  reportCount = 0,
   // children,
 }: {
   session: { name: string; slackId: string };
   nav: NavFlags;
   reviewCount?: number;
+  reportCount?: number;
   // children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -134,6 +138,13 @@ export function Shell({
     {
       label: "Moderation",
       items: [
+        {
+          href: "/reports",
+          label: "Reports",
+          icon: "reports",
+          show: nav.reports,
+          count: reportCount,
+        },
         {
           href: "/violations",
           label: "Violations",
