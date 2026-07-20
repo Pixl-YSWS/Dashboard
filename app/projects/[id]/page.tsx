@@ -17,6 +17,7 @@ import {
   StatusBadge,
 } from "@/app/_components/ProjectBadges";
 import { CommitList } from "@/app/_components/CommitList";
+import { renderMarkdown } from "@/lib/markdown";
 import { slackHandle } from "@/lib/slack";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -358,9 +359,10 @@ export default async function ProjectPage({
                 {new Date(j.created_at).toLocaleString()}
               </span>
             </div>
-            <div className="text-sm whitespace-pre-wrap break-words">
-              {j.content}
-            </div>
+            <div
+              className="md text-sm break-words text-foreground/80"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(j.content) }}
+            />
           </div>
         ))}
       </Card>
