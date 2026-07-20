@@ -34,6 +34,14 @@ export default async function ReportsPage({
   const all = await listReports(500);
   const viewers = await listReportViewers();
 
+  const REPEAT_THRESHOLD = 3;
+  const targetCounts = new Map<string, number>();
+  const reporterCounts = new Map<string, number>();
+  for (const r of all) {
+    targetCounts.set(r.target_id, (targetCounts.get(r.target_id) ?? 0) + 1);
+    reporterCounts.set(r.reporter_id, (reporterCounts.get(r.reporter_id) ?? 0) + 1);
+  }
+
   const openCount = all.filter((r) => r.status === "open").length;
   const activeStatus =
     status === "resolved" || status === "dismissed" || status === "all" ? status : "open";
@@ -100,9 +108,14 @@ export default async function ReportsPage({
                     {r.ai_score != null ? ` ${r.ai_score}/100` : ""}
                   </Badge>
                 )}
+                {(targetCounts.get(r.target_id) ?? 0) >= REPEAT_THRESHOLD && (
+                  <Badge variant="destructive">🚩 {targetCounts.get(r.target_id)}×</Badge>
+                )}
                 <span className="text-xs text-muted-foreground ml-auto">
-                  {r.anonymous ? "anonymous" : `by ${r.reporter_name}`} ·{" "}
-                  {new Date(r.created_at).toLocaleString()}
+                  {!r.anonymous || (reporterCounts.get(r.reporter_id) ?? 0) >= REPEAT_THRESHOLD
+                    ? `by ${r.reporter_name}${r.anonymous ? " 🚩" : ""}`
+                    : "anonymous"}{" "}
+                  · {new Date(r.created_at).toLocaleString()}
                 </span>
               </div>
               {r.reason && (

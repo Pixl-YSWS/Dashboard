@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireReportViewer, getAccess, canView } from "@/lib/guard";
-import { getReport, listChatFor } from "@/lib/db";
+import { getReport, listChatFor, reportCounts } from "@/lib/db";
 import { resolveReport } from "@/app/actions";
 import { slackHandle } from "@/lib/slack";
 import { BanForm, WarnForm } from "@/app/_components/Moderate";
@@ -29,13 +29,20 @@ export default async function ReportDetailPage({
   const report = await getReport(Number(id));
   if (!report) notFound();
 
-  const [chat, access, targetHandle] = await Promise.all([
+  const [chat, access, targetHandle, counts] = await Promise.all([
     listChatFor(report.target_id, 10),
     getAccess(),
     slackHandle(report.target_slack),
+    reportCounts(report.target_id, report.reporter_id),
   ]);
   const canBan = !!access && canView(access, ["ban"]);
   const canWarn = !!access && canView(access, ["warn"]);
+
+  // Serial reporters get deanonymized to viewers; heavily-reported targets get
+  // flagged for a closer look.
+  const REPEAT_THRESHOLD = 3;
+  const revealReporter = !report.anonymous || counts.byReporter >= REPEAT_THRESHOLD;
+  const targetFlagged = counts.againstTarget >= REPEAT_THRESHOLD;
 
   return (
     <div className="max-w-3xl">
@@ -56,6 +63,9 @@ export default async function ReportDetailPage({
             {report.ai_score != null ? ` ${report.ai_score}/100` : ""}
           </Badge>
         )}
+        {targetFlagged && (
+          <Badge variant="destructive">🚩 Repeat-reported ({counts.againstTarget})</Badge>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3 mb-4">
@@ -74,16 +84,23 @@ export default async function ReportDetailPage({
           <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
             Reported by
           </div>
-          {report.anonymous ? (
-            <span className="font-semibold text-muted-foreground">Anonymous</span>
-          ) : (
+          {revealReporter ? (
             <Link href={`/players/${report.reporter_id}`} className="font-semibold hover:text-brand">
               {report.reporter_name}
             </Link>
+          ) : (
+            <span className="font-semibold text-muted-foreground">Anonymous</span>
           )}
           <div className="text-xs text-muted-foreground mt-0.5">
             {new Date(report.created_at).toLocaleString()}
-            {report.anonymous ? " · identity hidden by reporter" : ""}
+            {report.anonymous && revealReporter
+              ? ` · 🚩 identity revealed — filed ${counts.byReporter} reports`
+              : report.anonymous
+                ? " · identity hidden by reporter"
+                : ""}
+            {!report.anonymous && counts.byReporter >= REPEAT_THRESHOLD
+              ? ` · ${counts.byReporter} reports filed`
+              : ""}
           </div>
         </Card>
       </div>
@@ -150,10 +167,8 @@ export default async function ReportDetailPage({
       </Card>
 
       <Card className="p-4 gap-3">
-        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</div>
-        <div className="flex gap-3 flex-wrap items-center">
-          {canWarn && <WarnForm userId={report.target_id} compact />}
-          {canBan && <BanForm userId={report.target_id} compact />}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Actions</div>
           {report.status === "open" && (
             <div className="flex gap-2 ml-auto">
               <form action={resolveReport}>
@@ -173,6 +188,31 @@ export default async function ReportDetailPage({
             </div>
           )}
         </div>
+
+        {(canWarn || canBan) && (
+          <div className="flex flex-col gap-2 pt-2 border-t border-border">
+            <div className="text-xs text-muted-foreground">
+              On the reported player (<span className="font-medium">{report.target_name}</span>)
+            </div>
+            <div className="flex gap-3 flex-wrap items-center">
+              {canWarn && <WarnForm userId={report.target_id} compact />}
+              {canBan && <BanForm userId={report.target_id} compact />}
+            </div>
+          </div>
+        )}
+
+        {revealReporter && (canWarn || canBan) && (
+          <div className="flex flex-col gap-2 pt-2 border-t border-border">
+            <div className="text-xs text-muted-foreground">
+              On the reporter (<span className="font-medium">{report.reporter_name}</span>) — for false or
+              abusive reports
+            </div>
+            <div className="flex gap-3 flex-wrap items-center">
+              {canWarn && <WarnForm userId={report.reporter_id} compact />}
+              {canBan && <BanForm userId={report.reporter_id} compact />}
+            </div>
+          </div>
+        )}
         {report.status !== "open" && report.handled_by && (
           <div className="text-xs text-muted-foreground">
             {report.status} by {report.handled_by}

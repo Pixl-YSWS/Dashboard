@@ -1212,6 +1212,19 @@ export async function listReportsAgainst(targetId: string, limit = 50): Promise<
   return hydrateReports((data ?? []) as ReportRow[]);
 }
 
+// How many reports a target has received and a reporter has filed — used to
+// flag repeat-reported players and to deanonymize serial reporters.
+export async function reportCounts(
+  targetId: string,
+  reporterId: string,
+): Promise<{ againstTarget: number; byReporter: number }> {
+  const [t, r] = await Promise.all([
+    db.from("reports").select("id", { count: "exact", head: true }).eq("target_id", targetId),
+    db.from("reports").select("id", { count: "exact", head: true }).eq("reporter_id", reporterId),
+  ]);
+  return { againstTarget: t.count ?? 0, byReporter: r.count ?? 0 };
+}
+
 export async function getReport(id: number): Promise<ReportRow | null> {
   const { data, error } = await db.from("reports").select("*").eq("id", id).single();
   if (error || !data) return null;
