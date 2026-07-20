@@ -94,6 +94,7 @@ export interface HackatimeReport {
   rangeStart: string | null;
   rangeEnd: string | null;
   languages: HackatimeBreakdown[];
+  languagesScoped: boolean;
   editors: HackatimeBreakdown[];
   operatingSystems: HackatimeBreakdown[];
   machines: HackatimeBreakdown[];
@@ -138,6 +139,7 @@ export async function fetchHackatimeReport(
     rangeStart: null,
     rangeEnd: null,
     languages: [],
+    languagesScoped: false,
     editors: [],
     operatingSystems: [],
     machines: [],
@@ -190,6 +192,25 @@ export async function fetchHackatimeReport(
       }),
     );
 
+    // Languages scoped to just this submission's linked projects — the
+    // account-wide stats above mix in everything else the maker codes.
+    let projectLanguages: HackatimeBreakdown[] = [];
+    if (linked.size > 0) {
+      try {
+        const langRes = await fetch(
+          `${BASE}/api/v1/users/${encodeURIComponent(id)}/stats` +
+            `?features=languages&filter_by_project=${encodeURIComponent([...linked].join(","))}`,
+          { headers, signal: AbortSignal.timeout(10000), next: { revalidate: 300 } },
+        );
+        if (langRes.ok) {
+          const ld = ((await langRes.json()) as { data?: Record<string, unknown> }).data ?? {};
+          projectLanguages = mapBreakdown(ld.languages);
+        }
+      } catch {
+        /* fall back to account-wide languages */
+      }
+    }
+
     const projects: HackatimeProjectReport[] = rawProjects
       .filter((p) => linked.has(p.name) || p.seconds > 0)
       .map((p) => {
@@ -214,7 +235,8 @@ export async function fetchHackatimeReport(
       dailyAverageSeconds: Number(data.daily_average) || 0,
       rangeStart: typeof data.start === "string" ? data.start : null,
       rangeEnd: typeof data.end === "string" ? data.end : null,
-      languages: mapBreakdown(data.languages),
+      languages: projectLanguages.length > 0 ? projectLanguages : mapBreakdown(data.languages),
+      languagesScoped: projectLanguages.length > 0,
       editors: mapBreakdown(data.editors),
       operatingSystems: mapBreakdown(data.operating_systems),
       machines: mapBreakdown(data.machines),

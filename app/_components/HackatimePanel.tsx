@@ -106,7 +106,12 @@ export function HackatimePanel({ report }: { report: HackatimeReport }) {
       </div>
 
       <div className="p-4 space-y-4 border-b border-border">
-        {report.languages.length > 0 && <Breakdown title="Languages (all projects)" items={report.languages} />}
+        {report.languages.length > 0 && (
+          <Breakdown
+            title={report.languagesScoped ? "Languages (this project)" : "Languages (all projects)"}
+            items={report.languages}
+          />
+        )}
         {report.editors.length > 0 && <Breakdown title="Editors" items={report.editors} />}
         {report.operatingSystems.length > 0 && <Breakdown title="Operating systems" items={report.operatingSystems} />}
         {report.machines.length > 0 && <Breakdown title="Machines" items={report.machines} />}
