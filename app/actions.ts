@@ -1767,3 +1767,76 @@ export async function deleteVaultLevel(formData: FormData): Promise<void> {
   if (error) console.error("deleteVaultLevel", error.message);
   revalidatePath("/community-goals");
 }
+
+export async function addStoryNode(formData: FormData): Promise<void> {
+  await requireSuper();
+  const s = (k: string, max: number) => String(formData.get(k) ?? "").trim().slice(0, max);
+  const title = s("title", 120);
+  if (!title)
+    redirect(`/story?error=${encodeURIComponent("A node needs a title.")}`);
+  const { error } = await db.from("story_nodes").insert({
+    kind: s("kind", 20) || "chapter",
+    seal: s("seal", 8),
+    tag: s("tag", 40),
+    duration: s("duration", 40),
+    title,
+    body: s("body", 1200),
+    quote: s("quote", 300),
+    outcome: s("outcome", 400),
+    position: Number(formData.get("position") ?? 0),
+  });
+  if (error) {
+    console.error("addStoryNode", error.message);
+    redirect(`/story?error=${encodeURIComponent("Couldn't save — is migration 0040 applied?")}`);
+  }
+  revalidatePath("/story");
+  redirect("/story?saved=1");
+}
+
+export async function updateStoryNode(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const s = (k: string, max: number) => String(formData.get(k) ?? "").trim().slice(0, max);
+  const { error } = await db
+    .from("story_nodes")
+    .update({
+      kind: s("kind", 20) || "chapter",
+      seal: s("seal", 8),
+      tag: s("tag", 40),
+      duration: s("duration", 40),
+      title: s("title", 120),
+      body: s("body", 1200),
+      quote: s("quote", 300),
+      outcome: s("outcome", 400),
+      position: Number(formData.get("position") ?? 0),
+    })
+    .eq("id", id);
+  if (error) {
+    console.error("updateStoryNode", error.message);
+    redirect(`/story?error=${encodeURIComponent("Couldn't update that node.")}`);
+  }
+  revalidatePath("/story");
+  redirect("/story?saved=1");
+}
+
+export async function toggleStoryNode(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("story_nodes")
+    .update({ active: formData.get("active") === "1" })
+    .eq("id", id);
+  if (error) console.error("toggleStoryNode", error.message);
+  revalidatePath("/story");
+}
+
+export async function deleteStoryNode(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db.from("story_nodes").delete().eq("id", id);
+  if (error) console.error("deleteStoryNode", error.message);
+  revalidatePath("/story");
+}

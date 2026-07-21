@@ -1686,3 +1686,30 @@ export async function listVaultLevels(): Promise<VaultLevelRow[]> {
       : [],
   })) as VaultLevelRow[];
 }
+
+export interface StoryNodeRow {
+  id: number;
+  kind: string;
+  seal: string;
+  tag: string;
+  duration: string;
+  title: string;
+  body: string;
+  quote: string;
+  outcome: string;
+  position: number;
+  active: boolean;
+}
+
+export async function listStoryNodes(): Promise<StoryNodeRow[]> {
+  const { data, error } = await db
+    .from("story_nodes")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) {
+    console.error("listStoryNodes", error.message);
+    return [];
+  }
+  return (data ?? []) as StoryNodeRow[];
+}
