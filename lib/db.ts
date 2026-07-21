@@ -1750,3 +1750,38 @@ export async function getPixelFlowSeries(days = 30): Promise<PixelFlowPoint[]> {
   }
   return points;
 }
+
+export interface ShopSalesPoint {
+  date: string;
+  count: number;
+}
+
+// Shop activity per day for the shop chart. Purchases aren't enabled yet, so
+// this counts trophy claims (shop_claims); it becomes real sales once buying
+// goes live and starts writing here.
+export async function getShopSalesSeries(days = 30): Promise<ShopSalesPoint[]> {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const startMs = today.getTime() - (days - 1) * 86400_000;
+  const { data, error } = await db
+    .from("shop_claims")
+    .select("claimed_at")
+    .gte("claimed_at", new Date(startMs).toISOString())
+    .limit(50000);
+  if (error) {
+    console.error("getShopSalesSeries", error.message);
+    return Array.from({ length: days }, (_, i) => ({
+      date: new Date(startMs + i * 86400_000).toISOString().slice(0, 10),
+      count: 0,
+    }));
+  }
+  const counts = new Map<string, number>();
+  for (const r of data ?? []) {
+    const key = new Date((r as { claimed_at: string }).claimed_at).toISOString().slice(0, 10);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return Array.from({ length: days }, (_, i) => {
+    const key = new Date(startMs + i * 86400_000).toISOString().slice(0, 10);
+    return { date: key, count: counts.get(key) ?? 0 };
+  });
+}
