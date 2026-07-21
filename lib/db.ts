@@ -1713,3 +1713,40 @@ export async function listStoryNodes(): Promise<StoryNodeRow[]> {
   }
   return (data ?? []) as StoryNodeRow[];
 }
+
+export interface PixelFlowPoint {
+  date: string;
+  given: number;
+  deducted: number;
+}
+
+// Daily pixel flow for the overview chart: positive amounts are pixels given
+// out, negative are spent/deducted (charted as a positive magnitude).
+export async function getPixelFlowSeries(days = 30): Promise<PixelFlowPoint[]> {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const startMs = today.getTime() - (days - 1) * 86400_000;
+  const { data, error } = await db
+    .from("pixel_transactions")
+    .select("amount, created_at")
+    .gte("created_at", new Date(startMs).toISOString())
+    .limit(50000);
+  if (error) {
+    console.error("getPixelFlowSeries", error.message);
+    return [];
+  }
+  const given = new Map<string, number>();
+  const deducted = new Map<string, number>();
+  for (const t of data ?? []) {
+    const key = new Date(t.created_at as string).toISOString().slice(0, 10);
+    const amt = Number((t as { amount: number }).amount) || 0;
+    if (amt >= 0) given.set(key, (given.get(key) ?? 0) + amt);
+    else deducted.set(key, (deducted.get(key) ?? 0) + Math.abs(amt));
+  }
+  const points: PixelFlowPoint[] = [];
+  for (let i = 0; i < days; i++) {
+    const key = new Date(startMs + i * 86400_000).toISOString().slice(0, 10);
+    points.push({ date: key, given: given.get(key) ?? 0, deducted: deducted.get(key) ?? 0 });
+  }
+  return points;
+}

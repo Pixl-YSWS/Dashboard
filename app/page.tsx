@@ -3,10 +3,12 @@ import { requireAdmin, canView } from "@/lib/guard";
 import {
   getStats,
   getGrowthSeries,
+  getPixelFlowSeries,
   listViolations,
   listActivityFeed,
 } from "@/lib/db";
 import { GrowthChart } from "@/app/_components/GrowthChart";
+import { PixelFlowChart } from "@/app/_components/PixelFlowChart";
 import { Badge } from "@/app/_components/ProjectBadges";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,9 +37,10 @@ export default async function Overview({
   const showModeration = canView(access, ["warn", "ban"]);
   const { range } = await searchParams;
   const days = RANGES.includes(Number(range)) ? Number(range) : 30;
-  const [stats, growth, recent, feed] = await Promise.all([
+  const [stats, growth, pixelFlow, recent, feed] = await Promise.all([
     getStats(),
     getGrowthSeries(days),
+    access.isSuper ? getPixelFlowSeries(days) : Promise.resolve([]),
     showModeration ? listViolations(8) : Promise.resolve([]),
     listActivityFeed({
       mod: showModeration,
@@ -45,7 +48,7 @@ export default async function Overview({
       team: access.isSuper,
       pixels: access.isSuper,
       payouts: access.isSuper,
-      limit: 20,
+      limit: 8,
     }),
   ]);
 
@@ -176,6 +179,11 @@ export default async function Overview({
                 kind="daily"
                 points={growth.violations}
               />
+            </Card>
+          )}
+          {access.isSuper && (
+            <Card className="p-5 lg:col-span-2">
+              <PixelFlowChart points={pixelFlow} />
             </Card>
           )}
         </div>
