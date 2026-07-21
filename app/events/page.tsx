@@ -9,20 +9,11 @@ import {
   type DashEventRow,
 } from "@/lib/db";
 import { createEvent, stopEvent, deleteEvent } from "@/app/actions";
+import { CreateEventForm } from "@/app/_components/CreateEventForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export const dynamic = "force-dynamic";
 
@@ -113,92 +104,11 @@ export default async function EventsPage({
         <p className="text-xs text-muted-foreground mb-4">
           Fill only the fields your event type uses — the rest are ignored.
         </p>
-        <form action={createEvent} className="space-y-4">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="block">
-              <Label className="block text-sm font-medium mb-1.5">Type</Label>
-              <Select name="type" defaultValue={Object.keys(EVENT_TYPES)[0]}>
-                <SelectTrigger className="w-full text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(EVENT_TYPES).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Name (players see this)</span>
-              <Input
-                name="name"
-                required
-                maxLength={100}
-                placeholder="e.g. Double Streak Weekend"
-                className="w-full text-sm"
-              />
-            </Label>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Starts (UTC, blank = now)</span>
-              <Input name="startsAt" type="datetime-local" className="w-full text-sm" />
-            </Label>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Ends (UTC)</span>
-              <Input name="endsAt" type="datetime-local" required className="w-full text-sm" />
-            </Label>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Bounty reward (px)</span>
-              <Input name="reward" type="number" min={0} max={500} placeholder="50" className="w-full text-sm" />
-            </Label>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Bounty description</span>
-              <Input
-                name="description"
-                maxLength={500}
-                placeholder="e.g. ship something multiplayer"
-                className="w-full text-sm"
-              />
-            </Label>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Goal: ships target / bonus %</span>
-              <div className="flex gap-2">
-                <Input name="target" type="number" min={0} placeholder="25" className="w-full text-sm" />
-                <Input name="bonusPct" type="number" min={0} max={50} placeholder="10" className="w-full text-sm" />
-              </div>
-            </Label>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Blitz multiplier</span>
-              <Input name="mult" type="number" step="0.1" min={1} max={3} placeholder="1.5" className="w-full text-sm" />
-            </Label>
-          </div>
-          {shopItems.length > 0 && (
-            <div>
-              <span className="block text-sm font-medium mb-1.5">
-                Mystery merchant items (keep them inactive in the shop — they only show while the
-                event runs)
-              </span>
-              <div className="flex flex-wrap gap-3">
-                {shopItems.map((i) => (
-                  <Label
-                    key={i.id}
-                    className={`flex items-center gap-2 text-sm font-normal rounded-lg border border-border px-3 py-1.5 ${
-                      i.active ? "opacity-60" : ""
-                    }`}
-                  >
-                    <Checkbox name="itemIds" value={String(i.id)} />
-                    {i.name}
-                    {i.active && <span className="text-xs text-muted-foreground">(active anyway)</span>}
-                  </Label>
-                ))}
-              </div>
-            </div>
-          )}
-          <Button className="bg-brand text-white border-transparent">Create event</Button>
-        </form>
+        <CreateEventForm
+          action={createEvent}
+          types={EVENT_TYPES}
+          shopItems={shopItems.map((i) => ({ id: i.id, name: i.name, active: i.active }))}
+        />
       </Card>
 
       <div>
