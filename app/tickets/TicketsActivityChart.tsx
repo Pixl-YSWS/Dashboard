@@ -20,8 +20,8 @@ function dateLabel(date: string): string {
 }
 
 const config = {
-  created: { label: "Created", color: "var(--chart-1)" },
-  resolved: { label: "Resolved", color: "var(--chart-2)" },
+  created: { label: "Created", color: "#f59e0b" },
+  resolved: { label: "Resolved", color: "#22c55e" },
 } satisfies ChartConfig;
 
 export function TicketsActivityChart({ points }: { points: ActivityPoint[] }) {
