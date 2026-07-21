@@ -67,6 +67,43 @@ export async function listTickets(
   }
 }
 
+export interface ActivityPoint {
+  date: string;
+  created: number;
+  resolved: number;
+}
+
+// A full aligned 30-day window (created vs resolved per day) for the activity
+// chart. Pixorpheus keys days as YYYY-MM-DD; we fill the gaps with zeros.
+export async function ticketActivity(): Promise<ActivityPoint[]> {
+  let created: { day: string; count: number }[] = [];
+  let resolved: { day: string; count: number }[] = [];
+  try {
+    const res = await pixo("/tickets/activity");
+    if (res.ok) {
+      const d = (await res.json()) as {
+        created?: { day: string; count: number }[];
+        resolved?: { day: string; count: number }[];
+      };
+      created = d.created ?? [];
+      resolved = d.resolved ?? [];
+    }
+  } catch {
+    // fall through to an empty (all-zero) window
+  }
+  const cMap = new Map(created.map((r) => [r.day, r.count]));
+  const rMap = new Map(resolved.map((r) => [r.day, r.count]));
+  const out: ActivityPoint[] = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setUTCDate(today.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    out.push({ date: key, created: cMap.get(key) ?? 0, resolved: rMap.get(key) ?? 0 });
+  }
+  return out;
+}
+
 export async function ticketThread(ts: string): Promise<ThreadMessage[]> {
   const res = await pixo(`/tickets/${encodeURIComponent(ts)}/thread`);
   if (!res.ok) throw new Error(`thread failed (${res.status})`);
@@ -76,12 +113,11 @@ export async function ticketThread(ts: string): Promise<ThreadMessage[]> {
 export async function ticketReply(
   ts: string,
   text: string,
-  username?: string,
-  iconUrl?: string | null,
+  actor: { slackId?: string; username?: string },
 ): Promise<void> {
   const res = await pixo(`/tickets/${encodeURIComponent(ts)}/reply`, {
     method: "POST",
-    body: JSON.stringify({ text, username, icon_url: iconUrl ?? undefined }),
+    body: JSON.stringify({ text, slackId: actor.slackId, username: actor.username }),
   });
   if (!res.ok) {
     let detail = "";

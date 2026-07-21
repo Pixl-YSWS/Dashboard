@@ -15,7 +15,10 @@ export async function POST(
   const text = body.text?.trim();
   if (!text) return NextResponse.json({ error: "Text is required" }, { status: 400 });
   try {
-    await ticketReply(ts, text, access.session.name);
+    await ticketReply(ts, text, {
+      slackId: access.session.slackId,
+      username: access.session.name,
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 502 });

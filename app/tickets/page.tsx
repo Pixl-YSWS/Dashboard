@@ -1,7 +1,8 @@
 import { requireAdmin } from "@/lib/guard";
-import { ticketStats } from "@/lib/tickets";
+import { ticketStats, ticketActivity } from "@/lib/tickets";
 import { Card } from "@/components/ui/card";
 import { TicketsClient } from "./TicketsClient";
+import { TicketsActivityChart } from "./TicketsActivityChart";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 
 export default async function TicketsPage() {
   await requireAdmin();
-  const stats = await ticketStats();
+  const [stats, activity] = await Promise.all([ticketStats(), ticketActivity()]);
 
   return (
     <div>
@@ -30,6 +31,10 @@ export default async function TicketsPage() {
         <StatCard label="Open" value={stats.open} />
         <StatCard label="Resolved" value={stats.resolved} />
       </div>
+
+      <Card className="p-5 mb-6">
+        <TicketsActivityChart points={activity} />
+      </Card>
 
       <TicketsClient />
     </div>

@@ -413,3 +413,46 @@ h6.md-h {
     @apply font-sans;
   }
 }
+/* Collapsible <details> openers: a rotating chevron instead of the default
+   triangle marker, plus a smooth open/close height animation on every opener. */
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details > summary::before {
+  content: "";
+  display: inline-block;
+  width: 0.42em;
+  height: 0.42em;
+  margin-right: 0.55em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.2s ease;
+  vertical-align: middle;
+  opacity: 0.7;
+}
+details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    interpolate-size: allow-keywords;
+  }
+  details::details-content {
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      block-size 0.25s ease,
+      opacity 0.2s ease,
+      content-visibility 0.25s allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+}
