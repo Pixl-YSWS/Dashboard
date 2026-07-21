@@ -8,7 +8,6 @@ import { OptionsEditor } from "@/app/_components/OptionsEditor";
 import { AddShopItemForm } from "@/app/_components/AddShopItemForm";
 import { parseOptionGroups } from "@/lib/shopOptions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,19 +109,25 @@ export default async function ShopPage({
                     <form action={toggleShopItem}>
                       <input type="hidden" name="id" value={item.id} />
                       <input type="hidden" name="active" value={item.active ? "0" : "1"} />
-                      <Button variant="outline" size="sm">
+                      <PendingButton
+                        variant="outline"
+                        size="sm"
+                        pendingText={item.active ? "Hiding…" : "Showing…"}
+                      >
                         {item.active ? "Hide" : "Show"}
-                      </Button>
+                      </PendingButton>
                     </form>
                     <form action={deleteShopItem}>
                       <input type="hidden" name="id" value={item.id} />
-                      <Button
+                      <PendingButton
                         variant="outline"
                         size="sm"
+                        pendingText="Deleting…"
+                        confirm={`Delete "${item.name}" from the shop? This can't be undone.`}
                         className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
                       >
                         Delete
-                      </Button>
+                      </PendingButton>
                     </form>
                   </div>
                   <Disclosure summary="Edit item" className="mt-3">

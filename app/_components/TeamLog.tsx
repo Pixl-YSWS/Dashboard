@@ -1,7 +1,7 @@
 import { listTeamLog, type TeamLogRow } from "@/lib/db";
 import { undoTeamChange } from "@/app/actions";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -87,9 +87,14 @@ export async function TeamLog() {
                   {row.action !== "undo" && (
                     <form action={undoTeamChange}>
                       <input type="hidden" name="id" value={row.id} />
-                      <Button variant="outline" size="sm">
+                      <PendingButton
+                        variant="outline"
+                        size="sm"
+                        pendingText="Undoing…"
+                        confirm="Undo this team change?"
+                      >
                         Undo
-                      </Button>
+                      </PendingButton>
                     </form>
                   )}
                 </TableCell>

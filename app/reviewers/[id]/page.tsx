@@ -20,9 +20,9 @@ import {
   type PayoutTotals,
 } from "@/lib/db";
 import { removeReviewer, setSecondPass } from "@/app/actions";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { slackHandle } from "@/lib/slack";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -177,12 +177,14 @@ export default async function ReviewerPage({
               placeholder="Reason (sent to them)"
               className="text-sm w-52"
             />
-            <Button
+            <PendingButton
               variant="outline"
+              pendingText="Removing…"
+              confirm={`Remove ${display} as a reviewer?`}
               className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
             >
               Remove reviewer
-            </Button>
+            </PendingButton>
           </form>
           {secondPassSlackIds().includes(slackId) ? (
             <span className="text-xs text-muted-foreground">
@@ -198,13 +200,22 @@ export default async function ReviewerPage({
                 value={admin?.permissions.includes(SECOND_PASS) ? "0" : "1"}
               />
               {admin?.permissions.includes(SECOND_PASS) ? (
-                <Button variant="ghost" size="sm" className="text-foreground/70">
+                <PendingButton
+                  variant="ghost"
+                  size="sm"
+                  pendingText="Removing…"
+                  className="text-foreground/70"
+                >
                   Remove final reviewer
-                </Button>
+                </PendingButton>
               ) : (
-                <Button size="sm" className="bg-mint text-ink border-transparent hover:bg-mint/90">
+                <PendingButton
+                  size="sm"
+                  pendingText="Saving…"
+                  className="bg-mint text-ink border-transparent hover:bg-mint/90"
+                >
                   Make final reviewer
-                </Button>
+                </PendingButton>
               )}
             </form>
           )}

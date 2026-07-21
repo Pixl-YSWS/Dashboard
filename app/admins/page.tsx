@@ -5,7 +5,7 @@ import { listAdmins } from "@/lib/db";
 import { addAdmin, removeAdmin, updateAdminPerms } from "@/app/actions";
 import { slackHandles } from "@/lib/slack";
 import { TeamLog } from "@/app/_components/TeamLog";
-import { Button } from "@/components/ui/button";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -120,9 +120,12 @@ export default async function AdminsPage({
           </div>
 
           <div className="flex justify-end">
-            <Button className="bg-brand text-white border-transparent">
+            <PendingButton
+              className="bg-brand text-white border-transparent"
+              pendingText="Adding…"
+            >
               Add sub-admin
-            </Button>
+            </PendingButton>
           </div>
         </form>
       </Card>
@@ -170,12 +173,14 @@ export default async function AdminsPage({
                         placeholder="Reason (sent to them)"
                         className="text-sm w-44"
                       />
-                      <Button
+                      <PendingButton
                         variant="outline"
+                        pendingText="Removing…"
+                        confirm={`Remove ${a.name || handle} as a sub-admin?`}
                         className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
                       >
                         Remove
-                      </Button>
+                      </PendingButton>
                     </form>
                   </div>
 
@@ -183,7 +188,9 @@ export default async function AdminsPage({
                     <input type="hidden" name="slackId" value={a.slack_id} />
                     <PermToggles name="perms" checked={(p) => a.permissions.includes(p)} />
                     <div className="flex justify-end mt-3">
-                      <Button variant="outline">Save permissions</Button>
+                      <PendingButton variant="outline" pendingText="Saving…">
+                        Save permissions
+                      </PendingButton>
                     </div>
                   </form>
                 </Card>

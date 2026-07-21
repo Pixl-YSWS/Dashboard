@@ -4,6 +4,7 @@ import { listPlayers } from "@/lib/db";
 import { slackHandles } from "@/lib/slack";
 import { massPlayerAction, syncSlackAvatars } from "@/app/actions";
 import { SelectAllBox, RowSelect } from "@/app/_components/MassSelect";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,7 +87,9 @@ export default async function PlayersPage({
         </form>
         {access.isSuper && (
           <form action={syncSlackAvatars}>
-            <Button variant="outline">Sync Slack photos</Button>
+            <PendingButton variant="outline" pendingText="Syncing…">
+              Sync Slack photos
+            </PendingButton>
           </form>
         )}
       </div>
@@ -143,9 +146,13 @@ export default async function PlayersPage({
                 className="w-full text-sm"
               />
             </div>
-            <Button className="bg-brand text-white border-transparent">
+            <PendingButton
+              className="bg-brand text-white border-transparent"
+              pendingText="Applying…"
+              confirm="Apply this action to every selected player?"
+            >
               Apply to selected
-            </Button>
+            </PendingButton>
           </div>
         </Card>
 

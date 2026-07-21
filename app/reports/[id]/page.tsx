@@ -5,8 +5,8 @@ import { getReport, listChatFor, reportCounts } from "@/lib/db";
 import { resolveReport } from "@/app/actions";
 import { slackHandle } from "@/lib/slack";
 import { BanForm, WarnForm } from "@/app/_components/Moderate";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -174,16 +174,22 @@ export default async function ReportDetailPage({
               <form action={resolveReport}>
                 <input type="hidden" name="id" value={report.id} />
                 <input type="hidden" name="action" value="resolve" />
-                <Button type="submit" size="sm" variant="outline">
+                <PendingButton type="submit" size="sm" variant="outline" pendingText="Resolving…">
                   Mark resolved
-                </Button>
+                </PendingButton>
               </form>
               <form action={resolveReport}>
                 <input type="hidden" name="id" value={report.id} />
                 <input type="hidden" name="action" value="dismiss" />
-                <Button type="submit" size="sm" variant="ghost" className="text-muted-foreground">
+                <PendingButton
+                  type="submit"
+                  size="sm"
+                  variant="ghost"
+                  pendingText="Dismissing…"
+                  className="text-muted-foreground"
+                >
                   Dismiss
-                </Button>
+                </PendingButton>
               </form>
             </div>
           )}

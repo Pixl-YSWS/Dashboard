@@ -10,7 +10,6 @@ import {
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -145,17 +144,25 @@ export default async function CommunityGoalsPage({
               <form action={toggleVaultLevel}>
                 <input type="hidden" name="id" value={l.id} />
                 <input type="hidden" name="active" value={l.active ? "0" : "1"} />
-                <Button variant="outline" size="sm">{l.active ? "Hide" : "Show"}</Button>
+                <PendingButton
+                  variant="outline"
+                  size="sm"
+                  pendingText={l.active ? "Hiding…" : "Showing…"}
+                >
+                  {l.active ? "Hide" : "Show"}
+                </PendingButton>
               </form>
               <form action={deleteVaultLevel}>
                 <input type="hidden" name="id" value={l.id} />
-                <Button
+                <PendingButton
                   variant="outline"
                   size="sm"
+                  pendingText="Deleting…"
+                  confirm={`Delete level ${l.level} "${l.title}"? This can't be undone.`}
                   className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
                 >
                   Delete
-                </Button>
+                </PendingButton>
               </form>
             </div>
           </Card>

@@ -17,6 +17,7 @@ import {
 import { addReviewer } from "@/app/actions";
 import { slackHandles } from "@/lib/slack";
 import { TeamLog } from "@/app/_components/TeamLog";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -181,7 +182,9 @@ export default async function ReviewersPage({
               className="w-full text-sm font-mono"
             />
           </Label>
-          <Button className="bg-brand text-white border-transparent">Add reviewer</Button>
+          <PendingButton className="bg-brand text-white border-transparent" pendingText="Adding…">
+            Add reviewer
+          </PendingButton>
         </form>
         <p className="text-xs text-muted-foreground mt-2">
           Slack → profile → ⋯ → Copy member ID. If they&apos;re already a sub-admin, this just

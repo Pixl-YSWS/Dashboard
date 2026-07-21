@@ -2,8 +2,8 @@ import Link from "next/link";
 import { requirePagePerm } from "@/lib/guard";
 import { fetchOnlinePlayers, gameServerConfigured } from "@/lib/gameServer";
 import { kickPlayer } from "@/app/actions";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -80,7 +80,13 @@ export default async function OnlinePage() {
                           placeholder="Reason (optional)"
                           className="text-sm w-44"
                         />
-                        <Button className="bg-tang text-white hover:bg-tang/90">Kick</Button>
+                        <PendingButton
+                          className="bg-tang text-white hover:bg-tang/90"
+                          pendingText="Kicking…"
+                          confirm={`Kick ${p.displayName || "this player"}? They'll be disconnected immediately.`}
+                        >
+                          Kick
+                        </PendingButton>
                       </form>
                     </TableCell>
                   )}

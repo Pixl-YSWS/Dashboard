@@ -9,6 +9,7 @@ import { renderMarkdown } from "@/lib/markdown";
 import { db } from "@/lib/db";
 import { ReviewForm, type BountyOption } from "@/app/_components/ReviewForm";
 import { banProject } from "@/app/actions";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { ReviewDetailTabs } from "@/app/_components/ReviewDetailTabs";
 import { LevelBadge, ShipBadges, StatusBadge } from "@/app/_components/ProjectBadges";
 import { slackHandle } from "@/lib/slack";
@@ -426,9 +427,13 @@ export default async function ReviewDetail({
                       placeholder="Reason for the ban (shown to the owner)…"
                       className="text-sm resize-y"
                     />
-                    <Button className="bg-rose-800 text-white border-transparent hover:bg-rose-900">
+                    <PendingButton
+                      className="bg-rose-800 text-white border-transparent hover:bg-rose-900"
+                      pendingText="Banning…"
+                      confirm="Permanently ban this project? It can never be shipped again."
+                    >
                       Ban project
-                    </Button>
+                    </PendingButton>
                   </form>
                 </details>
               </>

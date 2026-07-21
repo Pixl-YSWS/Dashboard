@@ -17,6 +17,7 @@ import {
   StatusBadge,
 } from "@/app/_components/ProjectBadges";
 import { CommitList } from "@/app/_components/CommitList";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { renderMarkdown } from "@/lib/markdown";
 import { slackHandle } from "@/lib/slack";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -215,9 +216,12 @@ export default async function ProjectPage({
             {canReReview && (
               <form action={reReviewProject}>
                 <input type="hidden" name="projectId" value={project.id} />
-                <Button className="bg-blue-600 text-white hover:bg-blue-700">
+                <PendingButton
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  pendingText="Sending…"
+                >
                   Send back to review
-                </Button>
+                </PendingButton>
               </form>
             )}
             <form action={archiveProject}>
@@ -225,24 +229,33 @@ export default async function ProjectPage({
               {project.archived_at && (
                 <input type="hidden" name="unarchive" value="1" />
               )}
-              <Button variant="outline">
+              <PendingButton
+                variant="outline"
+                pendingText={project.archived_at ? "Unarchiving…" : "Archiving…"}
+              >
                 {project.archived_at ? "Unarchive" : "Archive"}
-              </Button>
+              </PendingButton>
             </form>
             {project.rejected_at && (
               <form action={unrejectProject}>
                 <input type="hidden" name="projectId" value={project.id} />
-                <Button className="bg-mint text-ink hover:bg-mint/90">
+                <PendingButton
+                  className="bg-mint text-ink hover:bg-mint/90"
+                  pendingText="Restoring…"
+                >
                   Restore (un-reject)
-                </Button>
+                </PendingButton>
               </form>
             )}
             {project.banned_at && (
               <form action={unbanProject}>
                 <input type="hidden" name="projectId" value={project.id} />
-                <Button className="bg-mint text-ink hover:bg-mint/90">
+                <PendingButton
+                  className="bg-mint text-ink hover:bg-mint/90"
+                  pendingText="Lifting…"
+                >
                   Lift ban
-                </Button>
+                </PendingButton>
               </form>
             )}
           </div>
@@ -274,9 +287,13 @@ export default async function ProjectPage({
                   placeholder="Reason (shown to the owner)…"
                   className="flex-1 min-w-64 text-sm"
                 />
-                <Button className="bg-rose-600 text-white border-transparent hover:bg-rose-700">
+                <PendingButton
+                  className="bg-rose-600 text-white border-transparent hover:bg-rose-700"
+                  pendingText="Rejecting…"
+                  confirm="Reject this project? The owner is told who rejected it and why."
+                >
                   Reject project
-                </Button>
+                </PendingButton>
               </form>
             </div>
           )}
@@ -301,9 +318,13 @@ export default async function ProjectPage({
                   placeholder="Reason for the ban (shown to the owner)…"
                   className="flex-1 min-w-64 text-sm"
                 />
-                <Button className="bg-rose-800 text-white border-transparent hover:bg-rose-900">
+                <PendingButton
+                  className="bg-rose-800 text-white border-transparent hover:bg-rose-900"
+                  pendingText="Banning…"
+                  confirm="Permanently ban this project? It can never be shipped again."
+                >
                   Ban project
-                </Button>
+                </PendingButton>
               </form>
             </div>
           )}

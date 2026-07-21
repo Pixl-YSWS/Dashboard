@@ -5,7 +5,6 @@ import { addSidequest, toggleSidequest, deleteSidequest } from "@/app/actions";
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,19 +126,25 @@ export default async function SidequestsPage({
               <form action={toggleSidequest}>
                 <input type="hidden" name="id" value={q.id} />
                 <input type="hidden" name="active" value={q.active ? "0" : "1"} />
-                <Button variant="outline" size="sm">
+                <PendingButton
+                  variant="outline"
+                  size="sm"
+                  pendingText={q.active ? "Hiding…" : "Showing…"}
+                >
                   {q.active ? "Hide" : "Show"}
-                </Button>
+                </PendingButton>
               </form>
               <form action={deleteSidequest}>
                 <input type="hidden" name="id" value={q.id} />
-                <Button
+                <PendingButton
                   variant="outline"
                   size="sm"
+                  pendingText="Deleting…"
+                  confirm={`Delete sidequest "${q.name}"? This can't be undone.`}
                   className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
                 >
                   Delete
-                </Button>
+                </PendingButton>
               </form>
             </div>
           </Card>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { sendNotification, searchPlayers, type PlayerHit } from "@/app/actions";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -185,9 +186,12 @@ export function NotifyForm() {
             </Label>
 
             <div className="flex items-center gap-3 pt-1">
-              <Button className="bg-brand text-white border-transparent hover:bg-brand/90">
+              <PendingButton
+                className="bg-brand text-white border-transparent hover:bg-brand/90"
+                pendingText="Sending…"
+              >
                 {everyone ? "Send to everyone" : "Send"}
-              </Button>
+              </PendingButton>
               <span className="text-xs text-muted-foreground">
                 {everyone
                   ? "Goes to every player's in-game inbox."

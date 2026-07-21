@@ -10,9 +10,9 @@ import {
 } from "@/lib/db";
 import { createEvent, stopEvent, deleteEvent } from "@/app/actions";
 import { CreateEventForm } from "@/app/_components/CreateEventForm";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 export const dynamic = "force-dynamic";
@@ -170,19 +170,29 @@ export default async function EventsPage({
                   {(st === "live" || st === "upcoming") && (
                     <form action={stopEvent}>
                       <input type="hidden" name="id" value={ev.id} />
-                      <Button
+                      <PendingButton
                         variant="outline"
                         size="sm"
+                        pendingText="Stopping…"
+                        confirm={`Stop "${ev.name}" now? Players stop seeing it immediately.`}
                         className="text-rose-600 border-rose-200 dark:border-rose-500/30 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600"
                       >
                         Stop
-                      </Button>
+                      </PendingButton>
                     </form>
                   )}
                   {st !== "live" && (
                     <form action={deleteEvent}>
                       <input type="hidden" name="id" value={ev.id} />
-                      <Button variant="ghost" size="sm" className="text-muted-foreground">Delete</Button>
+                      <PendingButton
+                        variant="ghost"
+                        size="sm"
+                        pendingText="Deleting…"
+                        confirm={`Delete "${ev.name}"? This can't be undone.`}
+                        className="text-muted-foreground"
+                      >
+                        Delete
+                      </PendingButton>
                     </form>
                   )}
                 </div>

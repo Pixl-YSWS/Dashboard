@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireReportViewer } from "@/lib/guard";
 import { listReports, listReportViewers } from "@/lib/db";
 import { addReportViewerAction, removeReportViewerAction } from "@/app/actions";
+import { PendingButton } from "@/app/_components/PendingButton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -148,9 +149,16 @@ export default async function ReportsPage({
                 {v.slack_id !== session.slackId ? (
                   <form action={removeReportViewerAction} className="ml-auto">
                     <input type="hidden" name="slackId" value={v.slack_id} />
-                    <Button type="submit" size="sm" variant="ghost" className="text-destructive">
+                    <PendingButton
+                      type="submit"
+                      size="sm"
+                      variant="ghost"
+                      pendingText="Removing…"
+                      confirm={`Remove ${v.slack_id} from report viewers?`}
+                      className="text-destructive"
+                    >
                       Remove
-                    </Button>
+                    </PendingButton>
                   </form>
                 ) : (
                   <span className="ml-auto text-xs text-muted-foreground">you</span>
@@ -160,9 +168,9 @@ export default async function ReportsPage({
           </div>
           <form action={addReportViewerAction} className="flex gap-2">
             <Input name="slackId" placeholder="Slack member ID (U…)" className="text-sm font-mono max-w-xs" />
-            <Button type="submit" size="sm">
+            <PendingButton type="submit" size="sm" pendingText="Adding…">
               Add viewer
-            </Button>
+            </PendingButton>
           </form>
         </details>
       </div>
