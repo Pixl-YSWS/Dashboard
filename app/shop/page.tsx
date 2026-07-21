@@ -5,6 +5,7 @@ import { addShopItem, toggleShopItem, deleteShopItem, updateShopItem } from "@/a
 import { PendingButton } from "@/app/_components/PendingButton";
 import { Disclosure } from "@/app/_components/Disclosure";
 import { OptionsEditor } from "@/app/_components/OptionsEditor";
+import { AddShopItemForm } from "@/app/_components/AddShopItemForm";
 import { parseOptionGroups } from "@/lib/shopOptions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,65 +52,7 @@ export default async function ShopPage({
 
       <Card className="p-5 md:p-6 gap-0">
         <div className="text-base font-semibold mb-4">Add an item</div>
-        <form action={addShopItem} className="space-y-4">
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Label className="block sm:col-span-2 font-normal">
-              <span className="block text-sm font-medium mb-1.5">Name</span>
-              <Input
-                name="name"
-                required
-                maxLength={60}
-                placeholder="e.g. Holo Sticker"
-                className="w-full text-sm"
-              />
-            </Label>
-            <Label className="block font-normal">
-              <span className="block text-sm font-medium mb-1.5">Price (pixels)</span>
-              <Input
-                name="price"
-                type="number"
-                min={0}
-                required
-                placeholder="60"
-                className="w-full text-sm"
-              />
-            </Label>
-          </div>
-          <Label className="block font-normal">
-            <span className="block text-sm font-medium mb-1.5">Description</span>
-            <Input
-              name="description"
-              maxLength={300}
-              placeholder="Holographic, shimmery. Looks great on a laptop."
-              className="w-full text-sm"
-            />
-          </Label>
-          <div className="block">
-            <span className="block text-sm font-medium mb-1.5">Options (optional)</span>
-            <OptionsEditor name="options" />
-            <span className="block text-xs text-muted-foreground mt-1">
-              Add groups like Color, Storage or RAM — each with its own comma-separated choices.
-            </span>
-          </div>
-          <Label className="block font-normal">
-            <span className="block text-sm font-medium mb-1.5">Image (optional)</span>
-            <input
-              name="image"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className={FILE_INPUT}
-            />
-            <span className="block text-xs text-muted-foreground mt-1">PNG/JPG/WebP, max 4 MB.</span>
-          </Label>
-          <div className="flex justify-end">
-            <PendingButton
-              className="bg-brand text-white border-transparent"
-              pendingText="Adding… (uploading the image can take a few seconds)"
-            >
-              Add item
-            </PendingButton>
-          </div>
-        </form>
+        <AddShopItemForm action={addShopItem} />
       </Card>
 
       <div>
