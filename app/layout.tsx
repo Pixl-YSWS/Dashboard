@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getAccess, canView, isReportViewer } from "@/lib/guard";
 import { countPendingReviews, countOpenReports } from "@/lib/db";
+import { ticketStats } from "@/lib/tickets";
 import { Shell } from "@/app/_components/Shell";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,7 @@ export default async function RootLayout({
         pixels: access.isSuper,
         moderation: canView(access, ["warn", "ban"]),
         reports: reportViewer,
+        tickets: true,
         notify: access.isSuper || access.perms.has("notify"),
         admins: access.isSuper,
         reviewers: access.isSuper,
@@ -55,6 +57,7 @@ export default async function RootLayout({
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;
   const reportCount = reportViewer ? await countOpenReports() : 0;
+  const ticketCount = nav ? (await ticketStats()).open : 0;
   return (
     <html
       lang="en"
@@ -131,6 +134,7 @@ export default async function RootLayout({
               nav={nav}
               reviewCount={reviewCount}
               reportCount={reportCount}
+              ticketCount={ticketCount}
             />
 
             <main className="flex-1 min-w-0 overflow-x-hidden flex flex-col gap-4">
