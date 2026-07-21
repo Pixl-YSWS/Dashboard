@@ -53,6 +53,8 @@ export default async function RootLayout({
         shop: access.isSuper,
         events: access.isSuper,
         sidequests: access.isSuper,
+        story: access.isSuper,
+        goals: access.isSuper,
       }
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;

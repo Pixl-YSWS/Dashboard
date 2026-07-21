@@ -1691,3 +1691,79 @@ export async function removeReportViewerAction(formData: FormData): Promise<void
   if (slackId && slackId !== session.slackId) await removeReportViewer(slackId);
   revalidatePath("/reports");
 }
+
+function parseRewards(raw: string): { icon: string; label: string }[] {
+  return String(raw ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((l) => {
+      const sp = l.indexOf(" ");
+      if (sp === -1) return { icon: "🎁", label: l.slice(0, 60) };
+      return { icon: l.slice(0, sp), label: l.slice(sp + 1).trim().slice(0, 60) };
+    });
+}
+
+export async function addVaultLevel(formData: FormData): Promise<void> {
+  await requireSuper();
+  const level = Number(formData.get("level") ?? 0);
+  const energy_required = Number(formData.get("energy_required") ?? 0);
+  const title = String(formData.get("title") ?? "").trim().slice(0, 80);
+  const blurb = String(formData.get("blurb") ?? "").trim().slice(0, 400);
+  const position = Number(formData.get("position") ?? level) || level;
+  const rewards = parseRewards(String(formData.get("rewards") ?? ""));
+  if (!level || !title)
+    redirect(`/community-goals?error=${encodeURIComponent("A level needs a number and a title.")}`);
+  const { error } = await db
+    .from("vault_levels")
+    .insert({ level, energy_required, title, blurb, rewards, position, active: true });
+  if (error) {
+    console.error("addVaultLevel", error.message);
+    redirect(`/community-goals?error=${encodeURIComponent("Couldn't save — is migration 0038 applied? (level must be unique)")}`);
+  }
+  revalidatePath("/community-goals");
+  redirect("/community-goals?saved=1");
+}
+
+export async function updateVaultLevel(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const patch = {
+    level: Number(formData.get("level") ?? 0),
+    energy_required: Number(formData.get("energy_required") ?? 0),
+    title: String(formData.get("title") ?? "").trim().slice(0, 80),
+    blurb: String(formData.get("blurb") ?? "").trim().slice(0, 400),
+    position: Number(formData.get("position") ?? 0),
+    rewards: parseRewards(String(formData.get("rewards") ?? "")),
+  };
+  const { error } = await db.from("vault_levels").update(patch).eq("id", id);
+  if (error) {
+    console.error("updateVaultLevel", error.message);
+    redirect(`/community-goals?error=${encodeURIComponent("Couldn't update that level.")}`);
+  }
+  revalidatePath("/community-goals");
+  redirect("/community-goals?saved=1");
+}
+
+export async function toggleVaultLevel(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db
+    .from("vault_levels")
+    .update({ active: formData.get("active") === "1" })
+    .eq("id", id);
+  if (error) console.error("toggleVaultLevel", error.message);
+  revalidatePath("/community-goals");
+}
+
+export async function deleteVaultLevel(formData: FormData): Promise<void> {
+  await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { error } = await db.from("vault_levels").delete().eq("id", id);
+  if (error) console.error("deleteVaultLevel", error.message);
+  revalidatePath("/community-goals");
+}

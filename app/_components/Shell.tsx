@@ -34,6 +34,8 @@ export interface NavFlags {
   shop: boolean;
   events: boolean;
   sidequests: boolean;
+  story: boolean;
+  goals: boolean;
 }
 
 const GLYPHS = {
@@ -53,6 +55,8 @@ const GLYPHS = {
   shop: "bag-fill",
   events: "explore",
   sidequests: "compass",
+  story: "compass",
+  goals: "bank",
 } as const;
 
 type IconKey = keyof typeof GLYPHS;
@@ -137,6 +141,13 @@ export function Shell({
           icon: "sidequests",
           show: nav.sidequests,
         },
+      ],
+    },
+    {
+      label: "World",
+      items: [
+        { href: "/story", label: "Story", icon: "story", show: nav.story },
+        { href: "/community-goals", label: "Community Goals", icon: "goals", show: nav.goals },
       ],
     },
     {

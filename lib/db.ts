@@ -1652,3 +1652,37 @@ export async function globalSearch(
     projects: (projectsRes.data ?? []) as SearchResults["projects"],
   };
 }
+
+export interface VaultReward {
+  icon?: string;
+  label?: string;
+}
+
+export interface VaultLevelRow {
+  id: number;
+  level: number;
+  energy_required: number;
+  title: string;
+  blurb: string;
+  rewards: VaultReward[];
+  position: number;
+  active: boolean;
+}
+
+export async function listVaultLevels(): Promise<VaultLevelRow[]> {
+  const { data, error } = await db
+    .from("vault_levels")
+    .select("*")
+    .order("position", { ascending: true })
+    .order("level", { ascending: true });
+  if (error) {
+    console.error("listVaultLevels", error.message);
+    return [];
+  }
+  return (data ?? []).map((r) => ({
+    ...(r as VaultLevelRow),
+    rewards: Array.isArray((r as { rewards?: unknown }).rewards)
+      ? ((r as { rewards: VaultReward[] }).rewards)
+      : [],
+  })) as VaultLevelRow[];
+}
