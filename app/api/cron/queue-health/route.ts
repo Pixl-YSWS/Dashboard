@@ -37,7 +37,7 @@ export async function GET(req: Request) {
       daysWaiting(r.status === "shipped" ? r.shipped_at : (r.first_pass_at ?? r.shipped_at)),
     ),
   );
-  const base = process.env.BASE_URL || "https://dash.pixl.rsvp";
+  const base = process.env.BASE_URL || "https://pixl-dash.ridit.space";
   const lines = [
     `:hourglass_flowing_sand: *Pixl review queue*: ${rows.length} project${rows.length === 1 ? "" : "s"} waiting` +
       (secondPass > 0 ? ` (${firstPass} first-pass, ${secondPass} second-pass)` : "") +

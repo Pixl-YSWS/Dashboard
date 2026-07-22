@@ -37,7 +37,7 @@ import {
 const DEFAULT_WARNING =
   "Please keep chat messages and display names appropriate. Continued violations may result in a ban from Pixl.";
 
-const DASH_URL = "https://dash.pixl.rsvp";
+const DASH_URL = "https://pixl-dash.ridit.space";
 
 function actorName(access: AdminAccess): string {
   return `${access.session.name} (${access.session.slackId})`;
