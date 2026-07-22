@@ -76,10 +76,10 @@ function NodeFields({ n }: { n?: StoryNodeRow }) {
       </Field>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Quote" hint="operations only — the italic teaser line">
+        <Field label="Quote" hint="operations only , the italic teaser line">
           <Input name="quote" defaultValue={n?.quote} maxLength={300} placeholder="The Capital is standing…" className="text-sm" />
         </Field>
-        <Field label="Outcome" hint="operations only — supports <b> for bold">
+        <Field label="Outcome" hint="operations only , supports <b> for bold">
           <Input name="outcome" defaultValue={n?.outcome} maxLength={400} placeholder="The Great Forge is restored." className="text-sm" />
         </Field>
       </div>
@@ -106,7 +106,7 @@ export default async function StoryPage({
       <div>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Story</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          The season timeline players see at <span className="font-mono">/timeline</span> — chapters,
+          The season timeline players see at <span className="font-mono">/timeline</span> , chapters,
           operations and the prologue, in order. Edits go live on the page.
         </p>
       </div>

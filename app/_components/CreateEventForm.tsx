@@ -50,7 +50,7 @@ export function CreateEventForm({
         <Field label="Name (players see this)">
           <Input name="name" required maxLength={100} placeholder="Double Streak Weekend" className="text-sm" />
         </Field>
-        <Field label="Starts (UTC — blank = now)">
+        <Field label="Starts (UTC , blank = now)">
           <Input name="startsAt" type="datetime-local" className="text-sm" />
         </Field>
         <Field label="Ends (UTC)">
@@ -93,7 +93,7 @@ export function CreateEventForm({
         <div className="rounded-lg border border-border p-4">
           <div className="text-sm font-medium mb-1">Items to reveal while the event runs</div>
           <p className="text-xs text-muted-foreground mb-3">
-            Keep these inactive in the shop — they only appear during the event.
+            Keep these inactive in the shop , they only appear during the event.
           </p>
           {shopItems.length === 0 ? (
             <div className="text-sm text-muted-foreground">No shop items yet.</div>
@@ -118,7 +118,7 @@ export function CreateEventForm({
 
       {type === "leaderboard_sprint" && (
         <p className="text-sm text-muted-foreground rounded-lg border border-border p-4">
-          No extra settings — this just runs a window-only leaderboard in the in-game explore menu.
+          No extra settings , this just runs a window-only leaderboard in the in-game explore menu.
         </p>
       )}
 

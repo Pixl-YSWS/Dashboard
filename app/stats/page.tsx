@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Pixl — live stats",
+  title: "Pixl , live stats",
   description: "Ships, hours and pixels from the Pixl YSWS, live.",
 };
 

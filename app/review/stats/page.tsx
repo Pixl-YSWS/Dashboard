@@ -28,7 +28,7 @@ interface ReviewerStats {
 }
 
 function fmtDur(secs: number): string {
-  if (secs <= 0) return "—";
+  if (secs <= 0) return ",";
   if (secs < 60) return `${Math.round(secs)}s`;
   if (secs < 3600) return `${Math.round(secs / 60)}m`;
   return `${(secs / 3600).toFixed(1)}h`;
@@ -88,7 +88,7 @@ export default async function ReviewStatsPage() {
         {access.isSuper ? "Reviewer stats" : "Your review stats"}
       </h1>
       <p className="text-sm text-muted-foreground mb-5">
-        From the review audit log — verdicts, hours credited, time spent per review, and whether
+        From the review audit log , verdicts, hours credited, time spent per review, and whether
         the repo/demo were actually opened.
       </p>
 
@@ -127,7 +127,7 @@ export default async function ReviewStatsPage() {
                     className={`p-3 tabular-nums ${
                       s.avgSeconds > 0 && s.avgSeconds < 60 ? "text-rose-600 dark:text-rose-400 font-semibold" : ""
                     }`}
-                    title={s.avgSeconds > 0 && s.avgSeconds < 60 ? "Under a minute per review — rubber-stamping?" : undefined}
+                    title={s.avgSeconds > 0 && s.avgSeconds < 60 ? "Under a minute per review , rubber-stamping?" : undefined}
                   >
                     {fmtDur(s.avgSeconds)}
                   </TableCell>
@@ -141,7 +141,7 @@ export default async function ReviewStatsPage() {
                     </span>
                   </TableCell>
                   <TableCell className="p-3 text-muted-foreground">
-                    {s.lastActive ? new Date(s.lastActive).toLocaleDateString() : "—"}
+                    {s.lastActive ? new Date(s.lastActive).toLocaleDateString() : ","}
                   </TableCell>
                 </TableRow>
               ))}

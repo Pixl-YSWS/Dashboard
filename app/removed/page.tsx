@@ -28,7 +28,7 @@ export default async function RemovedPage() {
           You&apos;ve been removed from the team
         </h1>
         <p className="text-sm text-muted-foreground mt-2">
-          Hey {session.name || "there"} — your access to the Pixl dashboard has been
+          Hey {session.name || "there"} , your access to the Pixl dashboard has been
           removed, so there&apos;s nothing for you here anymore.
         </p>
         <p className="text-sm text-muted-foreground mt-3 mb-6">

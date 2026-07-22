@@ -44,7 +44,7 @@ export default async function ShopPage({
       <div>
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Shop</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-          Items shown in the in-game Pixl shop. Purchases aren&apos;t enabled yet — players can
+          Items shown in the in-game Pixl shop. Purchases aren&apos;t enabled yet , players can
           only browse, so feel free to stock the shelves.
         </p>
       </div>
@@ -171,7 +171,7 @@ export default async function ShopPage({
                       </div>
                       <Label className="block font-normal">
                         <span className="block text-xs font-medium text-muted-foreground mb-1">
-                          Replace image (optional — leave empty to keep the current one)
+                          Replace image (optional , leave empty to keep the current one)
                         </span>
                         <input
                           name="image"

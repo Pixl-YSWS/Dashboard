@@ -257,7 +257,7 @@ export default async function ReviewersPage({
                     <TableCell className="p-3 tabular-nums whitespace-nowrap">
                       {(() => {
                         const t = payoutTotals.get(r.slack_id);
-                        if (!t) return "—";
+                        if (!t) return ",";
                         return (
                           <>
                             {t.earnedPixels} px

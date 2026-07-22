@@ -28,7 +28,7 @@ export function CommitList({ result }: { result: CommitResult }) {
   if (result.error === "not_found")
     return (
       <div className="p-4 text-destructive text-sm font-medium">
-        {result.repo} — repo not found or private (404).
+        {result.repo} , repo not found or private (404).
       </div>
     );
   if (result.error)
@@ -70,7 +70,7 @@ export function CommitList({ result }: { result: CommitResult }) {
         <Badge
           variant="destructive"
           className="shrink-0"
-          title="Almost no tracked coding time between this commit and the previous one — code appeared without coding."
+          title="Almost no tracked coding time between this commit and the previous one , code appeared without coding."
         >
           ~0m coded
         </Badge>
@@ -93,7 +93,7 @@ export function CommitList({ result }: { result: CommitResult }) {
         <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border">
           &ldquo;coded&rdquo; = Hackatime time between commits.{" "}
           <span className="text-destructive">~0m coded</span> means code landed
-          with no tracked coding behind it — check for pasted/AI-dumped work.
+          with no tracked coding behind it , check for pasted/AI-dumped work.
         </div>
       )}
       <Table>
@@ -133,7 +133,7 @@ export function CommitList({ result }: { result: CommitResult }) {
                         c.tracked !== undefined &&
                         c.additions >= 200 &&
                         c.additions / (Math.max(c.tracked, 60) / 3600) > 1500
-                          ? "Huge amount of code vs almost no tracked coding time — possible paste/AI dump."
+                          ? "Huge amount of code vs almost no tracked coding time , possible paste/AI dump."
                           : "Lines added / removed"
                       }
                     >

@@ -49,7 +49,7 @@ const EMPTY_STATS: ReviewerStats = {
 };
 
 function fmtDuration(seconds: number): string {
-  if (seconds <= 0) return "—";
+  if (seconds <= 0) return ",";
   if (seconds < 60) return `${seconds}s`;
   const m = Math.floor(seconds / 60);
   if (m < 60) return `${m}m ${seconds % 60}s`;
@@ -188,7 +188,7 @@ export default async function ReviewerPage({
           </form>
           {secondPassSlackIds().includes(slackId) ? (
             <span className="text-xs text-muted-foreground">
-              Final reviewer via SECOND_PASS_SLACK_IDS — change it in the env.
+              Final reviewer via SECOND_PASS_SLACK_IDS , change it in the env.
             </span>
           ) : (
             <form action={setSecondPass}>
@@ -312,7 +312,7 @@ export default async function ReviewerPage({
                                 className="text-[0.7rem] text-rose-600 dark:text-rose-400 mt-1 max-w-64 whitespace-normal"
                                 title={p.cut_reason}
                               >
-                                −{p.cut_pct}% — {p.cut_reason}
+                                −{p.cut_pct}% , {p.cut_reason}
                               </div>
                             )}
                           </>
@@ -411,7 +411,7 @@ export default async function ReviewerPage({
                     <TableCell className="p-3 text-xs text-muted-foreground whitespace-nowrap">
                       {[a.repo_opened ? "repo" : null, a.demo_opened ? "demo" : null]
                         .filter(Boolean)
-                        .join(" · ") || "—"}
+                        .join(" · ") || ","}
                     </TableCell>
                     <TableCell className="p-3 text-muted-foreground whitespace-nowrap">
                       {fmtDateTime(a.created_at)}

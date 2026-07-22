@@ -2,7 +2,7 @@
 // with its own choices. To avoid a DB migration these are stored in the existing
 // `options: string[]` column, one element per group, encoded as
 // "GroupName: choiceA, choiceB". A group with no name is just "choiceA, choiceB".
-// Legacy items (a flat list of loose choices) still parse — they collapse into a
+// Legacy items (a flat list of loose choices) still parse , they collapse into a
 // single unnamed group.
 
 export interface OptionGroup {

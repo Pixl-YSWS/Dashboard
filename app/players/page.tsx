@@ -99,7 +99,7 @@ export default async function PlayersPage({
 
         <Card className="p-4 mb-4 gap-0">
           <div className="text-sm font-semibold mb-3">
-            Mass action — tick players below, then apply to all of them at once
+            Mass action , tick players below, then apply to all of them at once
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div className="block">

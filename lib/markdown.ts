@@ -2,7 +2,7 @@
 // the game's web renderer (web/pixl.js): escapes first, restricts URLs to
 // http(s), supports headings, bold/italic/strike, inline + fenced code, links,
 // images, lists, blockquotes and rules. Returns an HTML string for
-// dangerouslySetInnerHTML — never trust the input, so everything is escaped.
+// dangerouslySetInnerHTML , never trust the input, so everything is escaped.
 function esc(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,

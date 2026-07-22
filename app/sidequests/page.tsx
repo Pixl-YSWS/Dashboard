@@ -27,7 +27,7 @@ export default async function SidequestsPage({
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Sidequests</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           The quest log every player sees in-game (J key). Players will unlock quests by
-          talking to the NPC you name here — the unlock wiring comes with the NPC work;
+          talking to the NPC you name here , the unlock wiring comes with the NPC work;
           for now this is the master list.
         </p>
       </div>
@@ -151,7 +151,7 @@ export default async function SidequestsPage({
         ))}
         {quests.length === 0 && (
           <Card className="p-8 text-center text-muted-foreground text-sm">
-            No sidequests yet — the landing page&apos;s sidequest rewards are good seeds.
+            No sidequests yet , the landing page&apos;s sidequest rewards are good seeds.
           </Card>
         )}
       </div>

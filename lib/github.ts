@@ -16,7 +16,7 @@ const AI_AUTHOR_RX =
   /(^|\b)(claude|copilot|devin-ai|cursor-?agent|aider|codex|jules|chatgpt)(\b|\[bot\])|noreply@anthropic\.com|bot@openai\.com/i;
 
 // Flags commits that AI tooling signed (co-author trailers, bot authors,
-// "generated with" footers). Absence of a flag proves nothing — it only
+// "generated with" footers). Absence of a flag proves nothing , it only
 // catches tools that announce themselves.
 function looksAiAuthored(fullMessage: string, author: string, email: string): boolean {
   return (
@@ -84,7 +84,7 @@ export async function fetchCommits(repoUrl: string | null, limit = 50): Promise<
 
 // Per-commit line stats (additions/deletions) for the newest commits, so huge
 // code dumps with barely any coded time behind them stand out. One API call
-// per commit — capped and cached.
+// per commit , capped and cached.
 export async function attachCommitStats(result: CommitResult, cap = 20): Promise<void> {
   if (!result.repo || result.commits.length === 0) return;
   const headers: Record<string, string> = {

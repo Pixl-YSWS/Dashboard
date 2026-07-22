@@ -19,7 +19,7 @@ function fmtHM(hours: number): string {
 }
 
 function waited(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return ",";
   const d = Math.max(0, Date.now() - new Date(iso).getTime());
   const days = Math.floor(d / 86_400_000);
   if (days >= 1) return `${days}d`;

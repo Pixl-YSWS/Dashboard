@@ -40,5 +40,5 @@ export async function dmOrEmail(userId: string, subject: string, body: string): 
       console.error("DM failed, trying email", (e as Error).message);
     }
   }
-  if (email) await sendEmail(email, `Pixl — ${subject}`, body);
+  if (email) await sendEmail(email, `Pixl , ${subject}`, body);
 }

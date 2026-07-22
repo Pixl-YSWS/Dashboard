@@ -162,7 +162,7 @@ export async function fetchHackatimeReport(
 
     const rawProjects = mapBreakdown(data.projects);
     // Per-project sessions/first/last from spans (only for linked projects, in
-    // parallel — a maker links a handful at most).
+    // parallel , a maker links a handful at most).
     const spanInfo = new Map<string, { sessions: number; first: number | null; last: number | null }>();
     await Promise.all(
       [...linked].map(async (name) => {
@@ -192,7 +192,7 @@ export async function fetchHackatimeReport(
       }),
     );
 
-    // Languages scoped to just this submission's linked projects — the
+    // Languages scoped to just this submission's linked projects , the
     // account-wide stats above mix in everything else the maker codes.
     let projectLanguages: HackatimeBreakdown[] = [];
     if (linked.size > 0) {
@@ -261,7 +261,7 @@ function overlap(spans: Span[], from: number, to: number): number {
 // Attribute tracked coding time to each commit: the seconds of Hackatime spans
 // between the previous fetched commit and this one. The oldest fetched commit
 // stays unknown (its window extends past what we fetched). Commits with ~zero
-// tracked time behind them are a fraud signal — code appeared without coding.
+// tracked time behind them are a fraud signal , code appeared without coding.
 export function attachTrackedTime(commits: Commit[], spans: Span[]): void {
   const dated = commits
     .filter((c) => c.date)

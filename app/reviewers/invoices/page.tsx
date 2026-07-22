@@ -68,7 +68,7 @@ export default async function InvoicesPage({
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Payout invoices</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             What each reviewer earned from the $1-per-review payouts, month by month. 10 pixels
-            = $1 — settle the dollar column however you pay people.
+            = $1 , settle the dollar column however you pay people.
           </p>
         </div>
         <div className="flex items-center gap-2">

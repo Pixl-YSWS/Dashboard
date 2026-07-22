@@ -166,7 +166,7 @@ export function ReviewDetailTabs({
               <div className="divide-y divide-border">
                 {matches.length === 0 ? (
                   <div className="p-5 text-sm text-muted-foreground">
-                    This project&apos;s repo/demo isn&apos;t in the YSWS archive — no sign it was double-dipped.
+                    This project&apos;s repo/demo isn&apos;t in the YSWS archive , no sign it was double-dipped.
                   </div>
                 ) : (
                   <>

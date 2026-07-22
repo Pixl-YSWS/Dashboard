@@ -128,7 +128,7 @@ export function NotifyForm() {
                           <span className="font-medium truncate">{h.name}</span>
                           {!h.hasSlack && (
                             <span className="ml-auto text-[0.7rem] text-amber-600 dark:text-amber-400 shrink-0">
-                              no slack — no DM
+                              no slack , no DM
                             </span>
                           )}
                         </button>
@@ -146,7 +146,7 @@ export function NotifyForm() {
                   </span>
                 ) : (
                   <span className="block text-xs text-muted-foreground mt-1">
-                    Pick a player from the list — no need to type the exact name.
+                    Pick a player from the list , no need to type the exact name.
                   </span>
                 )}
               </div>

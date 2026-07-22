@@ -67,14 +67,14 @@ export function AddShopItemForm({ action }: { action: (fd: FormData) => void }) 
           <span className="block text-sm font-medium mb-1.5">Options</span>
           <OptionsEditor name="options" />
           <span className="block text-xs text-muted-foreground mt-1">
-            Optional — groups like Color or Storage, each with comma-separated choices.
+            Optional , groups like Color or Storage, each with comma-separated choices.
           </span>
         </div>
 
         <Label className="block font-normal">
           <span className="block text-sm font-medium mb-1.5">Image</span>
           <input name="image" type="file" accept="image/png,image/jpeg,image/webp" onChange={onFile} className={FILE_INPUT} />
-          <span className="block text-xs text-muted-foreground mt-1">Optional — PNG/JPG/WebP, max 4 MB.</span>
+          <span className="block text-xs text-muted-foreground mt-1">Optional , PNG/JPG/WebP, max 4 MB.</span>
         </Label>
 
         <div className="flex justify-start">
@@ -87,7 +87,7 @@ export function AddShopItemForm({ action }: { action: (fd: FormData) => void }) 
         </div>
       </div>
 
-      {/* live preview — what the card looks like in the shop */}
+      {/* live preview , what the card looks like in the shop */}
       <div className="lg:sticky lg:top-14 self-start">
         <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Preview</div>
         <div className="rounded-xl border border-border bg-card p-3 shadow-sm">

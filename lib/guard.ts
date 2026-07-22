@@ -99,7 +99,7 @@ export async function requirePerm(perm: Permission): Promise<AdminAccess> {
   return access;
 }
 
-// Reports are a separate, explicit allow-list (report_viewers table) — regular
+// Reports are a separate, explicit allow-list (report_viewers table) , regular
 // admins/sub-admins do NOT get in. A viewer only needs a valid session.
 export async function isReportViewer(): Promise<boolean> {
   const session = await getSession();

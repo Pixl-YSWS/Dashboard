@@ -1,5 +1,5 @@
 // Tickets live in Pixorpheus, not our DB. We read them (and post threaded
-// replies) through its EXTERNAL_API_KEY endpoints — same auth pattern as the
+// replies) through its EXTERNAL_API_KEY endpoints , same auth pattern as the
 // external DM call in lib/slack.ts.
 const BASE = process.env.EXTERNAL_API_BASE ?? "https://dashboard.gabintavernier.com/api/external";
 

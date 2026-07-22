@@ -23,7 +23,7 @@ export default async function ReviewLogPage() {
       <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-3">Review log</h1>
       <ReviewTabs isSuper={access.isSuper} />
       <p className="text-sm text-muted-foreground mb-4">
-        Owners only — every verdict with whether the reviewer opened the repo and
+        Owners only , every verdict with whether the reviewer opened the repo and
         demo, how long they spent in each, and any hour adjustments.
       </p>
       <Card className="divide-y divide-border py-0">

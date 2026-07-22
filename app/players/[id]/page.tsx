@@ -112,7 +112,7 @@ export default async function PlayerPage({
             {user.slack_id ? (
               <span className="font-mono">{user.slack_id}</span>
             ) : (
-              <span className="text-amber-600 dark:text-amber-400">no Slack id — can&apos;t DM</span>
+              <span className="text-amber-600 dark:text-amber-400">no Slack id , can&apos;t DM</span>
             )}{" "}
             · joined {new Date(user.created_at).toLocaleDateString()}
           </div>
@@ -269,7 +269,7 @@ export default async function PlayerPage({
                 <Badge variant="secondary">{b.lifted_at ? "lifted" : "expired"}</Badge>
               )}
               <span className="flex-1">
-                {b.reason || "(no reason)"} — by {b.banned_by || "?"}
+                {b.reason || "(no reason)"} , by {b.banned_by || "?"}
               </span>
               <span className="text-xs text-muted-foreground">
                 {new Date(b.created_at).toLocaleString()}

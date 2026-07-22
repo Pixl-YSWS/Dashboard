@@ -41,8 +41,8 @@ export default async function OnlinePage() {
       {players === null ? (
         <Card className="p-8 text-center text-muted-foreground text-sm">
           {gameServerConfigured()
-            ? "Couldn't reach the game server. It might be restarting — try again in a minute."
-            : "Not configured — set PIXL_SERVER_URL and ADMIN_API_KEY in the dashboard env."}
+            ? "Couldn't reach the game server. It might be restarting , try again in a minute."
+            : "Not configured , set PIXL_SERVER_URL and ADMIN_API_KEY in the dashboard env."}
         </Card>
       ) : players.length === 0 ? (
         <Card className="p-8 text-center text-muted-foreground text-sm">

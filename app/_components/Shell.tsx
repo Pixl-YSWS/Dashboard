@@ -32,6 +32,7 @@ export interface NavFlags {
   reviewers: boolean;
   online: boolean;
   shop: boolean;
+  fulfillment: boolean;
   events: boolean;
   sidequests: boolean;
   story: boolean;
@@ -53,6 +54,7 @@ const GLYPHS = {
   reviewers: "checkmark",
   online: "welcome",
   shop: "bag-fill",
+  fulfillment: "package",
   events: "explore",
   sidequests: "compass",
   story: "compass",
@@ -83,6 +85,7 @@ export function Shell({
   reviewCount = 0,
   reportCount = 0,
   ticketCount = 0,
+  orderCount = 0,
   // children,
 }: {
   session: { name: string; slackId: string };
@@ -90,6 +93,7 @@ export function Shell({
   reviewCount?: number;
   reportCount?: number;
   ticketCount?: number;
+  orderCount?: number;
   // children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -134,6 +138,13 @@ export function Shell({
       items: [
         { href: "/pixels", label: "Pixels", icon: "pixels", show: nav.pixels },
         { href: "/shop", label: "Shop", icon: "shop", show: nav.shop },
+        {
+          href: "/fulfillment",
+          label: "Fulfillment",
+          icon: "fulfillment",
+          show: nav.fulfillment,
+          count: orderCount,
+        },
         { href: "/events", label: "Events", icon: "events", show: nav.events },
         {
           href: "/sidequests",

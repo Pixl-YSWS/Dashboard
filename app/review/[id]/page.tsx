@@ -114,7 +114,7 @@ export default async function ReviewDetail({
   }
 
   // These calls hit GitHub, Hackatime, the YSWS archive, Slack and the DB.
-  // They're independent, so run them concurrently — the page is only as slow as
+  // They're independent, so run them concurrently , the page is only as slow as
   // the slowest one, not their sum. The commit stats + tracked-time attach form
   // one chain (both mutate `commits`) that runs alongside the rest.
   const hackatimeProjects = p.hackatime_projects ?? [];
@@ -168,7 +168,7 @@ export default async function ReviewDetail({
       {!claim.ok && (
         <Alert className="mt-4 border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10">
           <AlertDescription className="text-amber-800 dark:text-amber-300">
-            Heads up — {claimHandle ?? claim.by ?? "another reviewer"} is already reviewing this
+            Heads up , {claimHandle ?? claim.by ?? "another reviewer"} is already reviewing this
             submission. Avoid double-grading it.
           </AlertDescription>
         </Alert>
@@ -213,7 +213,7 @@ export default async function ReviewDetail({
               <Alert className="border-violet-300 dark:border-violet-500/40 bg-violet-50 dark:bg-violet-500/10">
                 <AlertDescription className="font-medium text-violet-700 dark:text-violet-300">
                   {aiCommits} commit{aiCommits === 1 ? "" : "s"} in this repo {aiCommits === 1 ? "is" : "are"} signed
-                  by an AI tool, but the maker did not tick &ldquo;AI used&rdquo;. Undisclosed AI —
+                  by an AI tool, but the maker did not tick &ldquo;AI used&rdquo;. Undisclosed AI ,
                   verify before crediting.
                 </AlertDescription>
               </Alert>
@@ -332,12 +332,12 @@ export default async function ReviewDetail({
               <Card className="p-4 flex-row items-center gap-3">
                 <Badge variant={TRUST_VARIANT(trust.level)}>{trust.level}</Badge>
                 <span className="text-xs text-muted-foreground">
-                  Hackatime trust factor — {trust.level === "green"
+                  Hackatime trust factor , {trust.level === "green"
                     ? "no fraud flags on this account."
                     : trust.level === "red" || trust.level === "convicted"
                       ? "Hackatime has convicted this account of fraud. Do not credit without digging."
                       : trust.level === "yellow" || trust.level === "suspected"
-                        ? "Hackatime suspects this account — verify carefully."
+                        ? "Hackatime suspects this account , verify carefully."
                         : "not scored yet."}
                 </span>
               </Card>
@@ -376,12 +376,12 @@ export default async function ReviewDetail({
 
             {isOwn && p.status === "shipped" && (
               <Card className="p-5 text-sm gap-0 ring-amber-300 dark:ring-amber-500/30 text-amber-700 dark:text-amber-300">
-                This is your own submission — another reviewer has to do the first pass.
+                This is your own submission , another reviewer has to do the first pass.
               </Card>
             )}
             {isOwn && isFinalStage && canReview && (
               <Card className="p-4 text-xs gap-0 ring-amber-300 dark:ring-amber-500/30 text-amber-700 dark:text-amber-300">
-                Your own submission — someone else first-passed it, so you may finalize. This is
+                Your own submission , someone else first-passed it, so you may finalize. This is
                 logged.
               </Card>
             )}
@@ -411,10 +411,10 @@ export default async function ReviewDetail({
                 <details className="rounded-xl bg-card ring-1 ring-rose-300 dark:ring-rose-500/30 p-4 text-card-foreground">
                   <summary className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-rose-700 dark:text-rose-400 select-none list-none">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-                    Ban project — permanent
+                    Ban project , permanent
                   </summary>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Permanently bans this project — it can never be shipped again and is hidden
+                    Permanently bans this project , it can never be shipped again and is hidden
                     everywhere. Different from requesting changes. Reversible by staff only.
                   </p>
                   <form action={banProject} className="mt-3 flex flex-col gap-2">
@@ -439,12 +439,12 @@ export default async function ReviewDetail({
               </>
             ) : isOwn ? null : isFinalStage ? (
               <Card className="p-5 text-sm text-muted-foreground">
-                Passed the first review — waiting on a final reviewer to sign off before pixels are
+                Passed the first review , waiting on a final reviewer to sign off before pixels are
                 credited.
               </Card>
             ) : (
               <Card className="p-5 text-sm text-muted-foreground">
-                Already reviewed —{" "}
+                Already reviewed ,{" "}
                 <StatusBadge status={p.status} />. See the{" "}
                 <Link href={`/projects/${p.id}`} className="text-brand hover:underline">
                   project page

@@ -12,7 +12,7 @@ export default async function LoginPage({
     error === "denied"
       ? "That Slack account isn't on the Pixl team (or was removed). If you think that's a mistake, contact the Pixl team."
       : error
-        ? "Sign-in failed — try again."
+        ? "Sign-in failed , try again."
         : null;
   return (
     <div className="min-h-screen flex items-center justify-center p-6">

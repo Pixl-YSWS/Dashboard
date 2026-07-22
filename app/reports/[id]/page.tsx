@@ -94,7 +94,7 @@ export default async function ReportDetailPage({
           <div className="text-xs text-muted-foreground mt-0.5">
             {new Date(report.created_at).toLocaleString()}
             {report.anonymous && revealReporter
-              ? ` · 🚩 identity revealed — filed ${counts.byReporter} reports`
+              ? ` · 🚩 identity revealed , filed ${counts.byReporter} reports`
               : report.anonymous
                 ? " · identity hidden by reporter"
                 : ""}
@@ -121,7 +121,7 @@ export default async function ReportDetailPage({
         {report.ai_at ? (
           <>
             <div className="text-sm">
-              <span className="font-semibold capitalize">{report.ai_verdict || "—"}</span>
+              <span className="font-semibold capitalize">{report.ai_verdict || ","}</span>
               {report.ai_score != null && (
                 <span className="text-muted-foreground"> · meanness likelihood {report.ai_score}/100</span>
               )}
@@ -137,7 +137,7 @@ export default async function ReportDetailPage({
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No AI result yet — the model may still be running, or OpenRouter/Slack keys aren&apos;t
+            No AI result yet , the model may still be running, or OpenRouter/Slack keys aren&apos;t
             configured on the server.
           </p>
         )}
@@ -145,7 +145,7 @@ export default async function ReportDetailPage({
 
       <Card className="p-4 gap-0 mb-4">
         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-          {report.target_name}&apos;s chat — last 10h ({chat.length})
+          {report.target_name}&apos;s chat , last 10h ({chat.length})
         </div>
         {chat.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -210,7 +210,7 @@ export default async function ReportDetailPage({
         {revealReporter && (canWarn || canBan) && (
           <div className="flex flex-col gap-2 pt-2 border-t border-border">
             <div className="text-xs text-muted-foreground">
-              On the reporter (<span className="font-medium">{report.reporter_name}</span>) — for false or
+              On the reporter (<span className="font-medium">{report.reporter_name}</span>) , for false or
               abusive reports
             </div>
             <div className="flex gap-3 flex-wrap items-center">

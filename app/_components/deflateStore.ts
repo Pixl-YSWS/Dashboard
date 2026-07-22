@@ -33,7 +33,7 @@ function persist(): void {
     for (const [k, v] of deductions) obj[k] = v;
     localStorage.setItem(storageKey(currentProjectId), JSON.stringify(obj));
   } catch {
-    /* private mode / quota — persistence is best-effort */
+    /* private mode / quota , persistence is best-effort */
   }
 }
 
@@ -55,7 +55,7 @@ export function initDeductions(projectId: string): void {
         }
       }
     } catch {
-      /* corrupt draft — ignore it */
+      /* corrupt draft , ignore it */
     }
   }
   notify();
@@ -79,7 +79,7 @@ export function totalDeductedMinutes(): number {
   return t;
 }
 
-// Called once a verdict is submitted — the deductions have been applied, so drop
+// Called once a verdict is submitted , the deductions have been applied, so drop
 // both the in-memory copy and the saved draft.
 export function clearDeductions(): void {
   const pid = currentProjectId;

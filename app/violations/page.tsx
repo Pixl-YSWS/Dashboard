@@ -130,7 +130,7 @@ export default async function ViolationsPage({
                   </Link>
                   <span className="text-xs text-muted-foreground">
                     {handle ? `${handle} · ` : ""}
-                    {!v.users?.slack_id && "no slack — can't DM · "}
+                    {!v.users?.slack_id && "no slack , can't DM · "}
                     {new Date(v.created_at).toLocaleString()}
                   </span>
                 </div>

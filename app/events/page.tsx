@@ -46,7 +46,7 @@ function configSummary(ev: DashEventRow): string {
   const c = ev.config;
   switch (ev.type) {
     case "bounty":
-      return `+${Number(c.reward) || 0} px per project${c.description ? ` — ${c.description}` : ""}`;
+      return `+${Number(c.reward) || 0} px per project${c.description ? ` , ${c.description}` : ""}`;
     case "community_goal":
       return `${Number(c.target) || 0} ships → +${Number(c.bonusPct) || 0}% for every shipper`;
     case "mystery_merchant":
@@ -82,7 +82,7 @@ export default async function EventsPage({
         <h1 className="text-2xl font-semibold text-foreground tracking-tight">Events</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
           Weekend events players see in-game the moment they go live. All times are UTC. Bonus
-          math runs server-side — nothing here hands out free pixels.
+          math runs server-side , nothing here hands out free pixels.
         </p>
       </div>
 
@@ -102,7 +102,7 @@ export default async function EventsPage({
       <Card className="p-5 md:p-6 gap-0">
         <div className="text-base font-semibold mb-1">Start an event</div>
         <p className="text-xs text-muted-foreground mb-4">
-          Fill only the fields your event type uses — the rest are ignored.
+          Fill only the fields your event type uses , the rest are ignored.
         </p>
         <CreateEventForm
           action={createEvent}
@@ -201,7 +201,7 @@ export default async function EventsPage({
           })}
           {events.length === 0 && (
             <Card className="p-5 text-muted-foreground text-sm">
-              No events yet. Start one above — players see it in-game instantly.
+              No events yet. Start one above , players see it in-game instantly.
             </Card>
           )}
         </div>

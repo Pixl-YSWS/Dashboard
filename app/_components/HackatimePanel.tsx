@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/chart";
 
 function fmtDate(unix: number | null): string {
-  if (!unix) return "—";
+  if (!unix) return ",";
   return new Date(unix * 1000).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
@@ -101,7 +101,7 @@ export function HackatimePanel({ report }: { report: HackatimeReport }) {
         <Tile label="Daily average" value={fmtSecs(report.dailyAverageSeconds)} />
         <Tile
           label="Tracked since"
-          value={report.rangeStart ? new Date(report.rangeStart).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : "—"}
+          value={report.rangeStart ? new Date(report.rangeStart).toLocaleDateString(undefined, { month: "short", year: "numeric" }) : ","}
         />
       </div>
 

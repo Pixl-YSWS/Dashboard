@@ -36,11 +36,11 @@ const REASON_LABEL: Record<string, string> = {
 const MANUAL_REASONS = new Set(["manual_grant", "manual_deduction"]);
 
 // Manual grants/deductions pack their justification into created_by as
-// "actor — note". Split it so the note names the transaction and the By
+// "actor , note". Split it so the note names the transaction and the By
 // column shows just who did it.
 function splitBy(reason: string, createdBy: string): { actor: string; note: string } {
   if (MANUAL_REASONS.has(reason)) {
-    const i = createdBy.indexOf(" — ");
+    const i = createdBy.indexOf(" , ");
     if (i !== -1) return { actor: createdBy.slice(0, i), note: createdBy.slice(i + 3) };
   }
   return { actor: createdBy, note: "" };
@@ -103,7 +103,7 @@ export default async function PixelsPage({
     <div>
       <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-1">Pixels log</h1>
       <p className="text-sm text-muted-foreground mb-5">
-        Every pixel movement — who it went to, how many, why, and who granted it. 1 hour = 5
+        Every pixel movement , who it went to, how many, why, and who granted it. 1 hour = 5
         pixels · 10 pixels = $1 · whole pixels only.
       </p>
 
@@ -115,7 +115,7 @@ export default async function PixelsPage({
       {adjusted && (
         <Alert className="mb-4">
           <AlertDescription className="font-medium text-hc-green">
-            Balance adjusted — it&apos;s in the ledger below.
+            Balance adjusted , it&apos;s in the ledger below.
           </AlertDescription>
         </Alert>
       )}
@@ -206,7 +206,7 @@ export default async function PixelsPage({
                       <div className="text-xs text-muted-foreground">{REASON_LABEL[t.reason] ?? t.reason}</div>
                     </>
                   ) : (
-                    <span className="text-foreground/70">{REASON_LABEL[t.reason] ?? (t.reason || "—")}</span>
+                    <span className="text-foreground/70">{REASON_LABEL[t.reason] ?? (t.reason || ",")}</span>
                   )}
                 </TableCell>
                 <TableCell className="p-3">
@@ -215,10 +215,10 @@ export default async function PixelsPage({
                       {t.project_name}
                     </Link>
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-muted-foreground">,</span>
                   )}
                 </TableCell>
-                <TableCell className="p-3 text-muted-foreground">{actor || "—"}</TableCell>
+                <TableCell className="p-3 text-muted-foreground">{actor || ","}</TableCell>
                 <TableCell className="p-3 text-muted-foreground">{new Date(t.created_at).toLocaleString()}</TableCell>
               </TableRow>
               );

@@ -28,12 +28,12 @@ export default async function AuditNotesPage() {
     <div>
       <ReviewTabs isSuper={access.isSuper} pending={pending} />
       <p className="text-sm text-muted-foreground mb-4 max-w-2xl">
-        Internal notes reviewers write with every verdict. Players never see these — they&apos;re
+        Internal notes reviewers write with every verdict. Players never see these , they&apos;re
         for audits and fraud checks.
       </p>
       {withNotes.length === 0 ? (
         <Card className="p-8 text-center text-muted-foreground text-sm">
-          No audit notes yet — they&apos;ll appear as reviews come in.
+          No audit notes yet , they&apos;ll appear as reviews come in.
         </Card>
       ) : (
         <div className="space-y-4">

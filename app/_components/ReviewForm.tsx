@@ -123,7 +123,7 @@ export function ReviewForm({
           totalSeconds.current.value = String(
             Math.round((Date.now() - openedAt.current) / 1000),
           );
-        // Verdict submitted — the saved draft has served its purpose.
+        // Verdict submitted , the saved draft has served its purpose.
         clearDeductions();
       }}
       className="mt-4 flex flex-col gap-2"
@@ -182,14 +182,14 @@ export function ReviewForm({
       {bounties.length > 0 && (
         <div className="rounded-lg border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/[0.06] p-3">
           <div className="text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1.5">
-            Bounty board — tick what this project meets (paid on final approval)
+            Bounty board , tick what this project meets (paid on final approval)
           </div>
           {bounties.map((b) => (
             <Label key={b.id} className="flex items-start gap-2 text-sm py-0.5 font-normal">
               <Checkbox name="bountyIds" value={String(b.id)} className="mt-0.5" />
               <span>
                 {b.name} <span className="font-semibold">+{b.reward} px</span>
-                {b.description && <span className="text-muted-foreground"> — {b.description}</span>}
+                {b.description && <span className="text-muted-foreground"> , {b.description}</span>}
               </span>
             </Label>
           ))}
@@ -201,7 +201,7 @@ export function ReviewForm({
           required
           minLength={AUDIT_MIN}
           onChange={(e) => setAuditLen(e.target.value.trim().length)}
-          placeholder="Internal audit note — never shown to the player, admins only. What did you check, what did the commits look like, anything sus? Min 150 characters."
+          placeholder="Internal audit note , never shown to the player, admins only. What did you check, what did the commits look like, anything sus? Min 150 characters."
           className="w-full text-sm"
           rows={3}
         />

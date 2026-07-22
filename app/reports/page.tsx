@@ -60,7 +60,7 @@ export default async function ReportsPage({
     <div>
       <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-1">Reports</h1>
       <p className="text-sm text-muted-foreground mb-5">
-        Players flagged by other players. Only report viewers can see this — regular admins
+        Players flagged by other players. Only report viewers can see this , regular admins
         can&apos;t. Each report runs an AI pass over the reported player&apos;s recent chat.
       </p>
 
@@ -135,7 +135,7 @@ export default async function ReportsPage({
       <div className="mt-8">
         <details className="rounded-xl border border-border bg-card p-4">
           <summary className="cursor-pointer text-sm font-semibold select-none">
-            Report viewers ({viewers.length}) — who can see reports
+            Report viewers ({viewers.length}) , who can see reports
           </summary>
           <p className="text-xs text-muted-foreground mt-2 mb-3">
             Only these Slack users can see reports (you can&apos;t remove yourself). Add mods by

@@ -246,7 +246,7 @@ export default async function Overview({
           <Card className="divide-y divide-border py-0">
             {recent.length === 0 && (
               <div className="p-5 text-muted-foreground text-sm">
-                Nothing yet — squeaky clean.
+                Nothing yet , squeaky clean.
               </div>
             )}
             {recent.map((v) => (

@@ -198,7 +198,7 @@ async function dmPayout(
   let text =
     pct === 0
       ? `You earned ${paid} pixels (${dollars}) for reviewing "${projectName}". Thanks for keeping the queue moving!`
-      : `You earned ${paid} pixels for reviewing "${projectName}" — the ${dollars} payout was cut ${pct}%: ${reason}.`;
+      : `You earned ${paid} pixels for reviewing "${projectName}" , the ${dollars} payout was cut ${pct}%: ${reason}.`;
   if (full > PAYOUT_PIXELS) text += `\n\n⚡ Review Blitz bonus included!`;
   if (!credited)
     text += `\n\nHeads up: there's no Pixl game account linked to your Slack, so the pixels couldn't be credited yet. Contact the team to get it sorted.`;
@@ -335,7 +335,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   const back = `/review/${projectId}`;
   const own = await isOwnProject(access, current.user_id);
   if (stage === "shipped" && !access.isSuper && own)
-    redirect(`${back}?error=${encodeURIComponent("You can't first-pass your own project — another reviewer has to take it.")}`);
+    redirect(`${back}?error=${encodeURIComponent("You can't first-pass your own project , another reviewer has to take it.")}`);
   if (stage !== "shipped" && stage !== "second_review")
     redirect(`${back}?error=${encodeURIComponent("This project isn't awaiting review anymore.")}`);
   if (!note)
@@ -355,7 +355,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
   }
   const reviewer = (await slackHandle(access.session.slackId)) ?? access.session.name;
 
-  // Request changes — bounce back to the maker from either stage.
+  // Request changes , bounce back to the maker from either stage.
   if (verdict === "needs_changes") {
     const { data: project, error } = await db
       .from("projects")
@@ -384,7 +384,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     await notifyOwner(
       project.user_id,
       "Changes requested",
-      `"${project.name}" needs changes before it can be approved — ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
+      `"${project.name}" needs changes before it can be approved , ${reviewer}:\n\n${note}\n\nUpdate your project and ship it again.`,
     );
     await logModAction(project.user_id, "project_needs_changes", `${project.name}: ${note}`, by);
     revalidatePath("/review");
@@ -421,7 +421,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
     redirect("/review");
   }
 
-  // Final approval — credit pixels. Only final reviewers reach here.
+  // Final approval , credit pixels. Only final reviewers reach here.
   if (stage === "second_review" && !access.canSecondPass)
     redirect(`${back}?error=${encodeURIComponent("Only a final reviewer can approve this stage.")}`);
   if (stage === "second_review" && !access.isSuper && current.first_pass_by && current.first_pass_by === by)
@@ -473,7 +473,7 @@ export async function reviewProject(formData: FormData): Promise<void> {
       const bonusPct = Number(g.config.bonusPct) || 0;
       if (target > 0 && bonusPct > 0 && (await communityGoalShipCount(g)) >= target) {
         goalMult *= 1 + bonusPct / 100;
-        goalNote += ` The "${g.name}" community goal was hit — +${bonusPct}% on this project!`;
+        goalNote += ` The "${g.name}" community goal was hit , +${bonusPct}% on this project!`;
       }
     }
   }
@@ -486,9 +486,9 @@ export async function reviewProject(formData: FormData): Promise<void> {
 
   let credited: string;
   if (alreadyPx > 0 && deltaPx > 0) {
-    credited = `\n\n+${deltaPx} pixels for what's new (${totalPx} pixels total for this project — ${creditHours}h approved).`;
+    credited = `\n\n+${deltaPx} pixels for what's new (${totalPx} pixels total for this project , ${creditHours}h approved).`;
   } else if (alreadyPx > 0 && deltaPx <= 0) {
-    credited = `\n\nNo new pixels this time — this project already earned ${alreadyPx} pixels.`;
+    credited = `\n\nNo new pixels this time , this project already earned ${alreadyPx} pixels.`;
   } else {
     credited =
       approvedHours !== null && approvedHours !== claimedHours
@@ -536,13 +536,13 @@ export async function reviewProject(formData: FormData): Promise<void> {
       p_reason: "bounty",
       p_created_by: by,
     });
-    credited += ` Bounty "${bounty.name}" met — +${reward} pixels!`;
+    credited += ` Bounty "${bounty.name}" met , +${reward} pixels!`;
     await logModAction(project.user_id, "bounty_awarded", `${bounty.name}: +${reward} pixels (${project.name})`, by);
   }
   await notifyOwner(
     project.user_id,
     "Project approved!",
-    `"${project.name}" passed review — approved by ${reviewer}. Congrats on shipping!\n\nReviewer note: ${note}${credited}`,
+    `"${project.name}" passed review , approved by ${reviewer}. Congrats on shipping!\n\nReviewer note: ${note}${credited}`,
   );
   await logModAction(
     project.user_id,
@@ -574,7 +574,7 @@ export async function reReviewProject(formData: FormData): Promise<void> {
 
   const claimedHours = await claimedHoursFor(projectId);
 
-  // The verdict is void, so the payout is too — claw back every pixel this
+  // The verdict is void, so the payout is too , claw back every pixel this
   // project was credited and leave the reversal in the ledger.
   const revoked = await revokeProjectPixels(project.user_id, project.id, by);
 
@@ -582,7 +582,7 @@ export async function reReviewProject(formData: FormData): Promise<void> {
     project.user_id,
     "review_reverted",
     `${project.name}: verdict reverted, back in the review queue${
-      revoked > 0 ? ` — ${revoked} pixels revoked` : ""
+      revoked > 0 ? ` , ${revoked} pixels revoked` : ""
     }`,
     by,
   );
@@ -591,7 +591,7 @@ export async function reReviewProject(formData: FormData): Promise<void> {
     user_id: project.user_id,
     reviewer: by,
     verdict: "reverted",
-    note: "Previous verdict reverted — project returned to the review queue.",
+    note: "Previous verdict reverted , project returned to the review queue.",
     audit_note: "",
     claimed_hours: claimedHours,
   });
@@ -604,7 +604,7 @@ export async function reReviewProject(formData: FormData): Promise<void> {
       revoked > 0
         ? ` The ${revoked} pixels it earned are on hold until the new verdict.`
         : ""
-    } You'll hear back here soon — nothing needed from you.`,
+    } You'll hear back here soon , nothing needed from you.`,
   });
   if (notifyError) console.error("re-review notification failed", notifyError.message);
   revalidatePath("/", "layout");
@@ -632,16 +632,16 @@ export async function adjustPixels(formData: FormData): Promise<void> {
     p_user_id: userId,
     p_amount: delta,
     p_reason: deduct ? "manual_deduction" : "manual_grant",
-    p_created_by: `${by} — ${reason}`,
+    p_created_by: `${by} , ${reason}`,
   });
   if (error) {
     console.error("adjustPixels failed", error.message);
-    redirect(`/pixels?error=${encodeURIComponent("Couldn't adjust pixels — try again.")}`);
+    redirect(`/pixels?error=${encodeURIComponent("Couldn't adjust pixels , try again.")}`);
   }
   await logModAction(
     userId,
     deduct ? "pixels_deducted" : "pixels_granted",
-    `${deduct ? "-" : "+"}${amount} pixels — ${reason}`,
+    `${deduct ? "-" : "+"}${amount} pixels , ${reason}`,
     by,
   );
   const title = deduct ? "Pixels deducted" : "Pixels granted";
@@ -839,7 +839,7 @@ export async function banPlayer(formData: FormData): Promise<void> {
   await logModAction(
     userId,
     "ban",
-    expiresAt ? `${hours}h — ${reason}` : `permanent — ${reason}`,
+    expiresAt ? `${hours}h , ${reason}` : `permanent , ${reason}`,
     by,
   );
 
@@ -953,7 +953,7 @@ export async function massPlayerAction(formData: FormData): Promise<void> {
       await logModAction(
         userId,
         "ban",
-        `${expiresAt ? `${hours}h` : "permanent"} — ${message} (mass action, ${ids.length} players)`,
+        `${expiresAt ? `${hours}h` : "permanent"} , ${message} (mass action, ${ids.length} players)`,
         by,
       );
       await dmOrEmail(
@@ -1024,7 +1024,7 @@ export async function sendNotification(formData: FormData): Promise<void> {
         redirect(
           `${backTo}?error=${encodeURIComponent(
             data && data.length > 1
-              ? `Multiple players match "${playerName}" — be more specific.`
+              ? `Multiple players match "${playerName}" , be more specific.`
               : `No player named "${playerName}".`,
           )}`,
         );
@@ -1269,7 +1269,7 @@ export async function setSecondPass(formData: FormData): Promise<void> {
   else
     await dmTeam(
       slackId,
-      "Your final-reviewer role on Pixl has been removed — you can still review first passes as usual. Contact the team if you think this is a mistake.",
+      "Your final-reviewer role on Pixl has been removed , you can still review first passes as usual. Contact the team if you think this is a mistake.",
     );
 }
 
@@ -1298,7 +1298,7 @@ export async function addReviewer(formData: FormData): Promise<void> {
       slackId,
       [
         "Welcome to the Pixl review team! 🎉",
-        `You now have access to the review queue on the Pixl dashboard — projects shipped by players are waiting for your verdict: ${DASH_URL}/review`,
+        `You now have access to the review queue on the Pixl dashboard , projects shipped by players are waiting for your verdict: ${DASH_URL}/review`,
         "Happy reviewing!",
       ].join("\n\n"),
     );
@@ -1471,13 +1471,79 @@ export async function deleteShopItem(formData: FormData): Promise<void> {
   revalidatePath("/shop");
 }
 
+// Mark a shop order shipped/handed over. Only flips a pending order so a repeat
+// click is a no-op, and drops the player a note so they know it's on the way.
+export async function fulfillOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  const note = String(formData.get("note") ?? "").trim().slice(0, 300);
+  if (!id) return;
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("user_id, item_name, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "pending") {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { error } = await db
+    .from("shop_orders")
+    .update({
+      status: "fulfilled",
+      fulfilled_at: new Date().toISOString(),
+      fulfilled_by: actorName(access),
+      note,
+    })
+    .eq("id", id)
+    .eq("status", "pending");
+  if (error) throw new Error(error.message);
+  await db.from("notifications").insert({
+    user_id: order.user_id,
+    title: "Order on its way! 📦",
+    body: `Your "${order.item_name}" order has been fulfilled.${note ? ` ${note}` : ""}`,
+  });
+  revalidatePath("/fulfillment");
+}
+
+// Cancel a pending order and refund the pixels. The refund + status flip happen
+// inside cancel_shop_order so they can't drift apart; it's idempotent, so a
+// double-click won't refund twice.
+export async function cancelOrder(formData: FormData): Promise<void> {
+  const access = await requireSuper();
+  const id = Number(formData.get("id") ?? 0);
+  if (!id) return;
+  const { data: order } = await db
+    .from("shop_orders")
+    .select("user_id, item_name, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!order || order.status !== "pending") {
+    revalidatePath("/fulfillment");
+    return;
+  }
+  const { data: refunded, error } = await db.rpc("cancel_shop_order", {
+    p_order_id: id,
+    p_by: actorName(access),
+  });
+  if (error) throw new Error(error.message);
+  const amount = Number(refunded ?? 0);
+  await db.from("notifications").insert({
+    user_id: order.user_id,
+    title: "Order cancelled",
+    body: `Your "${order.item_name}" order was cancelled and ${amount} pixel${amount === 1 ? "" : "s"} refunded.`,
+  });
+  revalidatePath("/fulfillment");
+  revalidatePath("/pixels");
+}
+
 // Backfill player-card photos from Slack for everyone who has a slack_id but
 // no photo yet. New sign-ups get theirs automatically from the game server.
 export async function syncSlackAvatars(): Promise<void> {
   await requireSuper();
   const avatars = await slackAvatars();
   if (avatars.size === 0)
-    redirect(`/players?error=${encodeURIComponent("Slack returned no profile photos — check SLACK_BOT_TOKEN.")}`);
+    redirect(`/players?error=${encodeURIComponent("Slack returned no profile photos , check SLACK_BOT_TOKEN.")}`);
   const { data: users, error } = await db
     .from("users")
     .select("id, slack_id, avatar_url")
@@ -1519,7 +1585,7 @@ export async function addSidequest(formData: FormData): Promise<void> {
   });
   if (error) {
     console.error("addSidequest", error.message);
-    redirect(`/sidequests?error=${encodeURIComponent("Couldn't save — is the sidequests migration applied?")}`);
+    redirect(`/sidequests?error=${encodeURIComponent("Couldn't save , is the sidequests migration applied?")}`);
   }
   revalidatePath("/sidequests");
   redirect("/sidequests?created=1");
@@ -1594,7 +1660,7 @@ export async function createEvent(formData: FormData): Promise<void> {
   });
   if (error) {
     console.error("createEvent", error.message);
-    fail("Couldn't create the event — is the events migration applied?");
+    fail("Couldn't create the event , is the events migration applied?");
   }
   revalidatePath("/", "layout");
   redirect("/events?created=1");
@@ -1657,7 +1723,7 @@ export async function resolveReport(formData: FormData): Promise<void> {
     console.error("resolveReport", error.message);
     return;
   }
-  // Close the loop with the reporter — works even for anonymous reports, since
+  // Close the loop with the reporter , works even for anonymous reports, since
   // it goes to them privately and never names them to anyone.
   if (updated?.reporter_id) {
     const { data: target } = await db
@@ -1668,7 +1734,7 @@ export async function resolveReport(formData: FormData): Promise<void> {
     const name = target?.display_name ?? "a player";
     const title = "Report reviewed";
     const body = dismissed
-      ? `Your report on ${name} was reviewed and closed — no action was needed this time. Thanks for helping keep Pixl safe.`
+      ? `Your report on ${name} was reviewed and closed , no action was needed this time. Thanks for helping keep Pixl safe.`
       : `Your report on ${name} was reviewed and acted on. Thanks for helping keep Pixl safe.`;
     await db.from("notifications").insert({ user_id: updated.reporter_id, title, body });
     await dmOrEmail(updated.reporter_id, title, body);
@@ -1720,7 +1786,7 @@ export async function addVaultLevel(formData: FormData): Promise<void> {
     .insert({ level, energy_required, title, blurb, rewards, position, active: true });
   if (error) {
     console.error("addVaultLevel", error.message);
-    redirect(`/community-goals?error=${encodeURIComponent("Couldn't save — is migration 0038 applied? (level must be unique)")}`);
+    redirect(`/community-goals?error=${encodeURIComponent("Couldn't save , is migration 0038 applied? (level must be unique)")}`);
   }
   revalidatePath("/community-goals");
   redirect("/community-goals?saved=1");
@@ -1787,7 +1853,7 @@ export async function addStoryNode(formData: FormData): Promise<void> {
   });
   if (error) {
     console.error("addStoryNode", error.message);
-    redirect(`/story?error=${encodeURIComponent("Couldn't save — is migration 0040 applied?")}`);
+    redirect(`/story?error=${encodeURIComponent("Couldn't save , is migration 0040 applied?")}`);
   }
   revalidatePath("/story");
   redirect("/story?saved=1");

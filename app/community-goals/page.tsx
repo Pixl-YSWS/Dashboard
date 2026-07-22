@@ -21,7 +21,7 @@ function rewardsText(level: VaultLevelRow): string {
   return (level.rewards ?? []).map((r) => `${r.icon ?? "🎁"} ${r.label ?? ""}`.trim()).join("\n");
 }
 
-const REWARDS_HINT = "One per line, emoji first — e.g. 🦊 Pixel fox pet";
+const REWARDS_HINT = "One per line, emoji first , e.g. 🦊 Pixel fox pet";
 
 export default async function CommunityGoalsPage({
   searchParams,

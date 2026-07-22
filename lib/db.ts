@@ -6,7 +6,7 @@ function required(name: string): string {
   return v;
 }
 
-// Created on first use, not at import time — Next evaluates this module while
+// Created on first use, not at import time , Next evaluates this module while
 // prerendering static pages (e.g. /_not-found) where env vars may be absent.
 let _client: SupabaseClient | null = null;
 function client(): SupabaseClient {
@@ -146,7 +146,7 @@ export async function listAdmins(): Promise<AdminRow[]> {
   return (data ?? []) as AdminRow[];
 }
 
-// Player display names keyed by linked Slack id — used as a fallback when the
+// Player display names keyed by linked Slack id , used as a fallback when the
 // Slack handle lookup is unavailable (e.g. missing app keys).
 export async function displayNamesBySlackId(ids: string[]): Promise<Map<string, string>> {
   const clean = [...new Set(ids.filter(Boolean))];
@@ -409,7 +409,7 @@ export async function claimReview(
   return { ok: true };
 }
 
-// Tell the owner their project is being looked at right now — at most once
+// Tell the owner their project is being looked at right now , at most once
 // every 6 hours per project so queue browsing doesn't spam them.
 async function notifyReviewStarted(projectId: number): Promise<void> {
   const { data: p } = await db
@@ -651,7 +651,7 @@ export function auditFlags(a: {
   return flags;
 }
 
-// Audits store the reviewer as "Name (SLACKID)" — aggregate per slack id.
+// Audits store the reviewer as "Name (SLACKID)" , aggregate per slack id.
 export async function reviewerStatsBySlackId(): Promise<Map<string, ReviewerStats>> {
   const rows: {
     reviewer: string;
@@ -724,7 +724,7 @@ export interface ReviewPayoutRow {
 }
 
 // Pay a reviewer into their linked game account. Returns false when no game
-// account matches the slack id — the payout row still records what's owed.
+// account matches the slack id , the payout row still records what's owed.
 export async function creditReviewerPixels(
   slackId: string,
   amount: number,
@@ -849,7 +849,7 @@ export interface PublicStats {
   shipsSeries: GrowthPoint[];
 }
 
-// Aggregates safe to show on the public stats page — nothing personal.
+// Aggregates safe to show on the public stats page , nothing personal.
 export async function publicStats(days = 30): Promise<PublicStats> {
   const pagedAll = async <T>(build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> => {
     const out: T[] = [];
@@ -1042,7 +1042,7 @@ export interface InvoiceRow {
   uncredited: number;
 }
 
-// Per-reviewer payout totals for one calendar month — the numbers whoever
+// Per-reviewer payout totals for one calendar month , the numbers whoever
 // settles real money needs. Only settled ('paid') payouts count; dollars are
 // paidPixels / 10.
 export async function payoutInvoice(monthStart: Date, monthEnd: Date): Promise<InvoiceRow[]> {
@@ -1105,7 +1105,7 @@ export interface PixelTxRow {
 }
 
 // The pixel ledger, newest first: every credit (and, later, spend). amount is
-// signed — positive is pixels given out, negative is spent.
+// signed , positive is pixels given out, negative is spent.
 export async function listPixelTransactions(limit = 1000): Promise<PixelTxRow[]> {
   const { data, error } = await db
     .from("pixel_transactions")
@@ -1197,7 +1197,7 @@ export async function listReports(limit = 500): Promise<ReportRow[]> {
   return hydrateReports((data ?? []) as ReportRow[]);
 }
 
-// Reports filed against one player, newest first — for their profile page.
+// Reports filed against one player, newest first , for their profile page.
 export async function listReportsAgainst(targetId: string, limit = 50): Promise<ReportRow[]> {
   const { data, error } = await db
     .from("reports")
@@ -1212,7 +1212,7 @@ export async function listReportsAgainst(targetId: string, limit = 50): Promise<
   return hydrateReports((data ?? []) as ReportRow[]);
 }
 
-// How many reports a target has received and a reporter has filed — used to
+// How many reports a target has received and a reporter has filed , used to
 // flag repeat-reported players and to deanonymize serial reporters.
 export async function reportCounts(
   targetId: string,
@@ -1240,7 +1240,7 @@ export interface ChatLogRow {
   created_at: string;
 }
 
-// A player's stored chat over the last `hours`, newest first — the evidence
+// A player's stored chat over the last `hours`, newest first , the evidence
 // for a report.
 export async function listChatFor(userId: string, hours = 10): Promise<ChatLogRow[]> {
   const since = new Date(Date.now() - hours * 3600_000).toISOString();
@@ -1332,6 +1332,59 @@ export async function listShopItems(): Promise<ShopItemRow[]> {
   return (data ?? []) as ShopItemRow[];
 }
 
+export interface ShopOrderRow {
+  id: number;
+  user_id: string;
+  item_id: number | null;
+  item_name: string;
+  option: string;
+  price: number;
+  status: "pending" | "fulfilled" | "cancelled";
+  note: string;
+  created_at: string;
+  fulfilled_at: string | null;
+  fulfilled_by: string;
+  player_name: string;
+  player_slack: string | null;
+}
+
+// Shop orders players placed with pixels, newest first. Player name + Slack are
+// resolved in a follow-up query so the team can reach out about delivery.
+export async function listShopOrders(status?: string, limit = 500): Promise<ShopOrderRow[]> {
+  let q = db.from("shop_orders").select("*");
+  if (status) q = q.eq("status", status);
+  const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
+  if (error) {
+    console.error("listShopOrders", error.message);
+    return [];
+  }
+  const rows = (data ?? []) as ShopOrderRow[];
+  const ids = [...new Set(rows.map((r) => r.user_id))];
+  const users = ids.length
+    ? await db.from("users").select("id, display_name, slack_id").in("id", ids)
+    : { data: [] };
+  const names = new Map(
+    (users.data ?? []).map((u) => [u.id as string, u as { display_name: string; slack_id: string | null }]),
+  );
+  for (const r of rows) {
+    r.player_name = names.get(r.user_id)?.display_name ?? r.user_id;
+    r.player_slack = names.get(r.user_id)?.slack_id ?? null;
+  }
+  return rows;
+}
+
+export async function countPendingOrders(): Promise<number> {
+  const { count, error } = await db
+    .from("shop_orders")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  if (error) {
+    console.error("countPendingOrders", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
+
 export interface FeedItem {
   kind: "mod" | "team" | "review" | "pixels" | "payout";
   text: string;
@@ -1418,10 +1471,10 @@ export async function listActivityFeed(opts: {
         p.status === "pending"
           ? "awaiting the final pass"
           : p.cut_pct > 0
-            ? `cut ${p.cut_pct}% — ${p.cut_reason}`
+            ? `cut ${p.cut_pct}% , ${p.cut_reason}`
             : p.credited
               ? "full payout"
-              : "full payout — no game account linked",
+              : "full payout , no game account linked",
       href: `/reviewers/${slack}`,
       when: p.settled_at ?? p.created_at,
     });

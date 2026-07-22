@@ -82,7 +82,7 @@ export default async function BansPage({
                         </Link>
                       </TableCell>
                       <TableCell className="p-3 max-w-64">
-                        <div className="truncate">{b.reason || "—"}</div>
+                        <div className="truncate">{b.reason || ","}</div>
                       </TableCell>
                       <TableCell className="p-3 text-foreground/70">{b.banned_by}</TableCell>
                       <TableCell className="p-3 text-muted-foreground">

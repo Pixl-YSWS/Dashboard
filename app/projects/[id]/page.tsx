@@ -142,7 +142,7 @@ export default async function ProjectPage({
       {project.banned_at && (
         <Alert variant="destructive" className="mt-4 border-rose-400 dark:border-rose-500/50 bg-rose-600/10">
           <AlertTitle className="font-pixel text-rose-700 dark:text-rose-400">
-            Banned{project.ban_by ? ` by ${project.ban_by}` : ""} — permanent
+            Banned{project.ban_by ? ` by ${project.ban_by}` : ""} , permanent
           </AlertTitle>
           {project.ban_reason && (
             <AlertDescription className="mt-1 break-words text-foreground">{project.ban_reason}</AlertDescription>
@@ -209,7 +209,7 @@ export default async function ProjectPage({
         <Card className="p-4 mb-8 gap-0">
           <div className="font-pixel text-xl mb-1">Staff actions</div>
           <p className="text-sm text-muted-foreground mb-3">
-            Everything here is reversible and kept in history — nothing is
+            Everything here is reversible and kept in history , nothing is
             erased.
           </p>
           <div className="flex flex-wrap gap-2 items-center">
@@ -266,7 +266,7 @@ export default async function ProjectPage({
               </div>
               <p className="text-xs text-muted-foreground mb-2">
                 Removes this project from Pixl and tells the owner who rejected
-                it and why. Reversible. This is not a player ban — ban the
+                it and why. Reversible. This is not a player ban , ban the
                 player from their{" "}
                 <Link
                   href={`/players/${project.user_id}`}
@@ -303,7 +303,7 @@ export default async function ProjectPage({
                 Ban project (permanent)
               </div>
               <p className="text-xs text-muted-foreground mb-2">
-                Permanently bans this project — it can never be shipped again
+                Permanently bans this project , it can never be shipped again
                 and is hidden everywhere. Different from a reject. Reversible by
                 staff.
               </p>

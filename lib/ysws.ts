@@ -47,7 +47,7 @@ async function loadArchive(): Promise<ArchiveEntry[]> {
   }
 }
 
-// Archive entries that reuse THIS project's repo/demo URL — i.e. the same
+// Archive entries that reuse THIS project's repo/demo URL , i.e. the same
 // project shipped to another YSWS (a possible double-dip). Reviewers compare
 // hours and dates for overlap before crediting. The maker's unrelated ships are
 // intentionally not returned; they're noise on a per-project review.
