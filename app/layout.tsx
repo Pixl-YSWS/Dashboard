@@ -8,9 +8,12 @@ import { Shell } from "@/app/_components/Shell";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-const jetbrainsMonoHeading = JetBrains_Mono({subsets:['latin'],variable:'--font-heading'});
+const jetbrainsMonoHeading = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-heading",
+});
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({
@@ -55,6 +58,7 @@ export default async function RootLayout({
         sidequests: access.isSuper,
         story: access.isSuper,
         goals: access.isSuper,
+        fulfillment: access.isSuper,
       }
     : null;
   const reviewCount = nav?.review ? await countPendingReviews() : 0;
